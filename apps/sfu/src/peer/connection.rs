@@ -1,9 +1,18 @@
+// src/peer/connection.rs
+
 use crate::peer::track::RtpPacketData;
 use crate::signaling::ServerMessage;
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
-use str0m::{Candidate, Event, Input, Output, Rtc, change::SdpOffer, net::Receive};
+use str0m::{
+    Candidate, Event, Input, Output, Rtc,
+    change::SdpOffer,
+    media::{MediaKind, Pt},
+    net::Receive,
+    rtp::{RtpWrite, SeqNo, Ssrc},
+};
 use tokio::net::UdpSocket;
 use tokio::sync::Mutex;
 
@@ -13,6 +22,7 @@ pub struct PeerConnection {
     pub socket: Arc<UdpSocket>,
     pub remote_addr: Option<SocketAddr>,
     pub sender: tokio::sync::broadcast::Sender<ServerMessage>,
+    pub tx_streams: HashMap<String, (MediaKind, Ssrc)>,
 }
 
 impl PeerConnection {
@@ -32,6 +42,7 @@ impl PeerConnection {
             socket: Arc::new(socket),
             remote_addr: None,
             sender,
+            tx_streams: HashMap::new(),
         }
     }
 
@@ -65,7 +76,44 @@ impl PeerConnection {
         }
     }
 
-    /// Boucle principale — gère les events str0m + UDP
+    pub fn write_rtp(&mut self, packet: &RtpPacketData) -> Result<(), String> {
+        let is_video = packet.payload_type >= 96;
+        let kind = if is_video {
+            MediaKind::Video
+        } else {
+            MediaKind::Audio
+        };
+
+        let ssrc = self
+            .tx_streams
+            .values()
+            .find(|(k, _)| *k == kind)
+            .map(|(_, ssrc)| *ssrc);
+
+        let ssrc = match ssrc {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+
+        let pt = Pt::new_with_value(packet.payload_type);
+        let seq_no = SeqNo::from(packet.sequence_number as u64);
+
+        let rtp_write = RtpWrite::new(
+            pt,
+            seq_no,
+            packet.timestamp,
+            Instant::now(),
+            packet.payload.as_slice(),
+        );
+
+        let mut api = self.rtc.direct_api();
+        if let Some(stream) = api.stream_tx(&ssrc) {
+            stream.write_rtp(rtp_write);
+        }
+
+        Ok(())
+    }
+
     pub async fn run(
         conn: Arc<Mutex<PeerConnection>>,
         rtp_tx: tokio::sync::mpsc::UnboundedSender<(String, RtpPacketData)>,
@@ -78,7 +126,6 @@ impl PeerConnection {
         let local_port = socket.local_addr().unwrap().port();
         let local_addr: SocketAddr = format!("127.0.0.1:{}", local_port).parse().unwrap();
 
-        // enregistre le candidat local
         {
             let mut c = conn.lock().await;
             if let Ok(candidate) = Candidate::host(local_addr, "udp") {
@@ -156,6 +203,24 @@ impl PeerConnection {
             Event::IceConnectionStateChange(state) => {
                 tracing::info!("Peer {} ICE : {:?}", conn.peer_id, state);
             }
+            Event::MediaAdded(media) => {
+                tracing::info!(
+                    "✅ Peer {} media ajouté : {:?} mid={:?}",
+                    conn.peer_id,
+                    media.kind,
+                    media.mid
+                );
+
+                let ssrc = conn.rtc.direct_api().new_ssrc();
+                conn.rtc
+                    .direct_api()
+                    .declare_stream_tx(ssrc, None, media.mid, None);
+
+                conn.tx_streams
+                    .insert(media.mid.to_string(), (media.kind, ssrc));
+
+                tracing::info!("Peer {} — StreamTx déclaré SSRC={:?}", conn.peer_id, ssrc);
+            }
             Event::RtpPacket(rtp) => {
                 let packet = RtpPacketData {
                     payload_type: *rtp.header.payload_type,
@@ -163,7 +228,7 @@ impl PeerConnection {
                     timestamp: rtp.header.timestamp,
                     ssrc: *rtp.header.ssrc,
                     payload: rtp.payload.to_vec(),
-                    is_keyframe: false, // TODO détecter les keyframes
+                    is_keyframe: false,
                 };
                 let _ = rtp_tx.send((conn.peer_id.clone(), packet));
             }
