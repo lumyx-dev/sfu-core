@@ -32,6 +32,10 @@ impl UpTrack {
         }
     }
 
+    pub fn get_down_track(&self, peer_id: &str) -> Option<Arc<DownTrack>> {
+        self.down_tracks.get(peer_id).map(|d| d.clone())
+    }
+
     /// Ajoute un subscriber
     pub fn add_subscriber(&self, peer_id: String, down_track: Arc<DownTrack>) {
         self.down_tracks.insert(peer_id, down_track);

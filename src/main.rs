@@ -22,13 +22,14 @@ use tokio::sync::{Mutex, broadcast};
 use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
-use crate::peer::PeerConnection;
+use crate::peer::{ForwardingEngine, PeerConnection};
 
 #[derive(Clone)]
 struct AppState {
     rooms: Arc<RoomManager>,
     metrics: Arc<Metrics>,
     connections: Arc<Mutex<HashMap<String, Arc<Mutex<PeerConnection>>>>>,
+    engine: Arc<ForwardingEngine>,
 }
 
 #[tokio::main]
@@ -41,6 +42,7 @@ async fn main() {
         rooms: Arc::new(RoomManager::new()),
         metrics: Metrics::new(),
         connections: Arc::new(Mutex::new(HashMap::new())),
+        engine: ForwardingEngine::new(),
     };
 
     let app = Router::new()
@@ -97,8 +99,9 @@ async fn handle_socket(socket: WebSocket, peer_id: String, state: AppState) {
         PeerConnection::new(peer_id.clone(), tx.clone()).await,
     ));
 
-    // canal RTP pour recevoir les paquets du peer
-    let (rtp_tx, _rtp_rx) = tokio::sync::mpsc::unbounded_channel::<(String, peer::RtpPacketData)>();
+    // canal RTP
+    let (rtp_tx, mut rtp_rx) =
+        tokio::sync::mpsc::unbounded_channel::<(String, peer::RtpPacketData)>();
 
     // lance la boucle WebRTC en background
     let conn_clone = conn.clone();
@@ -107,11 +110,24 @@ async fn handle_socket(socket: WebSocket, peer_id: String, state: AppState) {
         PeerConnection::run(conn_clone, rtp_tx_clone).await;
     });
 
-    // stocke la connexion dans le state
+    // stocke la connexion
     {
         let mut connections = state.connections.lock().await;
         connections.insert(peer_id.clone(), conn.clone());
     }
+
+    // ajoute le peer au ForwardingEngine
+    state.engine.add_peer(peer_id.clone(), conn.clone());
+
+    // task RTP → ForwardingEngine
+    let engine_clone = state.engine.clone();
+    let peer_id_rtp = peer_id.clone();
+    tokio::spawn(async move {
+        while let Some((from_peer_id, packet)) = rtp_rx.recv().await {
+            engine_clone.forward_rtp(&from_peer_id, packet).await;
+        }
+        tracing::debug!("Peer {} — rtp task terminée", peer_id_rtp);
+    });
 
     // task messages sortants WebSocket
     let peer_id_clone = peer_id.clone();
@@ -157,6 +173,7 @@ async fn handle_socket(socket: WebSocket, peer_id: String, state: AppState) {
 
     // nettoyage
     state.rooms.leave_room(&peer_id);
+    state.engine.remove_peer(&peer_id);
     state.metrics.record_disconnect();
     {
         let mut connections = state.connections.lock().await;
