@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Sightline — Test Client</title>
+  <style>
+    body { font-family: monospace; background: #0f0f0f; color: #e0e0e0; padding: 20px; margin: 0; }
+    h1 { color: #00bcd4; font-size: 18px; }
+    .log { background: #1a1a1a; padding: 12px; border-radius: 6px; height: 250px; overflow-y: auto; font-size: 12px; margin: 10px 0; border: 1px solid #333; }
+    .info  { color: #80cbc4; }
+    .error { color: #ef9a9a; }
+    .event { color: #a5d6a7; }
+    .send  { color: #fff59d; }
+    button { background: #00bcd4; color: #000; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 4px; font-weight: bold; font-size: 12px; }
+    button:disabled { background: #333; color: #666; cursor: default; }
+    video { width: 280px; height: 180px; background: #111; border-radius: 6px; border: 1px solid #333; }
+    .videos { display: flex; gap: 12px; margin: 10px 0; flex-wrap: wrap; }
+    .video-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+<h1>🔭 Sightline SFU — Test Client</h1>
+
+<div>
+  <button id="btnConnect">Connecter</button>
+  <button id="btnJoin" disabled>Rejoindre room</button>
+  <button id="btnCamera" disabled>Activer caméra</button>
+  <button id="btnCall" disabled>Appeler SFU</button>
+  <button id="btnDisconnect" disabled>Déconnecter</button>
+</div>
+
+<div class="videos">
+  <div>
+    <div class="video-label">📷 Local</div>
+    <video id="localVideo" autoplay muted playsinline></video>
+  </div>
+  <div id="remoteVideos"></div>
+</div>
+
+<div class="log" id="log"></div>
+
+<script>
+  const WS_URL = `wss://${window.location.host}/ws`;
+  const ROOM_ID = "test-room";
+
+  let ws, pc, localStream, peerId;
+
+  const log = (msg, type = "info") => {
+    const el = document.getElementById("log");
+    const line = document.createElement("div");
+    line.className = type;
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  };
+
+  const send = (obj) => {
+    const json = JSON.stringify(obj);
+    log(`→ ${obj.type}`, "send");
+    ws.send(json);
+  };
+
+  document.getElementById("btnConnect").onclick = () => {
+    log("Connexion WebSocket...");
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => log("WebSocket connecté ✅", "event");
+
+    ws.onmessage = async (e) => {
+      const msg = JSON.parse(e.data);
+      log(`← ${msg.type}`, "info");
+      await handleMessage(msg);
+    };
+
+    ws.onclose = () => {
+      log("WebSocket fermé", "error");
+      document.getElementById("btnConnect").disabled = false;
+      document.getElementById("btnDisconnect").disabled = true;
+    };
+
+    ws.onerror = () => log("Erreur WebSocket", "error");
+
+    document.getElementById("btnConnect").disabled = true;
+    document.getElementById("btnDisconnect").disabled = false;
+  };
+
+  document.getElementById("btnJoin").onclick = () => {
+    send({ type: "join", room_id: ROOM_ID, peer_id: peerId });
+  };
+
+  document.getElementById("btnCamera").onclick = async () => {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      document.getElementById("localVideo").srcObject = localStream;
+      log("Caméra activée ✅", "event");
+      document.getElementById("btnCall").disabled = false;
+    } catch (e) {
+      log(`Erreur caméra : ${e}`, "error");
+    }
+  };
+
+  document.getElementById("btnCall").onclick = async () => {
+    await startCall();
+  };
+
+  document.getElementById("btnDisconnect").onclick = () => {
+    ws?.close();
+    pc?.close();
+  };
+
+  async function handleMessage(msg) {
+    switch (msg.type) {
+      case "connected":
+        peerId = msg.peer_id;
+        log(`peer_id : ${peerId.slice(0, 8)}...`, "event");
+        document.getElementById("btnJoin").disabled = false;
+        document.getElementById("btnCamera").disabled = false;
+        break;
+
+      case "joined_room":
+        log(`Room rejointe — ${msg.peers.length} peers présents`, "event");
+        break;
+
+      case "peer_joined":
+        log(`Nouveau peer : ${msg.peer_id.slice(0, 8)}...`, "event");
+        break;
+
+      case "peer_left":
+        log(`Peer parti : ${msg.peer_id.slice(0, 8)}...`, "event");
+        break;
+
+      case "sfu_answer":
+        log("SFU answer reçue ✅", "event");
+        await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
+        break;
+
+      case "sfu_ice_candidate":
+        if (pc && msg.candidate) {
+          await pc.addIceCandidate({ candidate: msg.candidate, sdpMid: "0" });
+        }
+        break;
+
+      case "error":
+        log(`Erreur : ${msg.message}`, "error");
+        break;
+    }
+  }
+
+  async function startCall() {
+    log("Création RTCPeerConnection...");
+
+    pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+
+    if (localStream) {
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    }
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        send({ type: "sfu_ice_candidate", candidate: e.candidate.candidate });
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      log(`ICE : ${pc.iceConnectionState}`, "event");
+    };
+
+    pc.onconnectionstatechange = () => {
+      log(`Connection : ${pc.connectionState}`, "event");
+    };
+
+    pc.ontrack = (e) => {
+      log(`Track distant reçu : ${e.track.kind}`, "event");
+      addRemoteTrack(e.streams[0], e.track);
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    send({ type: "sfu_offer", sdp: offer.sdp });
+  }
+
+  function addRemoteTrack(stream, track) {
+    const container = document.getElementById("remoteVideos");
+    let video = document.getElementById(`remote-${stream.id}`);
+    if (!video) {
+      const wrapper = document.createElement("div");
+      video = document.createElement("video");
+      video.id = `remote-${stream.id}`;
+      video.autoplay = true;
+      video.playsinline = true;
+      const label = document.createElement("div");
+      label.className = "video-label";
+      label.textContent = `📺 Remote (${track.kind})`;
+      wrapper.appendChild(label);
+      wrapper.appendChild(video);
+      container.appendChild(wrapper);
+    }
+    if (!video.srcObject) video.srcObject = new MediaStream();
+    video.srcObject.addTrack(track);
+  }
+</script>
+</body>
+</html>
