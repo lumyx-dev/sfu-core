@@ -11,7 +11,7 @@ use str0m::{
     change::SdpOffer,
     media::{MediaKind, Pt},
     net::Receive,
-    rtp::{RtpWrite, SeqNo, Ssrc},
+    rtp::{RtpWrite, Ssrc},
 };
 use tokio::net::UdpSocket;
 use tokio::sync::Mutex;
@@ -23,6 +23,8 @@ pub struct PeerConnection {
     pub remote_addr: Option<SocketAddr>,
     pub sender: tokio::sync::broadcast::Sender<ServerMessage>,
     pub tx_streams: HashMap<String, (MediaKind, Ssrc)>,
+    pub ssrc_to_mid: HashMap<u32, String>,
+    pub rx_ssrcs: Vec<Ssrc>,
 }
 
 impl PeerConnection {
@@ -34,7 +36,9 @@ impl PeerConnection {
         let local_port = socket.local_addr().unwrap().port();
         tracing::info!("Peer {} — UDP sur port {}", peer_id, local_port);
 
-        let rtc = Rtc::builder().set_rtp_mode(true).build(Instant::now());
+        let rtc = Rtc::builder()
+            // .set_rtp_mode(true)
+            .build(Instant::now());
 
         PeerConnection {
             peer_id,
@@ -43,6 +47,8 @@ impl PeerConnection {
             remote_addr: None,
             sender,
             tx_streams: HashMap::new(),
+            ssrc_to_mid: HashMap::new(),
+            rx_ssrcs: Vec::new(),
         }
     }
 
@@ -77,63 +83,52 @@ impl PeerConnection {
     }
 
     pub fn write_rtp(&mut self, packet: &RtpPacketData) -> Result<(), String> {
-        let is_video = packet.payload_type >= 96;
-        let kind = if is_video {
-            MediaKind::Video
-        } else {
-            MediaKind::Audio
-        };
-
-        let mid = self
-            .tx_streams
-            .iter()
-            .find(|(_, (k, _))| *k == kind)
-            .map(|(mid_str, _)| str0m::media::Mid::from(mid_str.as_str()));
-
-        let mid = match mid {
-            Some(m) => m,
-            None => return Ok(()),
-        };
-
-        let pt = Pt::new_with_value(packet.payload_type);
-        let seq_no = str0m::rtp::SeqNo::from(packet.sequence_number as u64);
-
-        let rtp_write = RtpWrite::new(
-            pt,
-            seq_no,
-            packet.timestamp,
-            std::time::Instant::now(),
-            packet.payload.as_slice(),
-        )
-        .nackable(true);
-
-        let mut api = self.rtc.direct_api();
-        if let Some(stream) = api.stream_tx_by_mid(mid, None) {
-            stream.write_rtp(rtp_write);
-            tracing::debug!(
-                "Peer {} — RTP forwardé mid={:?} pt={} seq={} {} bytes",
-                self.peer_id,
-                mid,
-                packet.payload_type,
-                packet.sequence_number,
-                packet.payload.len()
-            );
-        } else {
-            tracing::warn!(
-                "Peer {} — stream_tx_by_mid non trouvé pour mid={:?}",
-                self.peer_id,
-                mid
-            );
+        if packet.mid.is_empty() || !self.tx_streams.contains_key(&packet.mid) {
+            return Ok(());
         }
 
-        tracing::info!(
-            "write_rtp — peer={} is_video={} tx_streams={:?}",
-            self.peer_id,
-            is_video,
-            self.tx_streams.keys().collect::<Vec<_>>()
-        );
+        let mid = str0m::media::Mid::from(packet.mid.as_str());
+
+        if let Some(writer) = self.rtc.writer(mid) {
+            let pt = writer.payload_params().next().map(|p| p.pt());
+
+            if let Some(pt) = pt {
+                let _ = writer.write(
+                    pt,
+                    std::time::Instant::now(),
+                    str0m::media::MediaTime::from_secs(packet.timestamp as u64),
+                    packet.payload.as_slice(),
+                );
+                tracing::debug!(
+                    "Peer {} — write_rtp mid={:?} pt={:?} {} bytes",
+                    self.peer_id,
+                    mid,
+                    pt,
+                    packet.payload.len()
+                );
+            } else {
+                tracing::warn!(
+                    "Peer {} — aucun PT disponible pour mid={:?}",
+                    self.peer_id,
+                    mid
+                );
+            }
+        } else {
+            tracing::warn!("Peer {} — writer non trouvé mid={:?}", self.peer_id, mid);
+        }
 
         Ok(())
+    }
+
+    pub fn request_keyframe(&mut self) {
+        let ssrcs: Vec<Ssrc> = self.rx_ssrcs.clone();
+        for ssrc in ssrcs {
+            let mut api = self.rtc.direct_api();
+            if let Some(stream) = api.stream_rx(&ssrc) {
+                stream.request_keyframe(str0m::media::KeyframeRequestKind::Pli);
+                tracing::info!("Peer {} — PLI envoyée ssrc={:?}", self.peer_id, ssrc);
+            }
+        }
     }
 
     pub async fn run(
@@ -239,20 +234,48 @@ impl PeerConnection {
                     (media.kind, str0m::rtp::Ssrc::from(0u32)),
                 );
             }
-            Event::RtpPacket(rtp) => {
+            Event::MediaData(data) => {
+                let mid_str = data.mid.to_string();
                 let packet = RtpPacketData {
-                    payload_type: *rtp.header.payload_type,
-                    sequence_number: rtp.header.sequence_number.into(),
-                    timestamp: rtp.header.timestamp,
-                    ssrc: *rtp.header.ssrc,
-                    payload: rtp.payload.to_vec(),
-                    is_keyframe: false,
-                    mid: rtp.header.ext_vals.mid.map(|m| *m as u8).unwrap_or(0),
+                    payload_type: *data.pt,
+                    sequence_number: 0,
+                    timestamp: data.time.as_seconds() as u32,
+                    ssrc: 0,
+                    payload: data.data.to_vec(),
+                    is_keyframe: data.contiguous,
+                    mid: mid_str,
                 };
                 let _ = rtp_tx.send((conn.peer_id.clone(), packet));
             }
+            // Event::RtpPacket(rtp) => {
+            //     let ssrc = *rtp.header.ssrc;
+
+            //     let ssrc_typed = Ssrc::from(ssrc);
+            //     if !conn.rx_ssrcs.contains(&ssrc_typed) {
+            //         conn.rx_ssrcs.push(ssrc_typed);
+            //     }
+
+            //     let mid_str = if let Some(mid) = rtp.header.ext_vals.mid {
+            //         let s = mid.to_string();
+            //         conn.ssrc_to_mid.insert(ssrc, s.clone());
+            //         s
+            //     } else {
+            //         conn.ssrc_to_mid.get(&ssrc).cloned().unwrap_or_default()
+            //     };
+
+            //     let packet = RtpPacketData {
+            //         payload_type: *rtp.header.payload_type,
+            //         sequence_number: rtp.header.sequence_number.into(),
+            //         timestamp: rtp.header.timestamp,
+            //         ssrc,
+            //         payload: rtp.payload.to_vec(),
+            //         is_keyframe: false,
+            //         mid: mid_str,
+            //     };
+            //     let _ = rtp_tx.send((conn.peer_id.clone(), packet));
+            // }
             Event::KeyframeRequest(_req) => {
-                tracing::info!("Peer {} — keyframe request", conn.peer_id);
+                tracing::info!("Peer {} — keyframe request reçue", conn.peer_id);
             }
             _ => {}
         }
