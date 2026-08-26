@@ -80,8 +80,15 @@ impl ForwardingEngine {
 
                 // demande une keyframe au peer source ← ici
                 if let Some(source_conn) = self.connections.get(from_peer_id) {
-                    let mut c = source_conn.lock().await;
-                    c.request_keyframe();
+                    let conn_clone = source_conn.clone();
+                    tokio::spawn(async move {
+                        for delay in [200, 500, 1000, 2000] {
+                            tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                            let mut c = conn_clone.lock().await;
+                            c.request_keyframe();
+                            tracing::info!("PLI envoyée après {}ms", delay);
+                        }
+                    });
                 }
             }
 
