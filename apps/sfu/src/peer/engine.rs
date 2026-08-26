@@ -34,7 +34,6 @@ impl ForwardingEngine {
 
     /// Reçoit un paquet RTP d'un peer et le forward aux autres
     pub async fn forward_rtp(&self, from_peer_id: &str, packet: RtpPacketData) {
-        // crée ou récupère l'UpTrack de ce peer
         let up_track = self
             .up_tracks
             .entry(from_peer_id.to_string())
@@ -48,14 +47,12 @@ impl ForwardingEngine {
             })
             .clone();
 
-        // pour chaque peer connecté sauf le sender
         for entry in self.connections.iter() {
             let subscriber_id = entry.key().clone();
             if subscriber_id == from_peer_id {
                 continue;
             }
 
-            // crée un DownTrack si pas encore fait
             if up_track.get_down_track(&subscriber_id).is_none() {
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<RtpPacketData>();
 
@@ -67,7 +64,7 @@ impl ForwardingEngine {
 
                 up_track.add_subscriber(subscriber_id.clone(), down_track);
 
-                // task qui lit les paquets remappés et les envoie via WebRTC
+                // task qui envoie les paquets remappés via WebRTC
                 let conn = entry.value().clone();
                 let sub_id = subscriber_id.clone();
                 let from_id = from_peer_id.to_string();
@@ -80,9 +77,14 @@ impl ForwardingEngine {
                         }
                     }
                 });
+
+                // demande une keyframe au peer source ← ici
+                if let Some(source_conn) = self.connections.get(from_peer_id) {
+                    let mut c = source_conn.lock().await;
+                    c.request_keyframe();
+                }
             }
 
-            // forward le paquet via l'UpTrack → DownTrack
             up_track.forward(&packet);
         }
     }
