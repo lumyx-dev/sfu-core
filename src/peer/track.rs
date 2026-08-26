@@ -11,6 +11,7 @@ pub struct RtpPacketData {
     pub ssrc: u32,
     pub payload: Vec<u8>,
     pub is_keyframe: bool,
+    pub mid: usize,
 }
 
 /// UpTrack — reçoit les paquets RTP d'un publisher
@@ -107,6 +108,7 @@ impl DownTrack {
             ssrc: self.ssrc,      // SSRC local unique
             payload: packet.payload.clone(),
             is_keyframe: packet.is_keyframe,
+            mid: packet.mid,
         };
 
         let _ = self.sender.send(rewritten);

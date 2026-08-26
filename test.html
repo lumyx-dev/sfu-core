@@ -1,205 +1,670 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
-  <title>Sightline — Test Client</title>
+  <title>Sightline</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap"
+    rel="stylesheet">
   <style>
-    body { font-family: monospace; background: #0f0f0f; color: #e0e0e0; padding: 20px; margin: 0; }
-    h1 { color: #00bcd4; font-size: 18px; }
-    .log { background: #1a1a1a; padding: 12px; border-radius: 6px; height: 250px; overflow-y: auto; font-size: 12px; margin: 10px 0; border: 1px solid #333; }
-    .info  { color: #80cbc4; }
-    .error { color: #ef9a9a; }
-    .event { color: #a5d6a7; }
-    .send  { color: #fff59d; }
-    button { background: #00bcd4; color: #000; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 4px; font-weight: bold; font-size: 12px; }
-    button:disabled { background: #333; color: #666; cursor: default; }
-    video { width: 280px; height: 180px; background: #111; border-radius: 6px; border: 1px solid #333; }
-    .videos { display: flex; gap: 12px; margin: 10px 0; flex-wrap: wrap; }
-    .video-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+    :root {
+      --bg: #080c10;
+      --surface: #0d1117;
+      --border: rgba(255, 255, 255, 0.06);
+      --accent: #00e5ff;
+      --accent2: #7b61ff;
+      --text: #e2e8f0;
+      --muted: #4a5568;
+      --success: #00e676;
+      --error: #ff5252;
+      --warn: #ffab40;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border: 1.5px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: all 0.3s;
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+    }
+
+    .status-dot.connecting {
+      background: var(--warn);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      padding: 24px 0;
+    }
+
+    .video-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .video-card {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      aspect-ratio: 16/10;
+    }
+
+    .video-card video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-card .label {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(0, 0, 0, 0.5);
+      padding: 3px 8px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .video-card .indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--error);
+    }
+
+    .video-card .indicator.live {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    .video-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.1);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 600;
+    }
+
+    .btn.primary:hover:not(:disabled) {
+      background: #33ebff;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+      color: #000;
+    }
+
+    .btn.danger {
+      border-color: rgba(255, 82, 82, 0.3);
+      color: var(--error);
+    }
+
+    .btn.danger:hover:not(:disabled) {
+      border-color: var(--error);
+      box-shadow: 0 0 12px rgba(255, 82, 82, 0.15);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-header .count {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 10px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .metric {
+      padding: 14px 16px;
+      background: var(--surface);
+    }
+
+    .metric-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .metric-label {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top: 4px;
+    }
+
+    .log-container {
+      height: 200px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .log-entry {
+      padding: 6px 16px;
+      font-size: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      gap: 8px;
+    }
+
+    .log-time {
+      color: var(--muted);
+    }
+
+    .log-msg.info {
+      color: #80cbc4;
+    }
+
+    .log-msg.error {
+      color: var(--error);
+    }
+
+    .log-msg.event {
+      color: var(--success);
+    }
+
+    .log-msg.send {
+      color: var(--warn);
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 16px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+    }
   </style>
 </head>
+
 <body>
-<h1>🔭 Sightline SFU — Test Client</h1>
+  <div class="app">
 
-<div>
-  <button id="btnConnect">Connecter</button>
-  <button id="btnJoin" disabled>Rejoindre room</button>
-  <button id="btnCamera" disabled>Activer caméra</button>
-  <button id="btnCall" disabled>Appeler SFU</button>
-  <button id="btnDisconnect" disabled>Déconnecter</button>
-</div>
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🔭</div>
+        Sightline
+      </div>
+      <div class="status-pill">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">disconnected</span>
+      </div>
+    </header>
 
-<div class="videos">
-  <div>
-    <div class="video-label">📷 Local</div>
-    <video id="localVideo" autoplay muted playsinline></video>
+    <main>
+      <div class="video-section">
+        <div class="controls">
+          <button class="btn primary" id="btnConnect">Connect</button>
+          <button class="btn" id="btnJoin" disabled>Join Room</button>
+          <button class="btn" id="btnCamera" disabled>Enable Camera</button>
+          <button class="btn" id="btnCall" disabled>Call SFU</button>
+          <button class="btn danger" id="btnDisconnect" disabled>Disconnect</button>
+        </div>
+
+        <div class="video-grid" id="videoGrid">
+          <div class="video-card" id="localCard">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="label">local</div>
+            <div class="indicator" id="localIndicator"></div>
+            <div class="video-placeholder" id="localPlaceholder">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path
+                  d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.361a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+              </svg>
+              camera off
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="panel">
+          <div class="panel-header">Metrics</div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric-value" id="metricRooms">0</div>
+              <div class="metric-label">Rooms</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="metricPeers">0</div>
+              <div class="metric-label">Peers</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="metricPackets">0</div>
+              <div class="metric-label">RTP Pkts</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="metricBytes">0</div>
+              <div class="metric-label">MB fwd</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="flex:1">
+          <div class="panel-header">
+            <span>Event Log</span>
+            <span class="count" id="logCount">0</span>
+          </div>
+          <div class="log-container" id="log"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div>peer_id: <span id="footerPeerId" style="color:var(--accent)">—</span></div>
+      <div>room: <span id="footerRoom" style="color:var(--accent2)">—</span></div>
+    </footer>
+
   </div>
-  <div id="remoteVideos"></div>
-</div>
 
-<div class="log" id="log"></div>
+  <script>
+    const WS_URL = `wss://${window.location.host}/ws`;
+    const ROOM_ID = "test-room";
 
-<script>
-  const WS_URL = `wss://${window.location.host}/ws`;
-  const ROOM_ID = "test-room";
+    let ws, pc, localStream, peerId;
+    let logCount = 0;
 
-  let ws, pc, localStream, peerId;
+    // ── Metrics polling ──────────────────────────────────
+    setInterval(async () => {
+      try {
+        const r = await fetch('/metrics');
+        const data = await r.json();
+        document.getElementById('metricRooms').textContent = data.rooms ?? 0;
+        document.getElementById('metricPeers').textContent = data.peers ?? 0;
+        document.getElementById('metricPackets').textContent =
+          (data.metrics?.rtp_packets_forwarded ?? 0).toLocaleString();
+        document.getElementById('metricBytes').textContent =
+          ((data.metrics?.bytes_forwarded ?? 0) / 1_000_000).toFixed(1);
+      } catch { }
+    }, 1000);
 
-  const log = (msg, type = "info") => {
-    const el = document.getElementById("log");
-    const line = document.createElement("div");
-    line.className = type;
-    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    el.appendChild(line);
-    el.scrollTop = el.scrollHeight;
-  };
-
-  const send = (obj) => {
-    const json = JSON.stringify(obj);
-    log(`→ ${obj.type}`, "send");
-    ws.send(json);
-  };
-
-  document.getElementById("btnConnect").onclick = () => {
-    log("Connexion WebSocket...");
-    ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => log("WebSocket connecté ✅", "event");
-
-    ws.onmessage = async (e) => {
-      const msg = JSON.parse(e.data);
-      log(`← ${msg.type}`, "info");
-      await handleMessage(msg);
+    // ── Log ──────────────────────────────────────────────
+    const log = (msg, type = "info") => {
+      const el = document.getElementById("log");
+      const entry = document.createElement("div");
+      entry.className = "log-entry";
+      const now = new Date();
+      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
+      el.appendChild(entry);
+      el.scrollTop = el.scrollHeight;
+      logCount++;
+      document.getElementById('logCount').textContent = logCount;
     };
 
-    ws.onclose = () => {
-      log("WebSocket fermé", "error");
-      document.getElementById("btnConnect").disabled = false;
-      document.getElementById("btnDisconnect").disabled = true;
+    const setStatus = (s) => {
+      document.getElementById('statusDot').className = `status-dot ${s}`;
+      document.getElementById('statusText').textContent = s;
     };
 
-    ws.onerror = () => log("Erreur WebSocket", "error");
+    const send = (obj) => {
+      log(`→ ${obj.type}`, "send");
+      ws.send(JSON.stringify(obj));
+    };
 
-    document.getElementById("btnConnect").disabled = true;
-    document.getElementById("btnDisconnect").disabled = false;
-  };
+    // ── Connect ──────────────────────────────────────────
+    document.getElementById("btnConnect").onclick = () => {
+      log("Connecting...");
+      setStatus("connecting");
+      ws = new WebSocket(WS_URL);
 
-  document.getElementById("btnJoin").onclick = () => {
-    send({ type: "join", room_id: ROOM_ID, peer_id: peerId });
-  };
+      ws.onopen = () => { log("WebSocket connected", "event"); setStatus("connected"); };
 
-  document.getElementById("btnCamera").onclick = async () => {
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      document.getElementById("localVideo").srcObject = localStream;
-      log("Caméra activée ✅", "event");
-      document.getElementById("btnCall").disabled = false;
-    } catch (e) {
-      log(`Erreur caméra : ${e}`, "error");
-    }
-  };
+      ws.onmessage = async (e) => {
+        const msg = JSON.parse(e.data);
+        log(`← ${msg.type}`, "info");
+        await handleMessage(msg);
+      };
 
-  document.getElementById("btnCall").onclick = async () => {
-    await startCall();
-  };
+      ws.onclose = () => {
+        log("WebSocket closed", "error");
+        setStatus("disconnected");
+        ['btnConnect', 'btnJoin', 'btnCamera', 'btnCall'].forEach((id, i) => {
+          document.getElementById(id).disabled = i !== 0;
+        });
+        document.getElementById('btnDisconnect').disabled = true;
+      };
 
-  document.getElementById("btnDisconnect").onclick = () => {
-    ws?.close();
-    pc?.close();
-  };
+      ws.onerror = () => log("WebSocket error", "error");
+      document.getElementById("btnConnect").disabled = true;
+      document.getElementById("btnDisconnect").disabled = false;
+    };
 
-  async function handleMessage(msg) {
-    switch (msg.type) {
-      case "connected":
-        peerId = msg.peer_id;
-        log(`peer_id : ${peerId.slice(0, 8)}...`, "event");
-        document.getElementById("btnJoin").disabled = false;
-        document.getElementById("btnCamera").disabled = false;
-        break;
+    document.getElementById("btnJoin").onclick = () => {
+      send({ type: "join", room_id: ROOM_ID, peer_id: peerId });
+      document.getElementById('footerRoom').textContent = ROOM_ID;
+    };
 
-      case "joined_room":
-        log(`Room rejointe — ${msg.peers.length} peers présents`, "event");
-        break;
-
-      case "peer_joined":
-        log(`Nouveau peer : ${msg.peer_id.slice(0, 8)}...`, "event");
-        break;
-
-      case "peer_left":
-        log(`Peer parti : ${msg.peer_id.slice(0, 8)}...`, "event");
-        break;
-
-      case "sfu_answer":
-        log("SFU answer reçue ✅", "event");
-        await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
-        break;
-
-      case "sfu_ice_candidate":
-        if (pc && msg.candidate) {
-          await pc.addIceCandidate({ candidate: msg.candidate, sdpMid: "0" });
-        }
-        break;
-
-      case "error":
-        log(`Erreur : ${msg.message}`, "error");
-        break;
-    }
-  }
-
-  async function startCall() {
-    log("Création RTCPeerConnection...");
-
-    pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-
-    if (localStream) {
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-    }
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        send({ type: "sfu_ice_candidate", candidate: e.candidate.candidate });
+    document.getElementById("btnCamera").onclick = async () => {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById("localVideo").srcObject = localStream;
+        document.getElementById('localPlaceholder').style.display = 'none';
+        document.getElementById('localIndicator').classList.add('live');
+        log("Camera enabled", "event");
+        document.getElementById("btnCall").disabled = false;
+      } catch (e) {
+        log(`Camera error: ${e.message}`, "error");
       }
     };
 
-    pc.oniceconnectionstatechange = () => {
-      log(`ICE : ${pc.iceConnectionState}`, "event");
-    };
+    document.getElementById("btnCall").onclick = () => startCall();
+    document.getElementById("btnDisconnect").onclick = () => { ws?.close(); pc?.close(); };
 
-    pc.onconnectionstatechange = () => {
-      log(`Connection : ${pc.connectionState}`, "event");
-    };
-
-    pc.ontrack = (e) => {
-      log(`Track distant reçu : ${e.track.kind}`, "event");
-      addRemoteTrack(e.streams[0], e.track);
-    };
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    send({ type: "sfu_offer", sdp: offer.sdp });
-  }
-
-  function addRemoteTrack(stream, track) {
-    const container = document.getElementById("remoteVideos");
-    let video = document.getElementById(`remote-${stream.id}`);
-    if (!video) {
-      const wrapper = document.createElement("div");
-      video = document.createElement("video");
-      video.id = `remote-${stream.id}`;
-      video.autoplay = true;
-      video.playsinline = true;
-      const label = document.createElement("div");
-      label.className = "video-label";
-      label.textContent = `📺 Remote (${track.kind})`;
-      wrapper.appendChild(label);
-      wrapper.appendChild(video);
-      container.appendChild(wrapper);
+    // ── Messages ─────────────────────────────────────────
+    async function handleMessage(msg) {
+      switch (msg.type) {
+        case "connected":
+          peerId = msg.peer_id;
+          document.getElementById('footerPeerId').textContent = peerId.slice(0, 8) + '...';
+          document.getElementById("btnJoin").disabled = false;
+          document.getElementById("btnCamera").disabled = false;
+          break;
+        case "joined_room":
+          log(`Joined room — ${msg.peers.length} peers`, "event");
+          break;
+        case "peer_joined":
+          log(`Peer joined: ${msg.peer_id.slice(0, 8)}...`, "event");
+          break;
+        case "peer_left":
+          log(`Peer left: ${msg.peer_id.slice(0, 8)}...`, "event");
+          break;
+        case "sfu_answer":
+          await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
+          log("Remote description set ✅", "event");
+          break;
+        case "sfu_ice_candidate":
+          if (pc && msg.candidate) {
+            try { await pc.addIceCandidate({ candidate: msg.candidate, sdpMid: "0" }); } catch { }
+          }
+          break;
+        case "error":
+          log(`Error: ${msg.message}`, "error");
+          break;
+      }
     }
-    if (!video.srcObject) video.srcObject = new MediaStream();
-    video.srcObject.addTrack(track);
-  }
-</script>
+
+    // ── Start Call ───────────────────────────────────────
+    async function startCall() {
+      log("Creating RTCPeerConnection...");
+
+      if (pc) { pc.close(); pc = null; }
+
+      pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          pc.addTransceiver(track, { direction: 'sendrecv', streams: [localStream] });
+          log(`Track added: ${track.kind}`);
+        });
+      } else {
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+        pc.addTransceiver('video', { direction: 'recvonly' });
+      }
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate) send({ type: "sfu_ice_candidate", candidate: e.candidate.candidate });
+      };
+
+      pc.oniceconnectionstatechange = () => log(`ICE: ${pc.iceConnectionState}`, "event");
+      pc.onconnectionstatechange = () => {
+        log(`Connection: ${pc.connectionState}`, "event");
+        if (pc.connectionState === 'connected') {
+          // force le navigateur à demander une keyframe
+          setTimeout(() => {
+            pc.getReceivers().forEach(receiver => {
+              if (receiver.track.kind === 'video') {
+                receiver.playoutDelayHint = 0;
+              }
+            });
+          }, 500);
+        }
+      };
+
+      pc.ontrack = (e) => {
+        log(`Remote track: ${e.track.kind} ✅`, "event");
+        addTrackToRemote(e.track);
+      };
+
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        log("Offer created — sending to SFU");
+        send({ type: "sfu_offer", sdp: offer.sdp });
+      } catch (e) {
+        log(`Offer error: ${e.message}`, "error");
+      }
+    }
+
+    // ── Remote Video ─────────────────────────────────────
+    function addTrackToRemote(track) {
+      const grid = document.getElementById('videoGrid');
+      let card = document.getElementById('card-remote');
+
+      if (!card) {
+        card = document.createElement('div');
+        card.className = 'video-card';
+        card.id = 'card-remote';
+
+        const video = document.createElement('video');
+        video.id = 'remoteVideo';
+        video.autoplay = true;
+        video.playsinline = true;
+        video.srcObject = new MediaStream();
+
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = 'remote';
+
+        const indicator = document.createElement('div');
+        indicator.className = 'indicator live';
+
+        card.appendChild(video);
+        card.appendChild(label);
+        card.appendChild(indicator);
+        grid.appendChild(card);
+      }
+
+      const video = document.getElementById('remoteVideo');
+      video.srcObject.addTrack(track);
+      log(`Track ${track.kind} added to remote ✅`, "event");
+    }
+  </script>
 </body>
+
 </html>
