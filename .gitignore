@@ -18,3 +18,7 @@ Thumbs.db
 
 # Private — jamais pushé
 apps/cloud/
+
+# Turborepo
+.turbo/
+.rtk/

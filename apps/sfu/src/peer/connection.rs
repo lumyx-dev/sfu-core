@@ -84,32 +84,54 @@ impl PeerConnection {
             MediaKind::Audio
         };
 
-        let ssrc = self
+        let mid = self
             .tx_streams
-            .values()
-            .find(|(k, _)| *k == kind)
-            .map(|(_, ssrc)| *ssrc);
+            .iter()
+            .find(|(_, (k, _))| *k == kind)
+            .map(|(mid_str, _)| str0m::media::Mid::from(mid_str.as_str()));
 
-        let ssrc = match ssrc {
-            Some(s) => s,
+        let mid = match mid {
+            Some(m) => m,
             None => return Ok(()),
         };
 
         let pt = Pt::new_with_value(packet.payload_type);
-        let seq_no = SeqNo::from(packet.sequence_number as u64);
+        let seq_no = str0m::rtp::SeqNo::from(packet.sequence_number as u64);
 
         let rtp_write = RtpWrite::new(
             pt,
             seq_no,
             packet.timestamp,
-            Instant::now(),
+            std::time::Instant::now(),
             packet.payload.as_slice(),
-        );
+        )
+        .nackable(true);
 
         let mut api = self.rtc.direct_api();
-        if let Some(stream) = api.stream_tx(&ssrc) {
+        if let Some(stream) = api.stream_tx_by_mid(mid, None) {
             stream.write_rtp(rtp_write);
+            tracing::debug!(
+                "Peer {} — RTP forwardé mid={:?} pt={} seq={} {} bytes",
+                self.peer_id,
+                mid,
+                packet.payload_type,
+                packet.sequence_number,
+                packet.payload.len()
+            );
+        } else {
+            tracing::warn!(
+                "Peer {} — stream_tx_by_mid non trouvé pour mid={:?}",
+                self.peer_id,
+                mid
+            );
         }
+
+        tracing::info!(
+            "write_rtp — peer={} is_video={} tx_streams={:?}",
+            self.peer_id,
+            is_video,
+            self.tx_streams.keys().collect::<Vec<_>>()
+        );
 
         Ok(())
     }
@@ -205,21 +227,17 @@ impl PeerConnection {
             }
             Event::MediaAdded(media) => {
                 tracing::info!(
-                    "✅ Peer {} media ajouté : {:?} mid={:?}",
+                    "✅ Peer {} media ajouté : {:?} mid={:?} direction={:?}",
                     conn.peer_id,
                     media.kind,
-                    media.mid
+                    media.mid,
+                    media.direction
                 );
 
-                let ssrc = conn.rtc.direct_api().new_ssrc();
-                conn.rtc
-                    .direct_api()
-                    .declare_stream_tx(ssrc, None, media.mid, None);
-
-                conn.tx_streams
-                    .insert(media.mid.to_string(), (media.kind, ssrc));
-
-                tracing::info!("Peer {} — StreamTx déclaré SSRC={:?}", conn.peer_id, ssrc);
+                conn.tx_streams.insert(
+                    media.mid.to_string(),
+                    (media.kind, str0m::rtp::Ssrc::from(0u32)),
+                );
             }
             Event::RtpPacket(rtp) => {
                 let packet = RtpPacketData {
@@ -229,6 +247,7 @@ impl PeerConnection {
                     ssrc: *rtp.header.ssrc,
                     payload: rtp.payload.to_vec(),
                     is_keyframe: false,
+                    mid: rtp.header.ext_vals.mid.map(|m| *m as u8).unwrap_or(0),
                 };
                 let _ = rtp_tx.send((conn.peer_id.clone(), packet));
             }
