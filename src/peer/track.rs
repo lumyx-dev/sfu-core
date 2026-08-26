@@ -12,6 +12,9 @@ pub struct RtpPacketData {
     pub payload: Vec<u8>,
     pub is_keyframe: bool,
     pub mid: String,
+    pub network_time: std::time::Instant,
+    pub rtp_time: u64,
+    pub is_video: bool,
 }
 
 /// UpTrack — reçoit les paquets RTP d'un publisher
@@ -109,6 +112,9 @@ impl DownTrack {
             payload: packet.payload.clone(),
             is_keyframe: packet.is_keyframe,
             mid: packet.mid.clone(),
+            network_time: packet.network_time,
+            is_video: packet.is_video,
+            rtp_time: packet.rtp_time,
         };
 
         let _ = self.sender.send(rewritten);

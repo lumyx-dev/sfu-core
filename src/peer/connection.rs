@@ -25,6 +25,7 @@ pub struct PeerConnection {
     pub tx_streams: HashMap<String, (MediaKind, Ssrc)>,
     pub ssrc_to_mid: HashMap<u32, String>,
     pub rx_ssrcs: Vec<Ssrc>,
+    pub mid_kind: HashMap<String, str0m::media::MediaKind>,
 }
 
 impl PeerConnection {
@@ -49,6 +50,7 @@ impl PeerConnection {
             tx_streams: HashMap::new(),
             ssrc_to_mid: HashMap::new(),
             rx_ssrcs: Vec::new(),
+            mid_kind: HashMap::new(),
         }
     }
 
@@ -93,17 +95,23 @@ impl PeerConnection {
             let pt = writer.payload_params().next().map(|p| p.pt());
 
             if let Some(pt) = pt {
-                let _ = writer.write(
-                    pt,
-                    std::time::Instant::now(),
-                    str0m::media::MediaTime::from_secs(packet.timestamp as u64),
-                    packet.payload.as_slice(),
-                );
+                let rtp_time = if packet.is_video {
+                    str0m::media::MediaTime::from_90khz(packet.rtp_time)
+                } else {
+                    str0m::media::MediaTime::new(
+                        packet.rtp_time,
+                        str0m::media::Frequency::FORTY_EIGHT_KHZ,
+                    )
+                };
+
+                let _ = writer.write(pt, packet.network_time, rtp_time, packet.payload.as_slice());
+
                 tracing::debug!(
-                    "Peer {} — write_rtp mid={:?} pt={:?} {} bytes",
+                    "Peer {} — write_rtp mid={:?} pt={:?} is_video={} {} bytes",
                     self.peer_id,
                     mid,
                     pt,
+                    packet.is_video,
                     packet.payload.len()
                 );
             } else {
@@ -222,20 +230,32 @@ impl PeerConnection {
             }
             Event::MediaAdded(media) => {
                 tracing::info!(
-                    "✅ Peer {} media ajouté : {:?} mid={:?} direction={:?}",
+                    "✅ Peer {} media ajouté : {:?} mid={:?}",
                     conn.peer_id,
                     media.kind,
-                    media.mid,
-                    media.direction
+                    media.mid
                 );
-
                 conn.tx_streams.insert(
                     media.mid.to_string(),
                     (media.kind, str0m::rtp::Ssrc::from(0u32)),
                 );
+                conn.mid_kind.insert(media.mid.to_string(), media.kind);
             }
             Event::MediaData(data) => {
                 let mid_str = data.mid.to_string();
+                let is_video = conn
+                    .mid_kind
+                    .get(&mid_str)
+                    .map(|k| *k == str0m::media::MediaKind::Video)
+                    .unwrap_or(false);
+
+                let freq = if is_video {
+                    str0m::media::Frequency::NINETY_KHZ
+                } else {
+                    str0m::media::Frequency::FORTY_EIGHT_KHZ
+                };
+
+                let rtp_time = data.time.rebase(freq).numer();
                 let packet = RtpPacketData {
                     payload_type: *data.pt,
                     sequence_number: 0,
@@ -244,6 +264,9 @@ impl PeerConnection {
                     payload: data.data.to_vec(),
                     is_keyframe: data.contiguous,
                     mid: mid_str,
+                    network_time: data.network_time,
+                    rtp_time,
+                    is_video,
                 };
                 let _ = rtp_tx.send((conn.peer_id.clone(), packet));
             }
