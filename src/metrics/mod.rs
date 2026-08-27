@@ -52,3 +52,51 @@ pub struct MetricsSnapshot {
     pub peers_connected: u64,
     pub peers_disconnected: u64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn counters_start_at_zero() {
+        let snap = Metrics::new().snapshot();
+        assert_eq!(snap.rtp_packets_forwarded, 0);
+        assert_eq!(snap.bytes_forwarded, 0);
+        assert_eq!(snap.keyframe_requests, 0);
+        assert_eq!(snap.peers_connected, 0);
+        assert_eq!(snap.peers_disconnected, 0);
+    }
+
+    #[test]
+    fn rtp_accumulates_packets_and_bytes() {
+        let m = Metrics::new();
+        m.record_rtp(100);
+        m.record_rtp(250);
+
+        let snap = m.snapshot();
+        assert_eq!(snap.rtp_packets_forwarded, 2);
+        assert_eq!(snap.bytes_forwarded, 350);
+    }
+
+    #[test]
+    fn connect_and_disconnect_are_tracked_separately() {
+        let m = Metrics::new();
+        m.record_connect();
+        m.record_connect();
+        m.record_disconnect();
+        m.record_keyframe();
+
+        let snap = m.snapshot();
+        assert_eq!(snap.peers_connected, 2);
+        assert_eq!(snap.peers_disconnected, 1);
+        assert_eq!(snap.keyframe_requests, 1);
+    }
+
+    #[test]
+    fn snapshot_does_not_reset_the_counters() {
+        let m = Metrics::new();
+        m.record_connect();
+        m.snapshot();
+        assert_eq!(m.snapshot().peers_connected, 1);
+    }
+}
