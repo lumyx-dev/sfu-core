@@ -1,15 +1,12 @@
-# ui
+# `@sightline/ui`
 
-To install dependencies:
+Shared React components and design primitives.
 
-```bash
-bun install
+> **Scaffold.** This package is empty — it exists to reserve the boundary. Nothing imports it
+> yet.
+
+Part of the [Sightline](../../README.md) monorepo. Add it to a consuming app with:
+
+```json
+"dependencies": { "@sightline/ui": "workspace:*" }
 ```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.3.11. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.

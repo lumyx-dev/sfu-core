@@ -91,8 +91,11 @@ impl ForwardingEngine {
                     });
                 }
             }
-
-            up_track.forward(&packet);
         }
+
+        // Un seul fan-out : `forward` itère déjà sur tous les DownTracks de l'UpTrack.
+        // L'appeler dans la boucle ci-dessus enverrait N copies du paquet à chaque
+        // subscriber (invisible à 2 peers, destructeur à partir de 3).
+        up_track.forward(&packet);
     }
 }
