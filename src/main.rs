@@ -57,9 +57,17 @@ async fn main() {
     let cert_path = format!("{}/localhost+1.pem", manifest_dir);
     let key_path = format!("{}/localhost+1-key.pem", manifest_dir);
 
-    let config = RustlsConfig::from_pem_file(cert_path, key_path)
+    let config = RustlsConfig::from_pem_file(&cert_path, &key_path)
         .await
-        .unwrap();
+        .unwrap_or_else(|e| {
+            eprintln!("❌ Certificat TLS introuvable ou illisible : {e}");
+            eprintln!("   attendu : {cert_path}");
+            eprintln!("            {key_path}");
+            eprintln!();
+            eprintln!("   Les certificats ne sont pas versionnés — génère-les une fois :");
+            eprintln!("     mkcert -install && cd apps/sfu && mkcert localhost 127.0.0.1");
+            std::process::exit(1);
+        });
 
     let addr: SocketAddr = "0.0.0.0:3000".parse().unwrap();
     tracing::info!("✅ Serveur HTTPS sur https://localhost:3000");
