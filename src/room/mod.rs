@@ -1,2 +1,7 @@
+//! Rooms et appartenance des peers.
+
 pub mod manager;
-pub use manager::{RoomManager, RoomPeer};
+pub mod peer;
+
+pub use manager::{Room, RoomManager};
+pub use peer::RoomPeer;
