@@ -37,10 +37,12 @@ same codebase. Every packet that crosses the SFU is a data point you can query.
 Three reasons to look at it:
 
 - **Rust, sans-IO.** Media handling sits on [str0m](https://github.com/algesten/str0m) — no
-  callbacks, no C++ dependency, no GC pause in the middle of a video frame. The whole SFU is
-  ~1k lines of readable Rust you can hold in your head.
+  callbacks, no C++ dependency, no GC pause in the middle of a video frame.
 - **Observability is a first-class feature**, not a `/metrics` afterthought.
-- **Small enough to hack on.** One crate, four modules, no plugin system to fight.
+- **The RTP router is unit-testable.** The media layer talks to a `RtpSink` trait, never to the
+  transport — so packet routing is tested with an in-memory sink: no socket, no DTLS handshake,
+  no async runtime. 68 tests run in 0.03s. That is rare in SFU codebases, and it is why this one
+  is safe to change.
 
 ---
 
@@ -53,14 +55,21 @@ Be honest with your infra decisions — here is what actually runs today.
 | ICE / DTLS / SRTP handshake | ✅ Works | via str0m, one `Rtc` + UDP socket per peer |
 | WebSocket signaling | ✅ Works | JSON protocol, documented below |
 | Room management | ✅ Works | concurrent (`DashMap`), auto-GC of empty rooms |
-| RTP forwarding (audio + video) | ✅ Works | per-subscriber SSRC / seq / timestamp rewrite |
-| Keyframe requests (PLI) | ✅ Works | sent to the publisher when a subscriber attaches |
-| Counter metrics endpoint | ✅ Works | packets, bytes, peers, keyframes |
-| Public / NAT deployment | ⚠️ Not yet | ICE advertises a `127.0.0.1` host candidate only |
-| Simulcast, SVC, bandwidth estimation | ❌ Planned | |
+| RTP forwarding (audio + video) | ✅ Works | scoped per room; ~3 µs/packet at 50 peers |
+| Test coverage | ✅ 68 tests | routing tested without a network, plus a bench on the hot path |
+| Counter metrics endpoint | ⚠️ Partial | `rooms`, `peers`, connects and disconnects are live; the packet, byte and keyframe counters are defined but never incremented |
+| Keyframe requests (PLI) | ⚠️ No-op | the PLI escalator runs, but `rx_ssrcs` is no longer populated since the move to `Event::MediaData`, so nothing is sent |
+| SSRC / seq / timestamp rewrite | ⚠️ Inert | computed by `DownTrack`, then discarded — str0m's `Writer::write()` regenerates the RTP header. Kept because it is needed again in `rtp_mode` |
+| Public / NAT deployment | ⚠️ Not yet | `SFU_ICE_HOST` sets the advertised host, but there is no STUN client and no srflx discovery |
+| Simulcast, SVC, bandwidth estimation | ❌ Planned | every subscriber gets the publisher's single encoding at full rate |
 | Quality metrics (jitter, loss, RTT, NACK) | ❌ Planned | the whole point of the project — next milestone |
 | Real-time dashboard | ❌ Scaffold | `apps/dashboard` is a bare Next.js app |
 | Session replay, alerting | ❌ Planned | |
+
+The ⚠️ rows are worth reading before you benchmark anything: three of the five `/metrics`
+counters are wired to nothing, and video recovery after a subscriber joins currently depends on
+the encoder emitting an IDR on its own. Both are tracked in
+[`apps/sfu/CONTEXT.md`](apps/sfu/CONTEXT.md).
 
 ---
 
@@ -100,7 +109,7 @@ through the SFU.
 
 | Route | What it does |
 |---|---|
-| `GET /` | Built-in test client (`apps/sfu/test.html`) |
+| `GET /` | Built-in test client (`apps/sfu/assets/test.html`), mounted only when `SFU_SERVE_TEST_CLIENT` is on |
 | `GET /ws` | WebSocket signaling — one connection per peer |
 | `GET /health` | `{ "status": "ok", "version": "0.1.0" }` |
 | `GET /metrics` | JSON counters (see below) |
@@ -114,13 +123,36 @@ curl -k https://localhost:3000/metrics
   "rooms": 1,
   "peers": 3,
   "metrics": {
-    "rtp_packets_forwarded": 128492,
-    "bytes_forwarded": 92048310,
-    "keyframe_requests": 12,
+    "rtp_packets_forwarded": 0,
+    "bytes_forwarded": 0,
+    "keyframe_requests": 0,
     "peers_connected": 5,
     "peers_disconnected": 2
   }
 }
+```
+
+Those three zeros are not a quiet call. `rooms`, `peers`, `peers_connected` and
+`peers_disconnected` are live; `record_rtp` and `record_keyframe` exist but are never called from
+the media path, so their counters stay at zero however much traffic you push. Wiring them up is
+the first half of the metrics milestone.
+
+### Configuration
+
+Everything is set by environment variable, and every default reproduces the previously
+hardcoded behaviour.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `SFU_BIND_ADDR` | `0.0.0.0:3000` | HTTPS listen address |
+| `SFU_CERT_PATH` | `apps/sfu/localhost+1.pem` | TLS certificate (PEM) |
+| `SFU_KEY_PATH` | `apps/sfu/localhost+1-key.pem` | TLS private key (PEM) |
+| `SFU_ICE_HOST` | `127.0.0.1` | Host advertised in local ICE candidates |
+| `SFU_LOG` | `debug` | `tracing-subscriber` filter |
+| `SFU_SERVE_TEST_CLIENT` | `true` | Serve the bundled test client on `/` — turn it off in production |
+
+```bash
+SFU_LOG=sfu=debug,str0m=info SFU_SERVE_TEST_CLIENT=false cargo run -p sfu --release
 ```
 
 ---
@@ -169,29 +201,55 @@ client                                  server
 
 ## Architecture
 
+Three stacked layers, plus shared state. Each one only knows about the one below it.
+
+```
+signaling/    WebSocket JSON protocol, session lifecycle
+    ↓
+media/        RTP routing — knows only the RtpSink trait
+    ↓
+transport/    WebRTC + UDP (str0m) — one connection per peer
+```
+
 ```
 apps/sfu/src/
-├─ main.rs          Axum HTTPS server · WebSocket loop · app state
-├─ signaling/       ClientMessage / ServerMessage — the JSON protocol
-├─ room/            RoomManager: DashMap<room_id, Room>, peer→room index
-├─ peer/
-│  ├─ connection.rs  One str0m Rtc + one UDP socket per peer.
-│  │                 Owns the poll_output / handle_input loop, emits RTP upward.
-│  ├─ engine.rs      ForwardingEngine: routes a publisher's RTP to every other peer.
-│  └─ track.rs       UpTrack (published stream) · DownTrack (per-subscriber rewrite)
-└─ metrics/         Lock-free atomic counters + JSON snapshot
+├─ main.rs        Bootstrap, ~30 lines
+├─ lib.rs         Crate root — this is what makes integration tests possible
+├─ config.rs      Config, overridable via SFU_*
+├─ app.rs         AppState + build_router
+├─ http/          Service routes, WebSocket upgrade
+├─ signaling/     messages (protocol) · session (lifecycle) · dispatch
+├─ media/         engine (forwarding) · up_track / down_track · sink (trait) · packet
+├─ transport/     peer_connection (str0m) · event_loop · sink (PeerSink)
+├─ room/          Room · RoomManager · RoomPeer
+└─ metrics/       Lock-free atomic counters
 ```
 
-Each module is documented in depth in [`apps/sfu/README.md`](apps/sfu/README.md) — the str0m
-loop, the RTP rewrite layer, current configuration and known limitations.
+**The media ↔ transport boundary is the design decision worth stealing.** `media/` never depends
+on `transport/`. The forwarding engine only ever holds `Arc<dyn RtpSink>`:
 
-The interesting part is `track.rs`. A subscriber must never see the publisher's raw RTP
-identifiers — so every `DownTrack` owns a randomized SSRC, its own monotonic sequence number and
-a timestamp offset. One publisher, *N* independent RTP streams out, and a subscriber dropping
-mid-call can't corrupt anyone else's sequence space.
+```rust
+pub trait RtpSink: Send + Sync {
+    fn write_rtp(&self, packet: RtpPacketData);
+    fn request_keyframe(&self);
+}
+```
 
-When a new subscriber attaches, `ForwardingEngine` schedules PLIs to the publisher at 200 ms,
-500 ms, 1 s and 2 s — so the new peer gets a decodable keyframe instead of a grey rectangle.
+In production that's `transport::PeerSink`. In tests it's an in-memory sink — which is how RTP
+routing gets tested with no socket, no DTLS handshake and no async runtime at all.
+
+Two more properties that matter under load:
+
+- **Forwarding is scoped per room.** The engine indexes sinks as `room_id → (peer_id → sink)`, so
+  fan-out walks one room's members rather than the whole server. It used to broadcast to every
+  connected peer — two simultaneous meetings could see each other.
+- **Media queues drop, they don't accumulate.** Both hot-path queues are bounded at 128 packets
+  and use `try_send`. Full means the packet is dropped, deliberately: a 300 ms-old video packet
+  has no value, and buffering it costs memory and latency without ever catching up. Drops are
+  counted and logged once per burst, never once per packet.
+
+The full architecture write-up, including the known-issues list, lives in
+[`apps/sfu/CONTEXT.md`](apps/sfu/CONTEXT.md).
 
 ### Monorepo layout
 
@@ -218,8 +276,12 @@ flowing through the SFU into per-peer jitter, packet loss and RTT, exposed on `/
 pushed live over WebSocket.
 
 - [x] SFU core: ICE / DTLS / SRTP, RTP forwarding, rooms
+- [x] Layered architecture with a testable media boundary — 68 tests, bench on the hot path
+- [x] Room-scoped forwarding, bounded media queues, configuration via `SFU_*`
+- [ ] Wire the existing counters to the media path (`record_rtp`, `record_keyframe`, drops)
+- [ ] Restore working keyframe requests — `rx_ssrcs` is no longer populated
 - [ ] Per-peer quality metrics (jitter · loss · RTT · NACK ratio)
-- [ ] ICE candidates for real deployments (STUN, host/srflx, `EXTERNAL_IP`)
+- [ ] ICE for real deployments (STUN client, srflx candidates)
 - [ ] Prometheus exporter + live WebSocket metrics stream
 - [ ] Real-time dashboard
 - [ ] Simulcast + bandwidth estimation
@@ -232,15 +294,15 @@ pushed live over WebSocket.
 ## Contributing
 
 Sightline is early — which is the best moment to shape it. Bug reports, protocol nitpicks and
-"your SSRC rewrite is wrong because…" issues are all genuinely welcome.
+"your fan-out is wrong because…" issues are all genuinely welcome.
 
 ```bash
-cargo build && cargo clippy && cargo test
+cargo test && cargo clippy --all-targets
 ```
 
-Good first areas: RTCP parsing for the quality-metrics milestone, replacing the hardcoded
-`127.0.0.1` ICE candidate with proper host/srflx discovery, or handling SDP renegotiation when a
-peer joins an in-progress room.
+Good first areas: wiring the metrics counters to the media path, restoring working keyframe
+requests, RTCP parsing for the quality-metrics milestone, or a STUN client so the SFU can serve
+peers beyond localhost.
 
 **[CONTRIBUTING.md](CONTRIBUTING.md)** covers the dev setup, conventions, and what to know before
 touching the media path — in particular: test with three or more peers, because a lot of SFU
