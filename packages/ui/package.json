@@ -3,9 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
   "exports": {
     ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./tokens/*": "./src/tokens/*"
   },
   "dependencies": {
     "lucide-react": "^0.469.0"

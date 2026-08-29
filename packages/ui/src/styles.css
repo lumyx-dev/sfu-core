@@ -1,12 +1,17 @@
-@import url("./tokens/fonts.css");
-@import url("./tokens/palette.css");
-@import url("./tokens/semantic.css");
-@import url("./tokens/typography.css");
-@import url("./tokens/spacing.css");
-@import url("./tokens/radius.css");
-@import url("./tokens/elevation.css");
-@import url("./tokens/motion.css");
-@import url("./tokens/base.css");
+@import "@sightline/ui/tokens/fonts.css";
+@import "@sightline/ui/tokens/palette.css";
+@import "@sightline/ui/tokens/semantic.css";
+@import "@sightline/ui/tokens/typography.css";
+@import "@sightline/ui/tokens/spacing.css";
+@import "@sightline/ui/tokens/radius.css";
+@import "@sightline/ui/tokens/elevation.css";
+@import "@sightline/ui/tokens/motion.css";
+@import "@sightline/ui/tokens/base.css";
+
+/* typography.css redeclares --font-sans on :root; next/font must win. */
+:root {
+  --font-sans: var(--font-geist), 'Geist Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
 
 /* Pont Tailwind v4 : référence les tokens, ne les redéfinit pas. Si les deux divergent,
    tokens/ gagne. Sert la mise en page au niveau des apps, pas les composants. */
