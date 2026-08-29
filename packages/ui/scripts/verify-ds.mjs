@@ -23,17 +23,23 @@ const files = walk(COMPONENTS);
 const rel = (p) => p.slice(ROOT.length);
 
 // 1. Aucune couleur en dur hors tokens/
-// Le hex doit apparaitre dans un contexte de valeur de couleur — precede de
-// ':', ',', '(' (eventuellement suivi d'espaces et d'un guillemet) — pas
-// n'importe ou sur la ligne. Ca evite les faux positifs sur les fragments
-// d'ancre/route (href="#face", xlink:href="#dead") tout en gardant la
-// detection des vraies couleurs (color: "#ABCDEF", linear-gradient(#fff, #000)).
-const HEX = /[:,(]\s*['"]?#[0-9a-fA-F]{3,8}\b/;
+// Strategie inversee : tout #hex ou rgb()/rgba() est presume etre une
+// couleur en dur, sauf s'il correspond a l'un des motifs de reference
+// connus et enumeres explicitement ci-dessous (pas de couleur du tout —
+// des references d'ancre/SVG). Une liste fermee qu'on etend deliberement
+// si un nouveau cas legitime apparait, plutot qu'une liste ouverte de
+// "contextes de couleur" qui laisse passer les valeurs raccourcies CSS
+// (border: 1px solid #abc123, box-shadow: ... #333, etc — la couleur n'y
+// suit jamais directement ':', ',' ou '(').
+const SAFE_HEX_REF =
+  /(?:\bxlink:href|\bhref)\s*=\s*(?:"#[^"]*"|'#[^']*'|\{\s*['"]#[^'"}]*['"]\s*\})|\burl\(\s*#[^)]*\)/g;
+const HEX = /#[0-9a-fA-F]{3,8}\b/;
 const RGB = /\brgba?\(/;
 for (const f of files) {
   const body = readFileSync(f, 'utf8');
   body.split('\n').forEach((line, i) => {
-    if (HEX.test(line) || RGB.test(line)) {
+    const scrubbed = line.replace(SAFE_HEX_REF, '');
+    if (HEX.test(scrubbed) || RGB.test(scrubbed)) {
       fail('no-hardcoded-color', `${rel(f)}:${i + 1} — ${line.trim()}`);
     }
   });
