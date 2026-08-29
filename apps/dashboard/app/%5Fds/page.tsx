@@ -1,4 +1,4 @@
-import { Probe } from '@sightline/ui';
+import { Icon, ICONS, Probe, type IconName } from '@sightline/ui';
 
 export default function DesignSystemPage() {
   return (
@@ -9,6 +9,17 @@ export default function DesignSystemPage() {
       <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">Probe</span>
         <div><Probe /></div>
+      </section>
+      <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">Icons — 16px, stroke 1.75</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-6)', color: 'var(--text-body)' }}>
+          {(Object.keys(ICONS) as IconName[]).map((name) => (
+            <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--fs-12)', color: 'var(--text-muted)' }}>
+              <Icon name={name} />
+              {name}
+            </span>
+          ))}
+        </div>
       </section>
     </main>
   );
