@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sightline/ui": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:",
     "next": "16.3.2",
