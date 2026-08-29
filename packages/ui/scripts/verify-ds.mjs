@@ -23,7 +23,12 @@ const files = walk(COMPONENTS);
 const rel = (p) => p.slice(ROOT.length);
 
 // 1. Aucune couleur en dur hors tokens/
-const HEX = /#[0-9a-fA-F]{3,8}\b/;
+// Le hex doit apparaitre dans un contexte de valeur de couleur — precede de
+// ':', ',', '(' (eventuellement suivi d'espaces et d'un guillemet) — pas
+// n'importe ou sur la ligne. Ca evite les faux positifs sur les fragments
+// d'ancre/route (href="#face", xlink:href="#dead") tout en gardant la
+// detection des vraies couleurs (color: "#ABCDEF", linear-gradient(#fff, #000)).
+const HEX = /[:,(]\s*['"]?#[0-9a-fA-F]{3,8}\b/;
 const RGB = /\brgba?\(/;
 for (const f of files) {
   const body = readFileSync(f, 'utf8');
@@ -59,13 +64,30 @@ for (const f of files) {
   }
 }
 
-// 5. Les tokens sont identiques au handoff (fonts.css excepté, cf. spec §4)
+// 5. Les tokens sont identiques au handoff (fonts.css excepté du contenu, cf.
+// spec §4 — mais fonts.css doit quand meme EXISTER des deux cotes). Comparaison
+// dans les deux sens : un fichier manquant localement ou un fichier en trop
+// localement doivent tous deux echouer et se nommer.
 let tokensSkipped = false;
 if (DS) {
-  for (const name of readdirSync(TOKENS)) {
-    if (name === 'fonts.css') continue;
+  const dsTokens = join(DS, 'tokens');
+  const localNames = new Set(readdirSync(TOKENS));
+  const dsNames = new Set(existsSync(dsTokens) ? readdirSync(dsTokens) : []);
+  const allNames = new Set([...localNames, ...dsNames]);
+  for (const name of [...allNames].sort()) {
+    const inLocal = localNames.has(name);
+    const inDs = dsNames.has(name);
+    if (!inLocal) {
+      fail('tokens-verbatim', `tokens/${name} existe dans le handoff mais pas dans packages/ui/src/tokens/`);
+      continue;
+    }
+    if (!inDs) {
+      fail('tokens-verbatim', `tokens/${name} existe dans packages/ui/src/tokens/ mais pas dans le handoff`);
+      continue;
+    }
+    if (name === 'fonts.css') continue; // present des deux cotes — contenu excepte
     const mine = readFileSync(join(TOKENS, name), 'utf8');
-    const theirs = readFileSync(join(DS, 'tokens', name), 'utf8');
+    const theirs = readFileSync(join(dsTokens, name), 'utf8');
     if (mine !== theirs) fail('tokens-verbatim', `tokens/${name} diverge du handoff`);
   }
 } else {
