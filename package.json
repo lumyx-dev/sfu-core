@@ -19,7 +19,8 @@
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "verify:ds": "turbo run verify:ds"
   },
   "devDependencies": {
     "turbo": "^2.10.12",

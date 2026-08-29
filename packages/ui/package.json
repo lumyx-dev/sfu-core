@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "verify:ds": "node scripts/verify-ds.mjs"
   },
   "exports": {
     ".": "./src/index.ts",
