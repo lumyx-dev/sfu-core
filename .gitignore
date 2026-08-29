@@ -22,3 +22,6 @@ apps/cloud/
 # Turborepo
 .turbo/
 .rtk/
+
+# Worktrees Claude Code
+.claude/worktrees/
