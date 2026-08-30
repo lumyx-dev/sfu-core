@@ -44,7 +44,7 @@ export function MetricCard({
       <span className="sl-label">{label}</span>
       <span className={cn('sl-num', s.valueRow, status && s[status])}>
         {value}
-        {unit != null && <span className={s.unit}>{unit}</span>}
+        {unit && <span className={s.unit}>{unit}</span>}
       </span>
       {(delta != null || sublabel) && (
         <span className={s.deltaRow}>
