@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 const DURATION = 560;
+const WORD_DURATION = 620;
 const EASE = 'cubic-bezier(0.16,0.84,0.32,1)';
 const FAILSAFE_MS = 6000;
 
@@ -31,7 +32,8 @@ export function MarketingMotion() {
         const span = document.createElement('span');
         span.textContent = word;
         span.style.display = 'inline-block';
-        span.style.animation = `sl-word ${DURATION}ms ${EASE} ${base + i * 45}ms both`;
+        span.style.whiteSpace = 'pre';
+        span.style.animation = `sl-word ${WORD_DURATION}ms ${EASE} ${base + 90 + i * 52}ms both`;
         el.appendChild(span);
         if (i < words.length - 1) el.appendChild(document.createTextNode(' '));
       });
