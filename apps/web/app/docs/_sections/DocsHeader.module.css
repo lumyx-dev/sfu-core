@@ -9,7 +9,7 @@
 }
 
 .nav {
-  /* `display` is the property the 900px override below changes, so base + override stay
+  /* `display` is the property the 1100px override below changes, so base + override stay
      together here; align-items/gap are static and live on the JSX instead. */
   display: flex;
 }
@@ -35,11 +35,14 @@
 }
 
 /* Responsive collapse — this task's own choice; the source is a fixed 1440px mockup with no
-   responsive behaviour at all (task-10-brief.md, "Responsive: this is the hard one"). The nav
-   and the search Input hide together at 900px (see DocsHeader.tsx for why staggering them was
-   a bug), then the version Select at 520px, leaving wordmark + badge + GitHub at 375px.
-   Unverified without a browser. */
-@media (max-width: 900px) {
+   responsive behaviour at all (task-10-brief.md, "Responsive: this is the hard one").
+   Review round 3, finding A: hiding the nav and search together at 900px (round 2's fix) still
+   overflowed above 900px — full header needs roughly 1010-1060px, see DocsHeader.tsx — so both
+   now hide up to 1100px instead, then the version Select at 520px, leaving wordmark + badge +
+   GitHub at 375px. search/version are also no longer flex:none over a hard pixel width
+   (DocsHeader.tsx) as a second line of defense in case this arithmetic is still off. Unverified
+   without a browser. */
+@media (max-width: 1099px) {
   .nav,
   .search {
     display: none;

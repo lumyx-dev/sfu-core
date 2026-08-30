@@ -1,11 +1,12 @@
 // UNVERIFIED — ces six champs et leurs seuils viennent du handoff de design, PAS du dépôt.
 // Le README annonce explicitement « Quality metrics (jitter, loss, RTT, NACK) — ❌ Planned,
-// the whole point of the project — next milestone », et `apps/sfu/src/metrics/mod.rs` ne
-// compte que peers_connected / peers_disconnected plus trois compteurs jamais incrémentés.
-// Aucun de ces six champs n'existe aujourd'hui. Cette page documente donc une API prévue, pas
-// une API livrée : à confirmer contre l'implémentation réelle avant toute mise en ligne
-// publique. Le brief d'origine affirmait l'inverse — l'affirmation venait du handoff et était
-// fausse.
+// the whole point of the project — next milestone ». Le `/metrics` du SFU expose des compteurs
+// réels — rooms, peers, connexions et déconnexions, paquets et octets transférés, demandes de
+// keyframe — mais aucun des six champs ci-dessous (packet_loss_ratio, rtt_ms, jitter_ms,
+// nack_ratio, freeze_ratio, bitrate_kbps) n'existe nulle part dans apps/sfu/src ni dans le
+// README. Cette page documente donc une API prévue, pas une API livrée : à confirmer contre
+// l'implémentation réelle avant toute mise en ligne publique. Le brief d'origine affirmait
+// l'inverse — l'affirmation venait du handoff et était fausse.
 //
 // Cette constante sera partagée avec apps/dashboard (sous-projet B) : la déplacer dans un
 // package commun le jour où le dashboard en a besoin, plutôt que de la dupliquer.

@@ -19,9 +19,13 @@
   grid-template-columns: 264px minmax(0, 1fr) 224px;
 }
 
-/* overflow/min-width live on the JSX as Tailwind utilities — only the 959px override (a
-   different value for the same `overflow` property) stays here. */
+/* `overflow` is the property the 959px override below changes, so base + override stay
+   bundled here together, like the header's gap/padding, `.nav`'s display, `.mainInner`'s
+   max-width/padding and `.rail`'s display — mixing Tailwind's `overflow-auto` with a module
+   override on the same property would make the two systems race on stylesheet injection order
+   (finding B, task-10 review round 3). `min-width` never changes, so it stays on the JSX. */
 .main {
+  overflow: auto;
 }
 
 /* max-width/padding both change at 959px, so base + override stay bundled here; display/flex-

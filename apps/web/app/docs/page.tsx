@@ -31,7 +31,7 @@ export default function DocsPage() {
       <div className={`min-h-0 ${s.columns}`}>
         <DocsNav />
 
-        <main className={`sl-scroll overflow-auto min-w-0 ${s.main}`}>
+        <main className={`sl-scroll min-w-0 ${s.main}`}>
           <div className={`flex flex-col gap-7 ${s.mainInner}`}>
             <nav className={`flex items-center gap-2 flex-wrap min-w-0 ${s.breadcrumb}`} aria-label="Breadcrumb">
               {CRUMBS.map((label, i) => (
