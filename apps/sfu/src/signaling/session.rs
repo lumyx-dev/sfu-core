@@ -120,35 +120,14 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     let departure = state.rooms.leave_room(&peer_id);
 
     if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer_id) {
-        let now = chrono::Utc::now();
-        for track in state.telemetry.forget_peer(peer_uuid) {
-            state.telemetry.record(Entry::TrackEnded { id: track, at: now });
-        }
-        state.telemetry.record(Entry::PeerLeft {
-            id: peer_uuid,
-            at: now,
-            // Axum ne remonte pas le code de fermeture jusqu'ici : la boucle
-            // `while let Some(Ok(msg))` avale `Message::Close(frame)`. Le récupérer
-            // demanderait de restructurer la boucle ; c'est hors périmètre et la
-            // colonne reste nullable pour cette raison.
-            close_code: None,
-        });
+        let _ = state.telemetry.clear_occupancy(peer_uuid);
         if let Some(d) = &departure {
-            state.telemetry.record(Entry::Event(
-                EventRecord::new(EventKind::PeerLeft, now)
-                    .room(d.room_session)
-                    .peer(peer_uuid),
-            ));
-            if d.room_dropped {
-                state.telemetry.record(Entry::RoomClosed {
-                    id: d.room_session,
-                    at: now,
-                    reason: "empty",
-                });
-                state.telemetry.record(Entry::Event(
-                    EventRecord::new(EventKind::RoomEnded, now).room(d.room_session),
-                ));
-            }
+            state.telemetry.record_departure(
+                d.peer_session,
+                d.room_session,
+                d.room_dropped,
+                chrono::Utc::now(),
+            );
         }
     }
 
@@ -186,13 +165,19 @@ fn spawn_transport_pump(
                     }
                 }
                 TransportEvent::TrackAdded { peer, mid, kind } => {
-                    if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer) {
+                    // La télémétrie clé ses tracks par occupation, pas par
+                    // connexion (Task 6 review, finding 3) : sans occupation
+                    // mirée pour ce connecteur — pas encore dans une room, ou
+                    // qui vient de la quitter — il n'y a rien à publier.
+                    if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer)
+                        && let Some(occupancy) = telemetry.occupancy_of(peer_uuid)
+                    {
                         let mid_str = mid.to_string();
-                        let track_id = telemetry.track_id(peer_uuid, &mid_str);
+                        let track_id = telemetry.track_id(occupancy, &mid_str);
                         let now = chrono::Utc::now();
                         telemetry.record(Entry::TrackPublished {
                             id: track_id,
-                            peer_id: peer_uuid,
+                            peer_id: occupancy,
                             mid: mid_str,
                             kind: match kind {
                                 MediaKind::Audio => TrackKind::Audio,
@@ -202,7 +187,7 @@ fn spawn_transport_pump(
                         });
                         telemetry.record(Entry::Event(
                             EventRecord::new(EventKind::TrackPublished, now)
-                                .peer(peer_uuid)
+                                .peer(occupancy)
                                 .track(track_id),
                         ));
                     }
