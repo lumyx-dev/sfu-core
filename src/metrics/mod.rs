@@ -9,6 +9,7 @@ pub struct Metrics {
     pub keyframe_requests: AtomicU64,
     pub peers_connected: AtomicU64,
     pub peers_disconnected: AtomicU64,
+    pub telemetry_entries_dropped: AtomicU64,
 }
 
 impl Metrics {
@@ -33,6 +34,14 @@ impl Metrics {
         self.peers_disconnected.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// An entry telemetry could not enqueue.
+    ///
+    /// Deliberate: a database must never be able to degrade a live call. Same
+    /// doctrine as the media queues.
+    pub fn record_telemetry_drop(&self) {
+        self.telemetry_entries_dropped.fetch_add(1, Ordering::Relaxed);
+    }
+
     pub fn snapshot(&self) -> MetricsSnapshot {
         MetricsSnapshot {
             rtp_packets_forwarded: self.rtp_packets_forwarded.load(Ordering::Relaxed),
@@ -40,6 +49,7 @@ impl Metrics {
             keyframe_requests: self.keyframe_requests.load(Ordering::Relaxed),
             peers_connected: self.peers_connected.load(Ordering::Relaxed),
             peers_disconnected: self.peers_disconnected.load(Ordering::Relaxed),
+            telemetry_entries_dropped: self.telemetry_entries_dropped.load(Ordering::Relaxed),
         }
     }
 }
@@ -51,6 +61,7 @@ pub struct MetricsSnapshot {
     pub keyframe_requests: u64,
     pub peers_connected: u64,
     pub peers_disconnected: u64,
+    pub telemetry_entries_dropped: u64,
 }
 
 #[cfg(test)]
@@ -98,5 +109,16 @@ mod tests {
         m.record_connect();
         m.snapshot();
         assert_eq!(m.snapshot().peers_connected, 1);
+    }
+
+    #[test]
+    fn telemetry_drops_are_counted_separately() {
+        let m = Metrics::new();
+        m.record_telemetry_drop();
+        m.record_telemetry_drop();
+        let snap = m.snapshot();
+        assert_eq!(snap.telemetry_entries_dropped, 2);
+        // Les compteurs média ne doivent pas bouger : /metrics doit rester lisible.
+        assert_eq!(snap.rtp_packets_forwarded, 0);
     }
 }

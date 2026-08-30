@@ -8,7 +8,10 @@
 //! `if let Some(db)` scattered across the codebase: there is always a sink.
 
 use super::entry::Entry;
+use crate::metrics::Metrics;
+use std::sync::Arc;
 use std::sync::Mutex;
+use tokio::sync::mpsc;
 
 pub trait TelemetrySink: Send + Sync {
     /// Records an entry. Must never block and never fail.
@@ -45,6 +48,36 @@ impl TelemetrySink for MemorySink {
             .lock()
             .expect("MemorySink non empoisonné")
             .push(entry);
+    }
+}
+
+/// Enqueues towards the writer task, dropping when the queue is full.
+///
+/// `try_send`, never `send().await`: producers call this from synchronous
+/// code and sometimes while holding a lock. Full means the entry is dropped,
+/// deliberately — the same trade-off the media queues already make, for a
+/// stronger reason: a database must never be able to degrade a live call.
+pub struct QueueSink {
+    tx: mpsc::Sender<Entry>,
+    metrics: Arc<Metrics>,
+}
+
+impl QueueSink {
+    /// Returns the sink and the receiving end the writer task consumes.
+    pub fn new(depth: usize, metrics: Arc<Metrics>) -> (Arc<Self>, mpsc::Receiver<Entry>) {
+        let (tx, rx) = mpsc::channel(depth);
+        (Arc::new(QueueSink { tx, metrics }), rx)
+    }
+}
+
+impl TelemetrySink for QueueSink {
+    fn record(&self, entry: Entry) {
+        if self.tx.try_send(entry).is_err() {
+            // Une seule métrique, pas de log par entrée : sous rafale, logger
+            // chaque perte coûterait plus cher que l'écriture qu'on évite.
+            // La tâche d'écriture log une fois par rafale.
+            self.metrics.record_telemetry_drop();
+        }
     }
 }
 
@@ -104,5 +137,28 @@ mod tests {
             Entry::TrackPublished { id, .. } => *id,
             _ => panic!("le test ne fabrique que des TrackPublished"),
         }
+    }
+
+    #[test]
+    fn a_full_queue_drops_and_counts_instead_of_blocking() {
+        let metrics = crate::metrics::Metrics::new();
+        let (sink, _rx) = QueueSink::new(2, metrics.clone());
+
+        // La file accepte deux entrées, puis jette. Aucun de ces appels ne doit
+        // bloquer : ils viennent parfois du milieu d'un verrou.
+        sink.record(a_track());
+        sink.record(a_track());
+        sink.record(a_track());
+        sink.record(a_track());
+
+        assert_eq!(metrics.snapshot().telemetry_entries_dropped, 2);
+    }
+
+    #[test]
+    fn nothing_is_dropped_while_the_queue_has_room() {
+        let metrics = crate::metrics::Metrics::new();
+        let (sink, _rx) = QueueSink::new(8, metrics.clone());
+        sink.record(a_track());
+        assert_eq!(metrics.snapshot().telemetry_entries_dropped, 0);
     }
 }
