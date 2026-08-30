@@ -6,6 +6,7 @@ import { Badge, Button, Tabs } from '@sightline/ui';
 import { HairlineGrid } from '@/components/marketing/HairlineGrid';
 import { PLANS, type Period } from '@/content/pricing';
 import { PRICING_FAQ } from '@/content/home';
+import { GITHUB_URL } from '@/content/nav';
 import s from './PricingStrip.module.css';
 
 const PERIOD_TABS = [
@@ -78,9 +79,28 @@ export function PricingStrip() {
                     ))}
                   </div>
                   <span style={{ flex: 1 }} />
-                  <Button size="sm" variant={plan.variant} block>
-                    {plan.cta}
-                  </Button>
+                  {/* "Get started free" and "View on GitHub" have real destinations (/signup,
+                      GITHUB_URL); "Contact us" (Business) does not — no contact route exists in
+                      this codebase's content files, so it stays a non-navigating button rather
+                      than a fabricated destination (same reasoning as the standalone "Talk to
+                      us about Business" button below). */}
+                  {plan.cta === 'Get started free' ? (
+                    <Link href="/signup">
+                      <Button size="sm" variant={plan.variant} block>
+                        {plan.cta}
+                      </Button>
+                    </Link>
+                  ) : plan.cta === 'View on GitHub' ? (
+                    <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+                      <Button size="sm" variant={plan.variant} block>
+                        {plan.cta}
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button size="sm" variant={plan.variant} block>
+                      {plan.cta}
+                    </Button>
+                  )}
                 </div>
               ))}
             </HairlineGrid>

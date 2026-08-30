@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import { Badge, Button } from '@sightline/ui';
 import { HairlineGrid } from '@/components/marketing/HairlineGrid';
 import type { Plan } from '@/content/pricing';
+import { GITHUB_URL } from '@/content/nav';
 import s from './PlanCards.module.css';
 
 // Source: Pricing.dc.html:79-87. Plain function component, no 'use client' of its own — it is
@@ -33,9 +35,26 @@ export function PlanCards({ plans }: { plans: Plan[] }) {
             ))}
           </div>
           <span style={{ flex: 1 }} />
-          <Button size="sm" variant={plan.variant} block>
-            {plan.cta}
-          </Button>
+          {/* "Get started free" and "View on GitHub" have real destinations (/signup,
+              GITHUB_URL); "Contact us" (Business) has none in this codebase's content files,
+              so it stays a non-navigating button rather than a fabricated destination. */}
+          {plan.cta === 'Get started free' ? (
+            <Link href="/signup">
+              <Button size="sm" variant={plan.variant} block>
+                {plan.cta}
+              </Button>
+            </Link>
+          ) : plan.cta === 'View on GitHub' ? (
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+              <Button size="sm" variant={plan.variant} block>
+                {plan.cta}
+              </Button>
+            </a>
+          ) : (
+            <Button size="sm" variant={plan.variant} block>
+              {plan.cta}
+            </Button>
+          )}
         </div>
       ))}
     </HairlineGrid>
