@@ -1,0 +1,28 @@
+.shell {
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.scrollArea {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* maxWidth vient de la prop (runtime) — la source n'a pas de defaut, donc
+   pas de largeur max ni de centrage tant que maxWidth n'est pas fourni. */
+.content {
+  padding: var(--space-8);
+  width: 100%;
+}

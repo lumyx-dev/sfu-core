@@ -1,0 +1,40 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  border: 1px solid var(--border);
+  font-size: var(--fs-12);
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.chip.warn {
+  background: var(--warn-tint);
+  border-color: transparent;
+  color: var(--warn);
+}
+
+.chip.danger {
+  background: var(--danger-tint);
+  border-color: transparent;
+  color: var(--danger);
+}
+
+.label {
+  color: var(--text-muted);
+}
+
+.plain {
+  color: var(--text-strong);
+}
+
+.plain.warn {
+  color: var(--warn);
+}
+
+.plain.danger {
+  color: var(--danger);
+}

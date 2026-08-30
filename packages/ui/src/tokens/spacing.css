@@ -1,0 +1,26 @@
+:root{
+  --space-0:0;
+  --space-1:2px;
+  --space-2:4px;
+  --space-3:6px;
+  --space-4:8px;
+  --space-5:12px;
+  --space-6:16px;
+  --space-7:20px;
+  --space-8:24px;
+  --space-9:32px;
+  --space-10:40px;
+  --space-11:48px;
+  --space-12:64px;
+
+  --pad-card:var(--space-7);
+  --pad-card-tight:var(--space-6);
+  --pad-cell:var(--space-5) var(--space-6);
+  --gap-grid:var(--space-6);
+  --gap-section:var(--space-8);
+
+  --content-max:1360px;
+  --sidebar-w:248px;
+  --rail-w:340px;
+  --grid-size:8px; /* @kind spacing */
+}
