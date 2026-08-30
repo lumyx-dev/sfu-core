@@ -29,3 +29,23 @@
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }
+
+/* Task 9 (Compare LiveKit): SUMMARY strip, Compare LiveKit.dc.html:71 — 3 columns down to 1. */
+.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 767px) {
+  .cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+/* Task 9 (Compare LiveKit): REPLACES grid, Compare LiveKit.dc.html:124 — 2 columns down to 1. */
+.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 639px) {
+  .cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
