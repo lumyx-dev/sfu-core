@@ -52,9 +52,7 @@ export function CompareHero() {
             <a href="#migrate" className={s.migrateLink}>
               Read the migration steps
             </a>
-            <span className={`sl-num ${s.meta}`}>
-              Last reviewed 27 Aug 2026 · corrections welcome as a PR
-            </span>
+            <span className={`sl-num ${s.meta}`}>Corrections welcome as a PR</span>
           </div>
         </div>
       </section>

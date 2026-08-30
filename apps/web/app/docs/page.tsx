@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Fragment } from 'react';
-import { AlertBanner, Badge } from '@sightline/ui';
+import { Badge } from '@sightline/ui';
 import { METRICS } from '@/content/metrics';
 import { DocsHeader } from './_sections/DocsHeader';
 import { DocsNav } from './_sections/DocsNav';
@@ -79,12 +79,16 @@ export default function DocsPage() {
 
             <Overrides />
 
-            <AlertBanner
-              severity="info"
-              title="These numbers come from the repository"
-              message="The six metrics and their thresholds are the ones documented in the README and implemented in the metrics collector. The sample payloads on this page are illustrative."
-              meta="apps/sfu/src · reviewed 27 Aug 2026"
-            />
+            {/*
+              An AlertBanner citing "apps/sfu/src · reviewed 27 Aug 2026" and asserting these
+              metrics were "documented in the README and implemented in the metrics collector"
+              stood here (ported verbatim from Docs.dc.html:131-133). It was false: the six
+              fields in content/metrics.ts appear nowhere in apps/sfu/src, README.md:65 classes
+              them "Planned — next milestone", and no review of that path happened on the date
+              claimed. See commits 2890a3e and 56cc985 for the same class of error. Removed —
+              do not port it back. Whether to add a "planned" caveat instead is a positioning
+              call for the repository's owner, not something to invent here.
+            */}
 
             <div className={`flex items-center gap-4 flex-wrap pt-2 ${s.pagination}`}>
               <a href="#" className={`flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline ${s.pagerLink}`}>

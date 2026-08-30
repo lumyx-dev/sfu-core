@@ -50,8 +50,7 @@ export function CompareTable() {
 
           <div className={s.footerBar}>
             <span className={s.footerNote}>
-              Compiled from public documentation and source, reviewed 27 Aug 2026. Open an issue
-              if a row is out of date and it gets fixed.
+              Open an issue if a row is out of date and it gets fixed.
             </span>
           </div>
         </div>
