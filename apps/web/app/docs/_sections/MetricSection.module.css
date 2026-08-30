@@ -1,16 +1,5 @@
 .section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 12px;
   border-top: 1px solid var(--border);
-}
-
-.heading {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 .title {
@@ -26,10 +15,6 @@
   color: var(--text-muted);
 }
 
-.headingSpacer {
-  flex: 1;
-}
-
 .body {
   margin: 0;
   font-size: 14px;
@@ -38,14 +23,13 @@
   text-wrap: pretty;
 }
 
+/* grid-template-columns is the one exotic, responsive-varying property here — display/gap/
+   overflow are static Tailwind utilities on the JSX (`grid gap-px overflow-hidden`). */
 .grid {
-  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
   background: var(--border-subtle);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  overflow: hidden;
 }
 
 /* Three fixed columns cannot survive 375px readably — this task's own responsive choice, the
@@ -58,10 +42,6 @@
 
 .cell {
   background: var(--surface-card);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .cellValue {
@@ -79,17 +59,12 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
 }
 
 .sampleLine {
   font-size: 12.5px;
   line-height: 1.6;
   color: var(--text-body);
-  white-space: pre-wrap;
 }
 
 .action {

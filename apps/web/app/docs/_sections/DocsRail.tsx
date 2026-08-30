@@ -30,24 +30,24 @@ export function DocsRail() {
   }, []);
 
   return (
-    <aside className={`sl-scroll ${s.rail}`}>
+    <aside className={`sl-scroll overflow-auto pt-9 px-5 pb-10 flex-col gap-2.5 ${s.rail}`}>
       <span className="sl-label">On this page</span>
       {DOC_NAV.map((item) => (
         <a
           key={item.id}
           href={`#${item.id}`}
-          className={s.item}
+          className={`pl-2.5 border-l-2 border-solid no-underline ${s.item}`}
           data-active={item.id === active ? '1' : undefined}
         >
           {item.label}
         </a>
       ))}
-      <div className={s.contribute}>
+      <div className={`flex flex-col gap-2.5 mt-5 pt-4 ${s.contribute}`}>
         <span className="sl-label">Contribute</span>
-        <a href={GITHUB_URL} className={s.contributeLink} target="_blank" rel="noreferrer">
+        <a href={GITHUB_URL} className={`no-underline ${s.contributeLink}`} target="_blank" rel="noreferrer">
           Edit this page on GitHub
         </a>
-        <a href="#" className={s.contributeLink}>
+        <a href="#" className={`no-underline ${s.contributeLink}`}>
           Report an inaccuracy
         </a>
       </div>

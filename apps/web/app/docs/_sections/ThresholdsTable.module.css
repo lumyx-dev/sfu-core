@@ -2,14 +2,9 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface-card);
-  overflow: hidden;
 }
 
 .head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -18,10 +13,6 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-strong);
-}
-
-.headSpacer {
-  flex: 1;
 }
 
 .headNote {

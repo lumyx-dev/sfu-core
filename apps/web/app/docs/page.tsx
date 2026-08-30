@@ -26,14 +26,14 @@ export const metadata: Metadata = {
 // item is a hardcoded flag ("the page you are on"), not client state.
 export default function DocsPage() {
   return (
-    <div className={s.shell}>
+    <div className={`grid ${s.shell}`}>
       <DocsHeader />
-      <div className={s.columns}>
+      <div className={`min-h-0 ${s.columns}`}>
         <DocsNav />
 
-        <main className={`sl-scroll ${s.main}`}>
-          <div className={s.mainInner}>
-            <nav className={s.breadcrumb} aria-label="Breadcrumb">
+        <main className={`sl-scroll overflow-auto min-w-0 ${s.main}`}>
+          <div className={`flex flex-col gap-7 ${s.mainInner}`}>
+            <nav className={`flex items-center gap-2 flex-wrap min-w-0 ${s.breadcrumb}`} aria-label="Breadcrumb">
               {CRUMBS.map((label, i) => (
                 <Fragment key={label}>
                   {i > 0 && (
@@ -45,7 +45,7 @@ export default function DocsPage() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.75"
-                      className={s.crumbChevron}
+                      className={`flex-none ${s.crumbChevron}`}
                     >
                       <path d="m9 18 6-6-6-6" />
                     </svg>
@@ -57,14 +57,14 @@ export default function DocsPage() {
               ))}
             </nav>
 
-            <div className={s.intro}>
+            <div className="flex flex-col gap-3.5">
               <h1 className={s.title}>Metrics reference</h1>
               <p className={s.lead}>
                 Six measurements are collected in the media path, per peer and per room, and
                 emitted on every stats interval. Each has a documented default threshold;
                 crossing it for longer than the debounce window raises an alert.
               </p>
-              <div className={s.badgeRow}>
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <Badge tone="neutral">Stats interval 2s</Badge>
                 <Badge tone="neutral">Debounce 30s</Badge>
                 <Badge tone="secondary">Read from RTCP</Badge>
@@ -86,12 +86,15 @@ export default function DocsPage() {
               meta="apps/sfu/src · reviewed 27 Aug 2026"
             />
 
-            <div className={s.pagination}>
-              <a href="#" className={s.pagerLink}>
+            <div className={`flex items-center gap-4 flex-wrap pt-2 ${s.pagination}`}>
+              <a href="#" className={`flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline ${s.pagerLink}`}>
                 <span className="sl-label">Previous</span>
                 <span className={s.pagerLabel}>Peers and tracks</span>
               </a>
-              <a href="#" className={`${s.pagerLink} ${s.pagerLinkNext}`}>
+              <a
+                href="#"
+                className={`flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline text-right ${s.pagerLink}`}
+              >
                 <span className="sl-label">Next</span>
                 <span className={s.pagerLabel}>Alerting and webhooks</span>
               </a>

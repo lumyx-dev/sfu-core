@@ -1,7 +1,7 @@
 // UNVERIFIED — ces six champs et leurs seuils viennent du handoff de design, PAS du dépôt.
 // Le README annonce explicitement « Quality metrics (jitter, loss, RTT, NACK) — ❌ Planned,
 // the whole point of the project — next milestone », et `apps/sfu/src/metrics/mod.rs` ne
-// compte que peers_connected / peers_disconnected plus deux compteurs jamais incrémentés.
+// compte que peers_connected / peers_disconnected plus trois compteurs jamais incrémentés.
 // Aucun de ces six champs n'existe aujourd'hui. Cette page documente donc une API prévue, pas
 // une API livrée : à confirmer contre l'implémentation réelle avant toute mise en ligne
 // publique. Le brief d'origine affirmait l'inverse — l'affirmation venait du handoff et était

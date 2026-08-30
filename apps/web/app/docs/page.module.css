@@ -1,8 +1,9 @@
 /* Source: Docs.dc.html:30. An app shell, not a scrolling marketing page (task-10-brief.md
    correction 1) — the page itself never scrolls, only its three panes do, each via the design
-   system's `sl-scroll` class. */
+   system's `sl-scroll` class. `display:grid` lives on the JSX (it never changes); the exotic
+   `grid-template-rows` and the height (which the 959px override below does change) stay
+   bundled here. */
 .shell {
-  display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   height: 100vh;
   background: var(--surface-page);
@@ -10,43 +11,38 @@
 }
 
 /* Source: Docs.dc.html:50 — `grid-template-columns:264px minmax(0,1fr) 224px`. Three columns,
-   not two (correction 2): DocsNav | main | DocsRail. */
+   not two (correction 2): DocsNav | main | DocsRail. `min-height:0` lives on the JSX (static);
+   `display` is what the 959px override changes (grid → block), so it stays here with the
+   exotic column template. */
 .columns {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr) 224px;
-  min-height: 0;
 }
 
+/* overflow/min-width live on the JSX as Tailwind utilities — only the 959px override (a
+   different value for the same `overflow` property) stays here. */
 .main {
-  overflow: auto;
-  min-width: 0;
 }
 
+/* max-width/padding both change at 959px, so base + override stay bundled here; display/flex-
+   direction/gap are static and live on the JSX as Tailwind utilities. */
 .mainInner {
   max-width: 820px;
   padding: 36px 44px 80px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
 }
 
 /* Same visual spec as @sightline/ui's Breadcrumb (Breadcrumb.module.css), rebuilt as plain
    markup: that component always wires an onClick handler onto its non-last crumbs, which makes
    it unusable from a Server Component tree here (Next.js: "Event handlers cannot be passed to
    Client Component props") — and this page's only client boundary is DocsRail.tsx
-   (task-10-brief.md correction 6). The source's own breadcrumb has no click behaviour either. */
+   (task-10-brief.md correction 6). The source's own breadcrumb has no click behaviour either.
+   display/align-items/gap/flex-wrap/min-width live on the JSX; only the font size stays here. */
 .breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: 13px;
-  flex-wrap: wrap;
-  min-width: 0;
 }
 
 .crumbChevron {
   color: var(--text-faint);
-  flex: none;
 }
 
 .crumb {
@@ -58,12 +54,6 @@
 .crumbLast {
   font-weight: 500;
   color: var(--text-strong);
-}
-
-.intro {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
 .title {
@@ -84,36 +74,18 @@
   text-wrap: pretty;
 }
 
-.badgeRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
+/* display/align-items/gap/flex-wrap/padding-top live on the JSX; only the border color stays
+   here. */
 .pagination {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding-top: 8px;
   border-top: 1px solid var(--border);
 }
 
+/* display/flex-direction/gap/flex/min-width/padding/text-decoration all live on the JSX
+   (`text-right` handles the source's `text-align:right` on the "Next" link); the border and
+   its token-based radius stay here. */
 .pagerLink {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 200px;
-  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  text-decoration: none;
-}
-
-.pagerLinkNext {
-  text-align: right;
 }
 
 .pagerLabel {
@@ -135,7 +107,6 @@
   }
   .columns {
     display: block;
-    min-height: 0;
   }
   .main {
     overflow: visible;

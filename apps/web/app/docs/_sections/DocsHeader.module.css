@@ -1,68 +1,46 @@
+/* display/align-items/height/flex-none live on the JSX as Tailwind utilities (`flex
+   items-center h-[60px] flex-none`) — they never change across breakpoints. gap and padding do
+   (the 520px override below), so they stay here bundled with that override. */
 .header {
-  display: flex;
-  align-items: center;
   gap: 26px;
-  height: 60px;
   padding: 0 24px;
   background: var(--surface-card);
   border-bottom: 1px solid var(--border);
-  flex: none;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  flex: none;
 }
 
 .nav {
+  /* `display` is the property the 900px override below changes, so base + override stay
+     together here; align-items/gap are static and live on the JSX instead. */
   display: flex;
-  align-items: center;
-  gap: 22px;
 }
 
 .link {
   font-size: 12.5px;
   color: var(--text-muted);
-  text-decoration: none;
 }
 .link:hover {
   color: var(--text-strong);
 }
 
-.spacer {
-  flex: 1;
-}
-
 .search,
 .version {
   display: flex;
-  flex: none;
 }
 
 .ghostButton {
-  display: inline-flex;
-  align-items: center;
-  height: 32px;
-  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-body);
   font-size: 12.5px;
-  text-decoration: none;
-  flex: none;
 }
 
 /* Responsive collapse — this task's own choice; the source is a fixed 1440px mockup with no
-   responsive behaviour at all (task-10-brief.md, "Responsive: this is the hard one"). Drops the
-   least essential chrome first so the header itself never forces horizontal scroll, down to
-   wordmark + badge + GitHub at 375px. Unverified without a browser. */
+   responsive behaviour at all (task-10-brief.md, "Responsive: this is the hard one"). The nav
+   and the search Input hide together at 900px (see DocsHeader.tsx for why staggering them was
+   a bug), then the version Select at 520px, leaving wordmark + badge + GitHub at 375px.
+   Unverified without a browser. */
 @media (max-width: 900px) {
-  .nav {
-    display: none;
-  }
-}
-@media (max-width: 680px) {
+  .nav,
   .search {
     display: none;
   }

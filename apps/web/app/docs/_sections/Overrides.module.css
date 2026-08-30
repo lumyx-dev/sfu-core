@@ -1,8 +1,4 @@
 .section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
@@ -26,15 +22,10 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
 }
 
 .sampleLine {
   font-size: 12.5px;
   line-height: 1.6;
   color: var(--text-body);
-  white-space: pre-wrap;
 }

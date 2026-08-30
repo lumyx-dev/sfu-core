@@ -20,10 +20,10 @@ const COLUMNS: DataTableColumn<Metric>[] = [
 // scroll-spy anchor.
 export function ThresholdsTable() {
   return (
-    <div id="thresholds" className={s.box}>
-      <div className={s.head}>
+    <div id="thresholds" className={`overflow-hidden ${s.box}`}>
+      <div className={`flex items-center gap-2.5 py-3.5 px-5 ${s.head}`}>
         <span className={s.headTitle}>Default thresholds</span>
-        <span className={s.headSpacer} />
+        <span className="flex-1" />
         <span className={`sl-num ${s.headNote}`}>override per project</span>
       </div>
       <DataTable columns={COLUMNS} rows={METRICS} />

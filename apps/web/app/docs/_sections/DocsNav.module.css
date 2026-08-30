@@ -1,6 +1,6 @@
+/* overflow/padding live on the JSX as Tailwind utilities — they never change across
+   breakpoints. Only the colors and the 959px hide (a different property) stay here. */
 .nav {
-  overflow: auto;
-  padding: 24px 16px 40px;
   border-right: 1px solid var(--border);
   background: var(--surface-card);
 }
@@ -15,28 +15,12 @@
   }
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 22px;
-}
-
-.groupTitle {
-  padding: 0 10px 8px;
-}
-
 .item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
   border-radius: var(--radius-sm);
   font-size: 12.5px;
   color: var(--text-muted);
   background: transparent;
   box-shadow: none;
-  text-decoration: none;
 }
 
 .item[data-active='1'] {

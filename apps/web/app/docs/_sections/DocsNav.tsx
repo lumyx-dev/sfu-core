@@ -8,15 +8,15 @@ import s from './DocsNav.module.css';
 // other doc pages are not built by this task.
 export function DocsNav() {
   return (
-    <nav className={`sl-scroll ${s.nav}`}>
+    <nav className={`sl-scroll overflow-auto pt-6 px-4 pb-10 ${s.nav}`}>
       {DOC_SECTIONS.map((section) => (
-        <div key={section.title} className={s.group}>
-          <span className={`sl-label ${s.groupTitle}`}>{section.title}</span>
+        <div key={section.title} className="flex flex-col gap-0.5 mb-[22px]">
+          <span className="sl-label px-2.5 pb-2">{section.title}</span>
           {section.items.map((item) => (
             <a
               key={item.id}
               href={`#${item.id}`}
-              className={s.item}
+              className={`flex items-center gap-2 py-[7px] px-2.5 no-underline ${s.item}`}
               data-active={item.active ? '1' : undefined}
             >
               {item.label}
