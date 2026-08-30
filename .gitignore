@@ -25,3 +25,4 @@ apps/cloud/
 
 # Worktrees Claude Code
 .claude/worktrees/
+.gstack/
