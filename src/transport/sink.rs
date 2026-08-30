@@ -2,6 +2,7 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::{RtpPacketData, RtpSink};
+use str0m::media::Mid;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
@@ -12,8 +13,10 @@ use tokio::sync::mpsc::{self, error::TrySendError};
 ///
 /// The source peer must produce a keyframe for the newcomer to be able to
 /// decode; a single request is lost too often while the connection settles,
-/// hence the staggered repetition.
-const KEYFRAME_RETRY_DELAYS_MS: [u64; 4] = [200, 500, 1000, 2000];
+/// hence the staggered repetition. The first one goes out immediately — the
+/// subscriber is already negotiated by the time this is called, so there is
+/// nothing to wait for.
+const KEYFRAME_RETRY_DELAYS_MS: [u64; 4] = [0, 200, 600, 1500];
 
 /// Depth of a peer's RTP write queue.
 ///
@@ -158,16 +161,18 @@ impl RtpSink for PeerSink {
         self.queue.push(&self.peer_id, packet);
     }
 
-    fn request_keyframe(&self) {
+    fn request_keyframe(&self, mid: Mid) {
         let conn = self.conn.clone();
         let peer_id = Arc::clone(&self.peer_id);
 
         tokio::spawn(async move {
             for delay in KEYFRAME_RETRY_DELAYS_MS {
-                tokio::time::sleep(Duration::from_millis(delay)).await;
-                conn.lock().await.request_keyframe();
-                tracing::info!("Peer {} — PLI envoyée après {}ms", peer_id, delay);
+                if delay > 0 {
+                    tokio::time::sleep(Duration::from_millis(delay)).await;
+                }
+                conn.lock().await.request_keyframe(mid);
             }
+            tracing::debug!("Peer {} — escalier de PLI terminé sur mid={}", peer_id, mid);
         });
     }
 }
@@ -175,18 +180,24 @@ impl RtpSink for PeerSink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use str0m::media::Mid;
     use std::time::Instant;
+    use str0m::format::{Codec, CodecSpec, PayloadParams};
+    use str0m::media::{Frequency, Pt};
 
     /// Minimal video packet, whose instances differ only by their payload.
     fn packet(payload: &[u8]) -> RtpPacketData {
         RtpPacketData {
-            payload_type: 96,
-            sequence_number: 0,
-            timestamp: 1_000,
-            ssrc: 0,
+            params: PayloadParams::new(
+                Pt::from(96),
+                None,
+                CodecSpec {
+                    codec: Codec::Vp8,
+                    clock_rate: Frequency::NINETY_KHZ,
+                    channels: None,
+                    format: Default::default(),
+                },
+            ),
             payload: Arc::from(payload),
-            is_keyframe: false,
             mid: Mid::from("0"),
             network_time: Instant::now(),
             rtp_time: 90_000,

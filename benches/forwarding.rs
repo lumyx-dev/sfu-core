@@ -19,12 +19,13 @@
 //! path — a payload copy reintroduced at write time, say — would be entirely
 //! invisible here.
 
-use sfu::media::{ForwardingEngine, RtpPacketData, RtpSink};
-use str0m::media::Mid;
+use sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
 use std::hint::black_box;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
+use str0m::format::{Codec, CodecSpec, PayloadParams};
+use str0m::media::{Frequency, Mid, Pt};
 
 /// A sink that does nothing but count — the packet received is consumed and dropped.
 #[derive(Default)]
@@ -37,19 +38,27 @@ impl RtpSink for CountingSink {
         self.writes.fetch_add(1, Ordering::Relaxed);
         black_box(&packet);
     }
-    fn request_keyframe(&self) {}
+    fn request_keyframe(&self, _mid: Mid) {}
 }
+
+/// The m-line every peer publishes its video on, as every browser does.
+const PUBLISH_MID: &str = "1";
 
 /// Video packet of realistic size (~MTU).
 fn packet() -> RtpPacketData {
     RtpPacketData {
-        payload_type: 96,
-        sequence_number: 0,
-        timestamp: 1_000,
-        ssrc: 0,
+        params: PayloadParams::new(
+            Pt::from(96),
+            None,
+            CodecSpec {
+                codec: Codec::Vp8,
+                clock_rate: Frequency::NINETY_KHZ,
+                channels: None,
+                format: Default::default(),
+            },
+        ),
         payload: Arc::from(vec![0u8; 1200]),
-        is_keyframe: false,
-        mid: Mid::from("0"),
+        mid: Mid::from(PUBLISH_MID),
         network_time: Instant::now(),
         rtp_time: 90_000,
         is_video: true,
@@ -63,22 +72,33 @@ const ROOM: &str = "bench";
 /// Returns (total duration, writes performed).
 fn run(peers: usize, iterations: usize) -> (std::time::Duration, usize) {
     let engine = ForwardingEngine::new();
-    let sinks: Vec<Arc<CountingSink>> = (0..peers)
-        .map(|i| {
+    let ids: Vec<Arc<str>> = (0..peers)
+        .map(|i| Arc::from(format!("peer-{i}").as_str()))
+        .collect();
+
+    let sinks: Vec<Arc<CountingSink>> = ids
+        .iter()
+        .map(|id| {
             let sink = Arc::new(CountingSink::default());
-            engine.add_peer(ROOM.to_string(), format!("peer-{i}"), sink.clone());
+            engine.add_peer(ROOM.to_string(), Arc::clone(id), sink.clone());
             sink
         })
         .collect();
 
-    // Dry run: creates the down_tracks outside the measurement, so that what is
-    // measured is the steady state and not the ramp-up.
-    engine.forward_rtp("peer-0", packet());
+    // The subscriptions are set up outside the measurement, as the negotiator
+    // does once each peer has answered: one m-line per subscriber. What is
+    // measured is the steady state, not the ramp-up.
+    let publisher = Arc::clone(&ids[0]);
+    let source = TrackKey::new(Arc::clone(&publisher), Mid::from(PUBLISH_MID));
+    engine.publish_track(source.clone(), true);
+    for subscriber in ids.iter().skip(1) {
+        engine.subscribe(&source, subscriber, Mid::from("2"));
+    }
 
     let template = packet();
     let start = Instant::now();
     for _ in 0..iterations {
-        engine.forward_rtp("peer-0", black_box(template.clone()));
+        engine.forward_rtp(&publisher, black_box(template.clone()));
     }
     let elapsed = start.elapsed();
 
