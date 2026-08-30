@@ -6,11 +6,13 @@ use super::negotiation::{NegotiationEvent, Negotiator};
 use crate::app::AppState;
 use crate::media::{ForwardingEngine, RtpSink};
 use crate::metrics::Metrics;
+use crate::telemetry::{Entry, EventKind, EventRecord, Telemetry, TrackKind};
 use crate::transport::{PeerConnection, PeerSink, TransportEvent, event_loop};
 use axum::extract::ws::{Message, WebSocket};
 use futures::sink::SinkExt;
 use futures::stream::{SplitSink, StreamExt};
 use std::sync::Arc;
+use str0m::media::MediaKind;
 use tokio::sync::mpsc::{self, Receiver};
 use tokio::sync::{Mutex, oneshot};
 
@@ -75,6 +77,7 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
         state.engine.clone(),
         state.negotiator.clone(),
         state.metrics.clone(),
+        state.telemetry.clone(),
         Arc::clone(&peer_id),
         transport_rx,
     );
@@ -114,7 +117,41 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     // socket — is finally destroyed.
     let _ = shutdown_tx.send(());
 
-    state.rooms.leave_room(&peer_id);
+    let departure = state.rooms.leave_room(&peer_id);
+
+    if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer_id) {
+        let now = chrono::Utc::now();
+        for track in state.telemetry.forget_peer(peer_uuid) {
+            state.telemetry.record(Entry::TrackEnded { id: track, at: now });
+        }
+        state.telemetry.record(Entry::PeerLeft {
+            id: peer_uuid,
+            at: now,
+            // Axum ne remonte pas le code de fermeture jusqu'ici : la boucle
+            // `while let Some(Ok(msg))` avale `Message::Close(frame)`. Le récupérer
+            // demanderait de restructurer la boucle ; c'est hors périmètre et la
+            // colonne reste nullable pour cette raison.
+            close_code: None,
+        });
+        if let Some(d) = &departure {
+            state.telemetry.record(Entry::Event(
+                EventRecord::new(EventKind::PeerLeft, now)
+                    .room(d.room_session)
+                    .peer(peer_uuid),
+            ));
+            if d.room_dropped {
+                state.telemetry.record(Entry::RoomClosed {
+                    id: d.room_session,
+                    at: now,
+                    reason: "empty",
+                });
+                state.telemetry.record(Entry::Event(
+                    EventRecord::new(EventKind::RoomEnded, now).room(d.room_session),
+                ));
+            }
+        }
+    }
+
     state.engine.remove_peer(&peer_id);
     state.negotiator.notify(NegotiationEvent::PeerLeft {
         peer: Arc::clone(&peer_id),
@@ -130,6 +167,7 @@ fn spawn_transport_pump(
     engine: Arc<ForwardingEngine>,
     negotiator: Arc<Negotiator>,
     metrics: Arc<Metrics>,
+    telemetry: Arc<Telemetry>,
     peer_id: Arc<str>,
     mut events: Receiver<TransportEvent>,
 ) {
@@ -148,6 +186,26 @@ fn spawn_transport_pump(
                     }
                 }
                 TransportEvent::TrackAdded { peer, mid, kind } => {
+                    if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer) {
+                        let mid_str = mid.to_string();
+                        let track_id = telemetry.track_id(peer_uuid, &mid_str);
+                        let now = chrono::Utc::now();
+                        telemetry.record(Entry::TrackPublished {
+                            id: track_id,
+                            peer_id: peer_uuid,
+                            mid: mid_str,
+                            kind: match kind {
+                                MediaKind::Audio => TrackKind::Audio,
+                                MediaKind::Video => TrackKind::Video,
+                            },
+                            at: now,
+                        });
+                        telemetry.record(Entry::Event(
+                            EventRecord::new(EventKind::TrackPublished, now)
+                                .peer(peer_uuid)
+                                .track(track_id),
+                        ));
+                    }
                     negotiator.notify(NegotiationEvent::TrackPublished { peer, mid, kind });
                 }
                 TransportEvent::KeyframeRequested { peer, mid } => {
