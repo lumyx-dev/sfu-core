@@ -131,8 +131,10 @@ Aucun n'affecte l'usage à deux peers.
    le compteur de paquets jetés du `PeerSink` : il existe et se journalise, mais
    `media/` n'a pas accès à `Metrics` et l'y amener est un chantier à part.
 
-4. **`localhost+1-key.pem` est une clé privée committée.** Certificat de dev,
-   donc bénin, mais mériterait un `.gitignore`.
+4. ~~**`localhost+1-key.pem` est une clé privée committée.**~~ Corrigé : la paire
+   est sortie du suivi git et `*.pem` / `*.key` sont ignorés. Chaque dev génère
+   la sienne (`mkcert localhost 127.0.0.1`). La clé reste dans l'historique ;
+   un `git filter-repo` avant l'ouverture du dépôt reste à faire.
 
 5. **Une socket UDP par peer.** Suffisant ici ; les SFU en production
    démultiplexent sur une socket unique par ufrag ICE.

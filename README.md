@@ -7,13 +7,19 @@ aux autres participants — un envoi montant par peer au lieu d'un maillage.
 
 ## Démarrer
 
+Les certificats de dev ne sont pas versionnés — à générer une fois, avec
+[mkcert](https://github.com/FiloSottile/mkcert) :
+
+```bash
+mkcert -install && mkcert localhost 127.0.0.1
+```
+
 ```bash
 cargo run
 ```
 
-Le serveur écoute sur `https://localhost:3000` avec les certificats de dev du
-dépôt. Ouvrir cette adresse dans deux navigateurs et rejoindre la même room
-pour un essai de bout en bout.
+Le serveur écoute sur `https://localhost:3000`. Ouvrir cette adresse dans deux
+navigateurs et rejoindre la même room pour un essai de bout en bout.
 
 ## Configuration
 
@@ -37,3 +43,6 @@ Le routage RTP se teste sans réseau : la couche média ne parle qu'au trait
 `RtpSink`, que les tests implémentent en mémoire. Voir `tests/forwarding.rs`.
 
 Architecture et points connus : [CONTEXT.md](CONTEXT.md).
+
+Présentation du projet : [README racine](../../README.md) · Contribuer :
+[CONTRIBUTING.md](../../CONTRIBUTING.md).
