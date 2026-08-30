@@ -1,0 +1,10 @@
+.grid {
+  display: grid;
+  gap: var(--gap-grid);
+  background: transparent;
+}
+
+.grid.divided {
+  gap: 1px;
+  background: var(--border-subtle);
+}

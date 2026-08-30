@@ -1,0 +1,68 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+.value {
+  color: var(--text-strong);
+}
+
+.track {
+  position: relative;
+  background: var(--surface-inset);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width var(--dur-3) var(--ease-out);
+}
+
+.shimmer {
+  position: absolute;
+  inset: 0;
+  width: 38%;
+  opacity: 0.55;
+  animation: sl-shimmer 1.4s var(--ease-in-out) infinite;
+}
+
+.accent {
+  background: var(--accent);
+}
+
+.secondary {
+  background: var(--accent-2);
+}
+
+.ok {
+  background: var(--ok);
+}
+
+.warn {
+  background: var(--warn);
+}
+
+.danger {
+  background: var(--danger);
+}
+
+.threshold {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  background: var(--danger);
+  border-radius: 2px;
+}

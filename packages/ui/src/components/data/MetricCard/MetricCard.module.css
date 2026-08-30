@@ -1,0 +1,103 @@
+.card {
+  padding: var(--space-6) var(--space-7);
+  background: var(--surface-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: left;
+  min-width: 0;
+}
+
+.card.right {
+  text-align: right;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  justify-content: flex-start;
+  font-size: var(--fs-34);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-display);
+  line-height: var(--lh-flat);
+  color: var(--text-strong);
+}
+
+.card.right .valueRow {
+  justify-content: flex-end;
+}
+
+.card.compact .valueRow {
+  font-size: var(--fs-20);
+}
+
+.valueRow.ok {
+  color: var(--ok);
+}
+
+.valueRow.warn {
+  color: var(--warn);
+}
+
+.valueRow.error {
+  color: var(--danger);
+}
+
+.unit {
+  font-size: var(--fs-14);
+  font-weight: var(--fw-regular);
+  color: var(--text-muted);
+}
+
+.card.compact .unit {
+  font-size: var(--fs-12);
+}
+
+.valueRow.ok .unit {
+  color: var(--ok);
+}
+
+.valueRow.warn .unit {
+  color: var(--warn);
+}
+
+.valueRow.error .unit {
+  color: var(--danger);
+}
+
+.deltaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--fs-12);
+  justify-content: flex-start;
+}
+
+.card.right .deltaRow {
+  justify-content: flex-end;
+}
+
+.delta {
+  color: var(--text-muted);
+}
+
+.delta.up {
+  color: var(--ok);
+}
+
+.delta.down {
+  color: var(--danger);
+}
+
+.delta.flat {
+  color: var(--text-muted);
+}
+
+.sublabel {
+  color: var(--text-muted);
+}
+
+.chartSlot {
+  margin-top: var(--space-2);
+}

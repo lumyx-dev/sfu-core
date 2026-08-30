@@ -30,4 +30,10 @@ export * from './components/feedback/LoadingSkeleton';
 export * from './components/feedback/SeverityBadge';
 export * from './components/feedback/Toast';
 
+export * from './components/data/DataTable';
+export * from './components/data/EventList';
+export * from './components/data/MetricCard';
+export * from './components/data/MetricGrid';
+export * from './components/data/ProgressBar';
+
 export * from './components/_probe';
