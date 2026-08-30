@@ -18,4 +18,9 @@ export * from './components/layout/DashboardGrid';
 export * from './components/layout/SplitPane';
 export * from './components/layout/StatusStrip';
 
+export * from './components/navigation/Breadcrumb';
+export * from './components/navigation/Sidebar';
+export * from './components/navigation/Tabs';
+export * from './components/navigation/Toolbar';
+
 export * from './components/_probe';
