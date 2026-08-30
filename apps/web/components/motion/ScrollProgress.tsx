@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import s from './ScrollProgress.module.css';
 
 export function ScrollProgress() {
   const [ratio, setRatio] = useState(0);
@@ -9,7 +10,7 @@ export function ScrollProgress() {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const onScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      setRatio(max > 0 ? window.scrollY / max : 0);
+      setRatio(max > 0 ? Math.min(1, window.scrollY / max) : 0);
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -24,16 +25,8 @@ export function ScrollProgress() {
     <div
       aria-hidden
       data-progress
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: 2,
-        width: `${ratio * 100}%`,
-        background: 'var(--accent)',
-        zIndex: 50,
-        transition: 'width 80ms linear',
-      }}
+      className={`fixed left-0 top-0 z-[60] h-0.5 ${s.bar}`}
+      style={{ width: `${ratio * 100}%` }}
     />
   );
 }

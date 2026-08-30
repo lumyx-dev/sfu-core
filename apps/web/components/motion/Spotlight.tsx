@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import s from './Spotlight.module.css';
 
 export function Spotlight() {
   const ref = useRef<HTMLDivElement>(null);
@@ -35,13 +36,8 @@ export function Spotlight() {
       ref={ref}
       aria-hidden
       data-spotlight
-      style={{
-        position: 'absolute',
-        inset: 0,
-        opacity: 0,
-        pointerEvents: 'none',
-        transition: 'opacity 300ms var(--ease-out)',
-      }}
+      className={`absolute inset-0 pointer-events-none ${s.spotlight}`}
+      style={{ opacity: 0 }}
     />
   );
 }
