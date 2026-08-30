@@ -4,6 +4,7 @@ import { DataSection } from './sections/data';
 import { FeedbackSection } from './sections/feedback';
 import { LayoutSection } from './sections/layout-section';
 import { NavigationSection } from './sections/navigation';
+import { WebrtcSection } from './sections/webrtc';
 
 export default function DesignSystemPage() {
   return (
@@ -45,6 +46,10 @@ export default function DesignSystemPage() {
       <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">Data</span>
         <DataSection />
+      </section>
+      <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">Webrtc</span>
+        <WebrtcSection />
       </section>
     </main>
   );

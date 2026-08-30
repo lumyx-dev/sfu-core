@@ -39,3 +39,9 @@ export * from './components/data/Sparkline';
 export * from './components/data/TimeSeriesChart';
 
 export * from './components/_probe';
+
+export * from './components/webrtc/LatencyChip';
+export * from './components/webrtc/PeerCard';
+export * from './components/webrtc/QualityIndicator';
+export * from './components/webrtc/RoomCard';
+export * from './components/webrtc/VideoTile';
