@@ -14,9 +14,20 @@ import {
   MetricCard,
   MetricGrid,
   ProgressBar,
+  Sparkline,
+  type SparklineTone,
   StatusDot,
+  TimeSeriesChart,
 } from '@sightline/ui';
 import { PEERS, type Peer } from '../mock';
+
+// Ordre exact de Sparkline.TONES (source :930) : accent/secondary/warn/neutral/ok -> --series-1..5,
+// danger -> --danger. Pas de mapping direct vers --accent/--ok/--warn/--danger pour les 5
+// premieres cles, contrairement a ce que le brief laissait entendre (cf. task-9-report.md).
+const SPARKLINE_TONES: SparklineTone[] = ['accent', 'secondary', 'warn', 'neutral', 'ok', 'danger'];
+
+// Recopie verbatim de `labels` (Dashboard UI.dc.html:342) — les memes libelles que la maquette.
+const TIME_LABELS = ['14:02', '14:17', '14:32', '14:47', '15:02'];
 
 const PEER_COLUMNS: DataTableColumn[] = [
   { key: 'peer_id', header: 'Peer', strong: true },
@@ -134,6 +145,92 @@ export function DataSection() {
         <span className="sl-label">EventList — dense=true, height=160</span>
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
           <EventList entries={EVENTS} height={160} dense />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">
+          Sparkline — un par tone (table exacte de la source : accent/secondary/warn/neutral/ok
+          -&gt; --series-1..5, danger -&gt; --danger, dans cet ordre), meme serie (a3f91c02) pour
+          comparer les couleurs
+        </span>
+        <div style={{ display: 'flex', gap: 'var(--space-7)', alignItems: 'center', flexWrap: 'wrap' }}>
+          {SPARKLINE_TONES.map((tone) => (
+            <Sparkline key={tone} data={PEERS[0].series} tone={tone} />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">Sparkline — fill=true (defaut) puis fill=false, meme serie et tone</span>
+        <div style={{ display: 'flex', gap: 'var(--space-7)', alignItems: 'center' }}>
+          <Sparkline data={PEERS[3].series} tone="danger" fill />
+          <Sparkline data={PEERS[3].series} tone="danger" fill={false} />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">Sparkline — dot=true (defaut) puis dot=false, meme serie et tone</span>
+        <div style={{ display: 'flex', gap: 'var(--space-7)', alignItems: 'center' }}>
+          <Sparkline data={PEERS[4].series} tone="ok" dot />
+          <Sparkline data={PEERS[4].series} tone="ok" dot={false} />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">
+          Sparkline — threshold sous le minimum de la serie (ligne pointillee danger a --danger,
+          dasharray 3 4, opacity 0.45)
+        </span>
+        <Sparkline data={PEERS[0].series} tone="accent" threshold={20} />
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: 280 }}>
+        <span className="sl-label">
+          MetricCard — Sparkline dans le slot chart (son usage reel dans les maquettes)
+        </span>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+          <MetricCard
+            label="avg_rtt_ms"
+            value={38}
+            unit="ms"
+            delta="-4"
+            deltaTone="down"
+            sublabel="p50 · 60s"
+            chart={<Sparkline data={PEERS[0].series} tone="accent" width={200} height={40} />}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">TimeSeriesChart — 1 serie (rtt de a3f91c02, tone accent), unit=&quot;ms&quot;</span>
+        <div style={{ maxWidth: 640 }}>
+          <TimeSeriesChart
+            series={[{ name: 'RTT', data: PEERS[0].series, tone: 'accent' }]}
+            labels={TIME_LABELS}
+            unit="ms"
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">
+          TimeSeriesChart — 3 series (rtt de 3 peers), threshold=150 + thresholdLabel=&quot;SLA&quot;,
+          unit=&quot;ms&quot; — chaque serie choisit sa couleur via sa propre prop tone (pas de
+          rotation automatique sur --series-1..5 par index, cf. task-9-report.md)
+        </span>
+        <div style={{ maxWidth: 640 }}>
+          <TimeSeriesChart
+            series={[
+              { name: 'a3f91c02', data: PEERS[0].series, tone: 'accent' },
+              { name: '5e7b21f4', data: PEERS[2].series, tone: 'warn' },
+              { name: 'd41f9ab7', data: PEERS[3].series, tone: 'ok' },
+            ]}
+            labels={TIME_LABELS}
+            threshold={150}
+            thresholdLabel="SLA"
+            unit="ms"
+          />
         </div>
       </div>
     </div>

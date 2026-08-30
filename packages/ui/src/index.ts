@@ -35,5 +35,7 @@ export * from './components/data/EventList';
 export * from './components/data/MetricCard';
 export * from './components/data/MetricGrid';
 export * from './components/data/ProgressBar';
+export * from './components/data/Sparkline';
+export * from './components/data/TimeSeriesChart';
 
 export * from './components/_probe';
