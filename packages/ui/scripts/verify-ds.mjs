@@ -113,14 +113,62 @@ if (DS) {
   console.log('· $DS non defini — verification tokens-verbatim sautee');
 }
 
+// 6. Le bloc de tokens inline dans apps/sfu/assets/test.html (delimite par les commentaires
+// SIGHTLINE DESIGN TOKENS) doit etre identique a la concatenation des 9 fichiers tokens/ du
+// handoff, jointe par '\n' — meme logique de jointure que celle utilisee pour construire le
+// bloc dans test.html (cf. rapport). Le SFU sert cette page comme une seule chaine HTML sans
+// route d'assets statiques ; les tokens y sont donc copies en dur et doivent rester verbatim.
+let sfuTokensSkipped = false;
+const SFU_TEST_HTML = join(ROOT, '..', '..', 'apps', 'sfu', 'assets', 'test.html');
+const TOKEN_ORDER = [
+  'fonts.css',
+  'palette.css',
+  'semantic.css',
+  'typography.css',
+  'spacing.css',
+  'radius.css',
+  'elevation.css',
+  'motion.css',
+  'base.css',
+];
+if (DS) {
+  const dsTokens = join(DS, 'tokens');
+  if (!existsSync(SFU_TEST_HTML)) {
+    fail('sfu-tokens-verbatim', `${rel(SFU_TEST_HTML)} n'existe pas`);
+  } else {
+    const html = readFileSync(SFU_TEST_HTML, 'utf8');
+    const OPEN = '/* ===== SIGHTLINE DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */';
+    const CLOSE = '/* ===== END SIGHTLINE DESIGN TOKENS ===== */';
+    const openIdx = html.indexOf(OPEN);
+    const closeIdx = html.indexOf(CLOSE);
+    if (openIdx === -1 || closeIdx === -1 || closeIdx < openIdx) {
+      fail('sfu-tokens-verbatim', `${rel(SFU_TEST_HTML)} ne contient pas de bloc de tokens delimite (marqueurs OPEN/CLOSE introuvables)`);
+    } else {
+      const actual = html.slice(openIdx + OPEN.length + 1, closeIdx).replace(/\n$/, '');
+      const expected = TOKEN_ORDER.map((name) => readFileSync(join(dsTokens, name), 'utf8'))
+        .join('\n')
+        .replace(/\n$/, '');
+      if (actual !== expected) {
+        fail('sfu-tokens-verbatim', `${rel(SFU_TEST_HTML)} — le bloc de tokens inline diverge de la concatenation verbatim de tokens/{${TOKEN_ORDER.join(',')}}`);
+      }
+    }
+  }
+} else {
+  sfuTokensSkipped = true;
+  console.log('· $DS non defini — verification sfu-tokens-verbatim sautee');
+}
+
 if (failures.length) {
   console.error(`\n✗ ${failures.length} violation(s) des contraintes du design system\n`);
   failures.forEach((f) => console.error('  ' + f));
   process.exit(1);
 }
 
-if (tokensSkipped) {
-  console.log('✓ contraintes respectees (tokens-verbatim SAUTE: $DS non defini)');
+if (tokensSkipped || sfuTokensSkipped) {
+  const skipped = [tokensSkipped && 'tokens-verbatim', sfuTokensSkipped && 'sfu-tokens-verbatim']
+    .filter(Boolean)
+    .join(', ');
+  console.log(`✓ contraintes respectees (${skipped} SAUTE: $DS non defini)`);
 } else {
   console.log('✓ contraintes du design system respectees');
 }
