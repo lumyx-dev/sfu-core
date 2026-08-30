@@ -231,10 +231,17 @@ function ProjectStep({
 
 // Sign up.dc.html:155-203 (`sc-if value="{{ isKeys }}"`). Renders exactly what the source shows
 // and no more (task-12-brief.md): no success toast, no fake loading state, no fake error. The
-// "Open the dashboard" and "Copy" controls carry no handler here because the source itself wires
-// none to them — unlike every other actionable control on this page (goProject, goKeys,
-// goAccount, region.pick, toggleStaging, setSdk all have one) — so they stay inert rather than
-// inventing a destination or a clipboard behaviour the mockup never specified.
+// source itself wires no handler to either "Open the dashboard" or the credential rows' "Copy"
+// IconButton, unlike every other actionable control on this page (goProject, goKeys, goAccount,
+// region.pick, toggleStaging, setSdk all have one) — but the two are treated differently here:
+//
+// - Copy is wired to the clipboard (coordinator ruling, fix pass 1) the same way Home's
+//   SnippetTabs.tsx does: a shipping site can't afford an affordance that visibly does nothing,
+//   even though the mockup leaves it inert. No "copied" confirmation UI — the source shows none.
+// - "Open the dashboard" (TODO(sous-projet C), below) stays inert: there is no dashboard to open
+//   (apps/sightline-cloud is an empty shell), and wiring it would mean inventing a destination —
+//   the failure mode this project is explicitly guarding against, unlike Copy, which only needs
+//   a real browser API and no invented backend or route.
 function KeysStep({
   region,
   staging,
@@ -252,6 +259,13 @@ function KeysStep({
     { label: 'Publishable key', value: 'pk_live_c27ad930f14b' },
     { label: 'Secret key — shown once', value: 'sk_live_8f31c02a4d6e9b7f2a1c' },
   ];
+
+  // Same clipboard pattern as Home's SnippetTabs.tsx: guarded for insecure origins (where
+  // `navigator.clipboard` is undefined) and failing silently — no toast, no "copied" state.
+  const copy = (value: string) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    navigator.clipboard.writeText(value).catch(() => {});
+  };
 
   return (
     <div className={s.step}>
@@ -277,7 +291,7 @@ function KeysStep({
             <span className="sl-label">{c.label}</span>
             <div className={s.credValue}>
               <span className={`sl-num ${s.credText}`}>{c.value}</span>
-              <IconButton label="Copy" size={28}>
+              <IconButton label="Copy" size={28} onClick={() => copy(c.value)}>
                 <Icon name="copy" size={14} />
               </IconButton>
             </div>
@@ -301,6 +315,9 @@ function KeysStep({
       </div>
 
       <div className={s.finalRow}>
+        {/* TODO(sous-projet C): point this at the Cloud dashboard once it exists. Left inert —
+            apps/sightline-cloud is an empty shell today, and wiring a destination that doesn't
+            exist would be worse than a control that visibly does nothing. */}
         <Button variant="primary">Open the dashboard</Button>
         <Button>Read the docs</Button>
         <span className={s.finalSpacer} />
