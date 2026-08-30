@@ -1,4 +1,4 @@
-//! Traitement d'un message client.
+//! Handling of a single client message.
 
 use super::messages::{ClientMessage, ServerMessage};
 use crate::app::AppState;
@@ -8,11 +8,11 @@ use crate::transport::PeerConnection;
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 
-/// Applique un message reçu du client.
+/// Applies a message received from the client.
 ///
-/// `tx` est le canal de signaling du peer émetteur ; `conn` sa connexion WebRTC ;
-/// `sink` la destination de ses paquets RTP, remise au moteur de forwarding
-/// au moment du `Join`.
+/// `tx` is the sending peer's signaling channel; `conn` its WebRTC connection;
+/// `sink` the destination of its RTP packets, handed to the forwarding engine
+/// on `Join`.
 pub async fn handle_message(
     msg: ClientMessage,
     peer_id: &str,
@@ -31,8 +31,8 @@ pub async fn handle_message(
                 },
             );
 
-            // Le forwarding est scopé à la room : le peer n'y devient joignable
-            // qu'ici, et seulement pour les membres de cette room.
+            // Forwarding is scoped to the room: the peer only becomes
+            // reachable here, and only to the members of that room.
             state
                 .engine
                 .add_peer(room_id.clone(), peer_id.to_string(), sink.clone());
@@ -49,11 +49,11 @@ pub async fn handle_message(
         ClientMessage::SfuOffer { sdp } => {
             tracing::info!("Peer {} — SFU offer reçue", peer_id);
 
-            // Lié dans un `let` avant le `match` : le `MutexGuard` temporaire
-            // d'un scrutateur vit jusqu'à la fin de l'expression `match`, ce qui
-            // garderait la `PeerConnection` verrouillée pendant la
-            // journalisation et l'envoi de la réponse. Ici il tombe dès la fin
-            // de cette ligne. (Clippy : `significant_drop_in_scrutinee`.)
+            // Bound in a `let` before the `match`: a scrutinee's temporary
+            // `MutexGuard` lives until the end of the `match` expression, which
+            // would keep the `PeerConnection` locked during logging and while
+            // sending the reply. Here it drops at the end of this line.
+            // (Clippy: `significant_drop_in_scrutinee`.)
             let outcome = conn.lock().await.handle_offer(&sdp);
 
             match outcome {
@@ -80,8 +80,8 @@ pub async fn handle_message(
             tracing::info!("Peer {} a quitté la room", peer_id);
         }
 
-        // --- Relais P2P, hérité du mode maillé ---
-        // Conservé pour compatibilité du client ; le SFU n'en dépend pas.
+        // --- P2P relay, inherited from the mesh mode ---
+        // Kept for client compatibility; the SFU does not depend on it.
         ClientMessage::Answer {
             sdp,
             target_peer_id,

@@ -1,22 +1,23 @@
-//! Mesure le coût du chemin chaud de forwarding en fonction du nombre de peers.
+//! Measures the cost of the forwarding hot path against the number of peers.
 //!
-//! Sans harness ni dépendance : `cargo bench` suffit. Les sinks sont des
-//! compteurs atomiques, donc on mesure le moteur, pas l'écriture réseau.
+//! No harness, no dependency: `cargo bench` is enough. The sinks are atomic
+//! counters, so what is measured is the engine, not the network write.
 //!
-//! Ce que le banc cherche à montrer : comment le travail par paquet publié
-//! évolue quand la room grandit, et ce que coûte une écriture.
+//! What the benchmark aims to show: how the work per published packet evolves
+//! as the room grows, and what a single write costs.
 //!
-//! # Portée : couche média seule, pas du bout-en-bout
+//! # Scope: the media layer alone, not end to end
 //!
-//! Le banc s'arrête au [`RtpSink`] : il couvre le fanout du moteur, la création
-//! des down_tracks, la réécriture et le clone du paquet, mais **pas** l'écriture
-//! WebRTC en aval (`PeerConnection::write_rtp` → `str0m::media::Writer::write`),
-//! ni la file du `PeerSink`, ni le chiffrement SRTP, ni l'envoi UDP.
+//! The benchmark stops at the [`RtpSink`]: it covers the engine's fanout, the
+//! creation of the down_tracks, and the packet's rewrite and clone, but **not**
+//! the downstream WebRTC write (`PeerConnection::write_rtp` →
+//! `str0m::media::Writer::write`), nor the `PeerSink` queue, nor SRTP
+//! encryption, nor the UDP send.
 //!
-//! Ces chiffres ne se lisent donc pas comme une latence ou un coût de bout en
-//! bout : ils bornent par le bas le travail par paquet. Une régression sur le
-//! chemin de sortie — par exemple une copie du payload réintroduite à
-//! l'écriture — resterait totalement invisible ici.
+//! These numbers must therefore not be read as a latency or an end-to-end cost:
+//! they are a lower bound on the work per packet. A regression on the outbound
+//! path — a payload copy reintroduced at write time, say — would be entirely
+//! invisible here.
 
 use sfu::media::{ForwardingEngine, RtpPacketData, RtpSink};
 use str0m::media::Mid;
@@ -25,7 +26,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-/// Sink qui ne fait que compter — le paquet reçu est consommé et jeté.
+/// A sink that does nothing but count — the packet received is consumed and dropped.
 #[derive(Default)]
 struct CountingSink {
     writes: AtomicUsize,
@@ -39,7 +40,7 @@ impl RtpSink for CountingSink {
     fn request_keyframe(&self) {}
 }
 
-/// Paquet vidéo de taille réaliste (~MTU).
+/// Video packet of realistic size (~MTU).
 fn packet() -> RtpPacketData {
     RtpPacketData {
         payload_type: 96,
@@ -55,11 +56,11 @@ fn packet() -> RtpPacketData {
     }
 }
 
-/// Room unique du banc : tous les peers y sont, donc tous se voient.
+/// The benchmark's single room: every peer is in it, so everyone sees everyone.
 const ROOM: &str = "bench";
 
-/// Publie `iterations` paquets depuis un peer d'une room de `peers` membres.
-/// Rend (durée totale, écritures effectuées).
+/// Publishes `iterations` packets from one peer of a room of `peers` members.
+/// Returns (total duration, writes performed).
 fn run(peers: usize, iterations: usize) -> (std::time::Duration, usize) {
     let engine = ForwardingEngine::new();
     let sinks: Vec<Arc<CountingSink>> = (0..peers)
@@ -70,8 +71,8 @@ fn run(peers: usize, iterations: usize) -> (std::time::Duration, usize) {
         })
         .collect();
 
-    // Tour à blanc : crée les down_tracks hors mesure, pour mesurer le
-    // régime établi et non la montée en charge.
+    // Dry run: creates the down_tracks outside the measurement, so that what is
+    // measured is the steady state and not the ramp-up.
     engine.forward_rtp("peer-0", packet());
 
     let template = packet();
@@ -120,7 +121,7 @@ fn main() {
         );
     }
 
-    // Débit soutenable : un flux 1080p ~ 150 paquets/s par publisher.
+    // Sustainable rate: a 1080p stream is ~150 packets/s per publisher.
     println!("\nCapacité estimée sur un cœur (150 paquets/s par publisher) :\n");
     println!("{:>6} {:>18} {:>16}", "peers", "µs/s de CPU", "charge cœur");
     println!("{}", "-".repeat(42));
@@ -128,7 +129,7 @@ fn main() {
     for peers in [5, 10, 20, 50] {
         let (elapsed, _) = run(peers, ITERATIONS);
         let us_per_packet = elapsed.as_secs_f64() * 1e6 / ITERATIONS as f64;
-        // chaque peer publie 150 paquets/s
+        // each peer publishes 150 packets/s
         let us_per_second = us_per_packet * 150.0 * peers as f64;
         println!(
             "{:>6} {:>18.0} {:>15.1}%",

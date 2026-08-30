@@ -1,4 +1,4 @@
-//! État partagé et assemblage du routeur HTTP.
+//! Shared state and HTTP router assembly.
 
 use crate::config::Config;
 use crate::http;
@@ -9,7 +9,7 @@ use axum::{Router, routing::get};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
-/// Ce que partagent tous les handlers HTTP et WebSocket.
+/// What every HTTP and WebSocket handler shares.
 #[derive(Clone)]
 pub struct AppState {
     pub rooms: Arc<RoomManager>,
@@ -29,7 +29,7 @@ impl AppState {
     }
 }
 
-/// Assemble les routes du serveur.
+/// Assembles the server routes.
 pub fn build_router(state: AppState) -> Router {
     let serve_test_client = state.config.serve_test_client;
 
