@@ -1306,7 +1306,9 @@ impl PgWriter {
 
 **Sur le choix de `INSERT` plutôt que `COPY`** : à 100 lignes par seconde dans une transaction unique, `INSERT` tient largement, et il donne `on conflict do nothing` — indispensable, puisqu'un lot rejoué après une erreur réseau ne doit pas violer la clé primaire. `COPY` n'accepte pas `on conflict`. La spec parlait de `COPY` ; c'est un raffinement à mesurer si le profil le réclame, pas une exigence.
 
-Ajouter dans `telemetry/mod.rs` : `pub mod pg;` et `pub use pg::PgWriter;`, sous `#[cfg(feature = ...)]`— non : sans feature, simplement `pub mod pg;`.
+Déclarer le module dans `telemetry/mod.rs` : `pub mod pg;` puis `pub use pg::PgWriter;`.
+Aucune feature Cargo : sqlx est une dépendance inconditionnelle, c'est
+`SFU_DATABASE_URL` qui décide à l'exécution si on s'en sert.
 
 - [ ] **Step 5: Lancer les tests, avec puis sans base**
 
@@ -1783,7 +1785,10 @@ pub fn join_room(&self, room_id: &str, peer: RoomPeer) -> JoinOutcome {
 
     let previous = self.peer_room_index.get(&peer_id).map(|r| r.clone());
     if previous.is_some_and(|previous| previous != room_id) {
-        self.leave_room(&peer_id);
+        // `let _ =` obligatoire : `leave_room` rend désormais un `Option`, qui
+        // est `#[must_use]`. Sans ça, `cargo clippy` sort un warning et la
+        // contrainte globale « aucun warning » saute.
+        let _ = self.leave_room(&peer_id);
     }
 
     let mut created = false;
@@ -1830,7 +1835,13 @@ pub fn leave_room(&self, peer_id: &str) -> Option<LeaveOutcome> {
 
 Attention : le `drop(room)` de la version actuelle disparaît parce qu'on clone l'`Arc<Room>` au lieu de tenir la `Ref` de la DashMap pendant le `remove`. C'est **nécessaire** : tenir la `Ref` pendant `self.rooms.remove` garde le verrou du shard qu'on modifie — la même famille de blocage que celle documentée dans `CONTEXT.md`.
 
-Adapter tous les appelants et tous les tests existants de `manager.rs` qui attendaient `Vec<String>` ou `()`.
+Adapter tous les appelants et tous les tests existants de `manager.rs` qui attendaient
+`Vec<String>` ou `()`. Il y en a une quinzaine dans le `mod tests` du fichier ; le seul qui
+demande plus qu'un ajustement mécanique est
+`assert_eq!(mgr.join_room("standup", bob), vec!["alice".to_string()])`, qui devient
+`assert_eq!(mgr.join_room("standup", bob).occupants, vec!["alice".to_string()])`.
+Côté production, l'unique appelant hors `manager.rs` est le teardown de `session.rs`,
+repris à l'étape 5.
 
 - [ ] **Step 5: Émettre depuis `dispatch` et `session`**
 
@@ -2189,7 +2200,21 @@ rtc: Rtc::builder()
     .build(Instant::now()),
 ```
 
-`PeerConnection::new` prend un paramètre `stats_interval: Duration` de plus, passé depuis `session.rs` avec `state.config.telemetry.sample_interval`.
+`PeerConnection::new` prend un paramètre `stats_interval: Duration` de plus. Il a **six
+sites d'appel**, tous à mettre à jour, sinon la compilation casse :
+
+| Site | Valeur à passer |
+|---|---|
+| `src/signaling/session.rs:40` | `state.config.telemetry.sample_interval` |
+| `src/signaling/negotiation.rs:366` (test) | `Duration::from_secs(1)` |
+| `src/transport/peer_connection.rs:477` (helper de test) | `Duration::from_secs(1)` |
+| `src/transport/sink.rs:275` (test) | `Duration::from_secs(1)` |
+| `tests/negotiation.rs:64` | `Duration::from_secs(1)` |
+| `tests/room.rs:122` | `Duration::from_secs(1)` |
+
+Les cinq sites de test passent une seconde plutôt que `None` : activer les statistiques dans
+les tests d'intégration est justement ce qui prouve qu'elles ne perturbent pas la
+négociation.
 
 Ajouter aussi un registre du clock rate par mid, alimenté au premier paquet — `MediaAdded` ne porte pas le codec, seul `PayloadParams` le porte :
 
