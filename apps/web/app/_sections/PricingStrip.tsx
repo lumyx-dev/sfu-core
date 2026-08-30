@@ -86,7 +86,7 @@ export function PricingStrip() {
             </HairlineGrid>
           </div>
 
-          <div className={s.overageBar}>
+          <div className={`flex items-center gap-3.5 flex-wrap ${s.overageBar}`}>
             <span className="sl-label">Overage</span>
             <span className={`sl-num ${s.overageText}`}>
               Starter €0.0012/min · Scale €0.0009/min · egress beyond the cap €0.09/GB

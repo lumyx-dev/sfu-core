@@ -14,15 +14,15 @@ export function SiteHeader({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
         <Link href="/" aria-label="Sightline — home">
           <Wordmark />
         </Link>
-        <nav className="hidden flex-1 items-center gap-6 md:flex">
+        <nav className={`flex-1 items-center gap-6 ${s.nav}`}>
           {HEADER_NAV.map((l) => (
             <Link key={l.href} href={l.href} className={s.link}>
               {l.label}
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3 md:ml-0">
-          <span className={`sl-num hidden md:inline ${s.meta}`}>{SITE_VERSION}</span>
+        <div className={`flex items-center gap-3 ${s.actions}`}>
+          <span className={`sl-num ${s.meta}`}>{SITE_VERSION}</span>
           <a href={GITHUB_URL} className={s.ghostButton} target="_blank" rel="noreferrer">
             GitHub
           </a>

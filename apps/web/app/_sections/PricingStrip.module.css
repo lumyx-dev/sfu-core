@@ -113,11 +113,9 @@
   color: var(--text-body);
 }
 
+/* display/align-items/gap/flex-wrap moved to Tailwind utilities in PricingStrip.tsx — plain
+   flex mechanics with an on-scale gap, same pattern as .ctaRow above. */
 .overageBar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
   padding: 16px 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);

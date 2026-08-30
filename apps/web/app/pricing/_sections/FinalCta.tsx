@@ -6,9 +6,12 @@ import s from './FinalCta.module.css';
 // @sightline/ui only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no
 // 'ghost') — same gap already flagged in Home's app/_sections/FinalCta.tsx, `quiet` is the
 // closest match. Not fixed here; packages/ui is out of scope for this task.
+// This section's own border-top was removed (task-13): it's the first child of the wrapper
+// in app/pricing/page.tsx, which already carries `border-top: var(--border)` — the two hairlines
+// doubled up and didn't quite match.
 export function FinalCta() {
   return (
-    <section style={{ borderTop: '1px solid var(--border-subtle)' }}>
+    <section>
       <div className={s.layout}>
         <h2 className={s.headline}>
           Start on the free tier. Move to self-hosted whenever you want.

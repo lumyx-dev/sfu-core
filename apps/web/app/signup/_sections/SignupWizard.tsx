@@ -18,6 +18,10 @@ const SDK_TABS = [
   { id: 'go', label: 'Go' },
 ];
 
+// Source hoists a single reusable object for this; three fresh object literals at the call sites
+// would just be noise (and a new object identity on every render).
+const FULL_WIDTH_WRAPPER = { width: '100%' };
+
 // Source: Sign up.dc.html's `<script data-dc-script>` Component class (`state`, `renderVals`).
 // Two steps plus a done screen — `'account' | 'project' | 'keys'` — not three (task-12-brief.md
 // correction 6): the stepper only ever renders the two `stepDef` entries above, and `index`
@@ -122,14 +126,14 @@ function AccountStep({ onSubmit }: { onSubmit: () => void }) {
           label="Work email"
           type="email"
           placeholder="you@company.com"
-          wrapperStyle={{ width: '100%' }}
+          wrapperStyle={FULL_WIDTH_WRAPPER}
         />
         <Input
           label="Password"
           type="password"
           placeholder="At least 12 characters"
           hint="12 characters minimum. No composition rules."
-          wrapperStyle={{ width: '100%' }}
+          wrapperStyle={FULL_WIDTH_WRAPPER}
         />
         <Button variant="primary" block onClick={onSubmit}>
           Create account
@@ -171,7 +175,7 @@ function ProjectStep({
         label="Project name"
         defaultValue="live-classroom"
         hint="Used as the API identifier: lowercase, dashes. Immutable."
-        wrapperStyle={{ width: '100%' }}
+        wrapperStyle={FULL_WIDTH_WRAPPER}
       />
 
       <div className={s.field}>
@@ -221,6 +225,9 @@ function ProjectStep({
         <Button variant="primary" onClick={onSubmit}>
           Create project
         </Button>
+        {/* The source has this as `variant="ghost"`; @sightline/ui only exposes 'primary' |
+            'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no 'ghost') — same gap the three
+            FinalCta.tsx files document — `quiet` is the closest match. */}
         <Button variant="quiet" onClick={onBack}>
           Back
         </Button>

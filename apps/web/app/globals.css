@@ -37,3 +37,19 @@
 @keyframes sl-dash {
   to { stroke-dashoffset: -36; }
 }
+
+/* Filet de sécurité global pour prefers-reduced-motion. MarketingMotion.tsx ne gère que
+   les éléments porteurs de data-anim, piloté en JS ; toute animation déclarée en CSS pur
+   (les beams/dash SVG de LiveCard, le marquee de Hero, sl-breathe dans @sightline/ui)
+   passait au travers. Cette règle coupe tout, sans jamais pouvoir masquer de contenu :
+   elle ne touche qu'à la durée/l'itération, jamais à l'opacité ou au display. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
