@@ -325,10 +325,25 @@ casser, un payload d'exemple et le seuil par défaut :
 | `freeze_ratio` | ratio, affiché en % | peer | > 1% |
 | `bitrate_kbps` | kilobits par seconde | peer, track, room | < 100kbps |
 
-Ces six lignes sont les seules données non inventées de tout le handoff : elles viennent
-de la référence des métriques du README du repo. Elles vivent dans `content/metrics.ts` et
-**cette constante est partagée avec le sous-projet B** — le dashboard affiche les mêmes
-seuils.
+**Correction du 2026-08-30, après vérification contre le dépôt.** Ce paragraphe affirmait que
+ces six lignes étaient « les seules données non inventées de tout le handoff », venues de la
+référence des métriques du README. **C'est faux, et l'erreur était la mienne.**
+
+Il n'existe aucune référence des métriques dans `README.md` : les six noms de champ n'y
+apparaissent pas une seule fois. Le README dit l'inverse — `Quality metrics (jitter, loss, RTT,
+NACK) — ❌ Planned, the whole point of the project — next milestone` — et
+`apps/sfu/src/metrics/mod.rs` ne compte que `peers_connected`, `peers_disconnected` et deux
+compteurs que le README lui-même décrit comme définis mais jamais incrémentés.
+
+L'affirmation venait du `github.md` du handoff, que j'ai reprise sans la vérifier. Les six
+métriques et leurs seuils sont **inventés par le design, au même titre que les prix**, et la
+fonctionnalité qu'ils décrivent n'existe pas encore.
+
+Conséquence : `content/metrics.ts` porte un en-tête `UNVERIFIED` comme `pricing.ts` et
+`benchmarks.ts`, et la page Docs documente une API **prévue**, pas une API livrée. Publier
+cette page en l'état ferait dire au site l'inverse de ce que dit le README du dépôt. La
+décision — publier avec une mention « planned », différer la page, ou implémenter les métriques
+d'abord — appartient au propriétaire du dépôt.
 
 Suit la section « Overriding a threshold » et son exemple
 `PATCH /v1/projects/live-classroom/thresholds`.
@@ -375,8 +390,8 @@ Tout le contenu éditorial vit dans `content/`, en TypeScript typé, jamais dans
 `benchmarks.ts` remplace les mentions « benchmark pending » de Home et Pricing et attend
 trois mesures Rust réelles : mémoire au repos, peers par cœur, latence p99.
 
-`metrics.ts` est la seule constante fondée sur une source vérifiée (le README du repo) et
-ne porte donc pas d'avertissement.
+`metrics.ts` porte le même avertissement que les autres. Il était présenté ici comme la seule
+constante vérifiée ; la vérification contre le dépôt a montré le contraire (voir §7.4).
 
 ## 9. Responsive
 
