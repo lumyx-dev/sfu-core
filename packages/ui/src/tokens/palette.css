@@ -1,0 +1,59 @@
+:root{
+  /* ── Neutrals: near-neutral with a faint cool cast. The system is 90% these. ── */
+  --n-0:#ffffff;
+  --n-25:#fbfbfc;
+  --n-50:#f5f6f8;
+  --n-100:#ebedf1;
+  --n-150:#e4e7ec;
+  --n-200:#dee1e7;
+  --n-300:#c6cad4;
+  --n-400:#9298a6;
+  --n-500:#6b7180;
+  --n-600:#4d5361;
+  --n-700:#383d49;
+  --n-800:#23262e;
+  --n-900:#15171c;
+  --n-950:#0b0c10;
+
+  /* ── Accent: indigo. Saturated and confident — the primary action, the selected row,
+        focus rings, and the primary data series. ── */
+  --indigo-50:#eeecfe;
+  --indigo-100:#ded8fd;
+  --indigo-400:#7c68f8;
+  --indigo-500:#4f39f6;
+  --indigo-600:#3d24d9;
+  --indigo-700:#2f1aa8;
+  --indigo-900:#1e1170;
+
+  /* ── Secondary: coral. The room / session axis, against indigo's peer axis. ── */
+  --coral-50:#fff0ea;
+  --coral-400:#ff8a5c;
+  --coral-500:#f0521f;
+  --coral-600:#c93c0f;
+
+  /* ── Semantics. The 500s are fills, dots, chart strokes and dark-mode ink; the 600s are the
+        light-theme ink steps (they clear 4.5:1 on both white and their own tint). ── */
+  --green-50:#e6f9ef;
+  --green-400:#34c77b;
+  --green-500:#0fa15c;
+  --green-600:#0a7a45;
+  --amber-50:#fff4de;
+  --amber-400:#f9b23c;
+  --amber-500:#dd8a00;
+  --amber-600:#9a5f00;
+  --red-50:#ffecea;
+  --red-400:#ff6b5a;
+  --red-500:#e5342a;
+  --red-600:#b8201c;
+  --blue-50:#e9f1ff;
+  --blue-400:#5b9bff;
+  --blue-500:#2f6df0;
+  --blue-600:#1f4fc0;
+
+  /* ── Chart series: five values that stay legible next to each other. ── */
+  --series-1:#4f39f6;
+  --series-2:#f0521f;
+  --series-3:#0fa15c;
+  --series-4:#dd8a00;
+  --series-5:#6b7180;
+}

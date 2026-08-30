@@ -1,12 +1,27 @@
 {
   "name": "@sightline/ui",
-  "module": "index.ts",
-  "type": "module",
+  "version": "0.1.0",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "verify:ds": "node scripts/verify-ds.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./tokens/*": "./src/tokens/*"
+  },
+  "dependencies": {
+    "lucide-react": "^0.469.0"
   },
   "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "typescript": "^5"
   }
 }

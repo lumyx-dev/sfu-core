@@ -1,0 +1,24 @@
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--dur-1) var(--ease-out);
+}
+
+.iconBtn:disabled { cursor: not-allowed; opacity: .45; }
+
+/* Pas de ring focus dans la source (:322-364) — ni useState(focus) ni boxShadow conditionnel.
+   Port fidele : l'outline navigateur par defaut reste, on n'en ajoute pas. */
+
+.iconBtn:hover:not(:disabled),
+.iconBtn.active { background: var(--accent-tint); color: var(--accent-text); }
+.iconBtn.active { border-color: var(--accent-border); }
+
+.iconBtn.danger:hover:not(:disabled),
+.iconBtn.danger.active { background: var(--danger-tint); color: var(--danger); }

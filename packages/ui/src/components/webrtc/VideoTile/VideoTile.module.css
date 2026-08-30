@@ -1,0 +1,76 @@
+.tile {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-inset);
+  box-shadow: var(--shadow-xs);
+  min-width: 0;
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  color: var(--text-faint);
+  font-size: var(--fs-12);
+}
+
+.bar {
+  position: absolute;
+  bottom: var(--space-5);
+  left: var(--space-5);
+  right: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  background: var(--surface-overlay);
+  color: var(--text-on-overlay);
+  border: none;
+  backdrop-filter: var(--blur-overlay);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+}
+
+.capsuleEmpty {
+  background: var(--surface-card);
+  color: var(--text-body);
+  border: 1px solid var(--border);
+  backdrop-filter: none;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sublabel {
+  opacity: 0.72;
+}
+
+.overlay {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  padding: 5px 9px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+}

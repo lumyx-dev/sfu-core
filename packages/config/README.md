@@ -1,15 +1,12 @@
-# config
+# `@sightline/config`
 
-To install dependencies:
+Shared configuration: TypeScript, lint and build presets.
 
-```bash
-bun install
+> **Scaffold.** This package is empty — it exists to reserve the boundary. Nothing imports it
+> yet.
+
+Part of the [Sightline](../../README.md) monorepo. Add it to a consuming app with:
+
+```json
+"dependencies": { "@sightline/config": "workspace:*" }
 ```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.3.11. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.

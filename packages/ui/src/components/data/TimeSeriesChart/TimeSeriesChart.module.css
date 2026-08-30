@@ -1,0 +1,86 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ticksCol {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 1px;
+  flex: 0 0 auto;
+}
+
+.tickLabel {
+  font-size: var(--fs-11);
+  color: var(--text-faint);
+  line-height: 1;
+}
+
+.chartWrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.svg {
+  display: block;
+  overflow: visible;
+}
+
+.cursor {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--accent);
+}
+
+.thresholdLabel {
+  position: absolute;
+  right: 0;
+  font-size: var(--fs-11);
+  color: var(--danger);
+  background: var(--surface-card);
+  padding: 0 4px;
+}
+
+.labelsRow {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 34px;
+}
+
+.axisLabel {
+  font-size: var(--fs-11);
+  color: var(--text-faint);
+}
+
+.legendRow {
+  display: flex;
+  gap: var(--space-6);
+  padding-left: 34px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+}

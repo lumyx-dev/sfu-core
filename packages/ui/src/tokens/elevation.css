@@ -1,0 +1,22 @@
+:root{
+  /* Real, soft, neutral shadows — cast from a single high light source. No coloured glow. */
+  --shadow-xs:0 1px 2px rgba(21,23,28,.05);
+  --shadow-sm:0 1px 3px rgba(21,23,28,.07), 0 1px 2px rgba(21,23,28,.04);
+  --shadow-md:0 6px 16px -4px rgba(21,23,28,.11), 0 2px 6px -2px rgba(21,23,28,.06);
+  --shadow-lg:0 16px 40px -12px rgba(21,23,28,.17), 0 4px 12px -6px rgba(21,23,28,.09);
+  --shadow-none:none; /* @kind shadow */
+
+  --ring-accent:0 0 0 3px rgba(79,57,246,.20); /* @kind shadow */
+  --ring-danger:0 0 0 3px rgba(184,32,28,.20); /* @kind shadow */
+
+  --blur-overlay:blur(6px); /* @kind other */
+}
+
+.theme-dark{
+  --shadow-xs:0 1px 2px rgba(0,0,0,.4);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.45);
+  --shadow-md:0 8px 20px -6px rgba(0,0,0,.55);
+  --shadow-lg:0 20px 48px -16px rgba(0,0,0,.65);
+  --ring-accent:0 0 0 3px rgba(124,104,248,.28); /* @kind shadow */
+  --ring-danger:0 0 0 3px rgba(255,107,90,.24); /* @kind shadow */
+}

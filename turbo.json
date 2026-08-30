@@ -33,6 +33,11 @@
     },
     "clean": {
       "cache": false
+    },
+    "verify:ds": {
+      "dependsOn": [],
+      "env": ["DS"],
+      "cache": false
     }
   }
 }
