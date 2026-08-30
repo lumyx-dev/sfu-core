@@ -14,6 +14,13 @@ pub enum ClientMessage {
     SfuOffer {
         sdp: String,
     },
+    /// SDP answer to a re-offer the SFU sent.
+    ///
+    /// The SFU offers whenever the room gains or loses a published track: each
+    /// one needs its own outbound m-line on every other peer.
+    SfuAnswer {
+        sdp: String,
+    },
     /// ICE candidate addressed to the SFU.
     SfuIceCandidate {
         candidate: String,
@@ -102,6 +109,14 @@ mod tests {
         assert!(matches!(
             parse(r#"{"type":"sfu_ice_candidate","candidate":"candidate:1 1 udp"}"#),
             ClientMessage::SfuIceCandidate { .. }
+        ));
+    }
+
+    #[test]
+    fn sfu_answer_parses() {
+        assert!(matches!(
+            parse(r#"{"type":"sfu_answer","sdp":"v=0"}"#),
+            ClientMessage::SfuAnswer { .. }
         ));
     }
 
