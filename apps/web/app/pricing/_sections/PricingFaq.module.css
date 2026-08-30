@@ -1,0 +1,75 @@
+/* Source: Pricing.dc.html:160-176 — same 180px-rail shape as ComparisonTable.module.css
+   (task-8-brief.md correction 7), but this rail carries no paragraph, unlike the table's. */
+.section {
+  border-top: 1px solid var(--border);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 20px;
+}
+@media (min-width: 640px) {
+  .layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 40px;
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (min-width: 900px) {
+  .rail {
+    position: sticky;
+    top: 32px;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 40px;
+  }
+}
+
+.item {
+  border-top: 1px solid var(--border);
+  padding: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-wrap: pretty;
+}
+
+.answer {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}

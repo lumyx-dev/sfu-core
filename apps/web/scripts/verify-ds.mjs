@@ -18,6 +18,7 @@ const CLIENT_ALLOWED = new Set([
   'PricingStrip.tsx',
   'CostEstimator.tsx',
   'PlanSwitcher.tsx',
+  'PricingPeriodProvider.tsx',
   'DocsRail.tsx',
   'SignupWizard.tsx',
 ]);

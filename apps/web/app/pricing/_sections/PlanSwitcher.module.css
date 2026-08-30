@@ -1,0 +1,49 @@
+/* Source: Pricing.dc.html:79-96 — the Plans section. Unlike the comparison table and FAQ
+   sections either side of it, this one has no 180px rail: it is a plain flex column
+   (`padding:56px 40px;display:flex;flex-direction:column;gap:24px`). */
+.section {
+  border-top: 1px solid var(--border);
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 20px;
+}
+@media (min-width: 640px) {
+  .layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.overageBar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+.overageText {
+  font-size: 13px;
+  color: var(--text-body);
+}
+
+.overageNote {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
