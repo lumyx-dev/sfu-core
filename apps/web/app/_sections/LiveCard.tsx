@@ -212,6 +212,18 @@ export function LiveCard() {
             </div>
           </div>
         </div>
+
+        <p
+          style={{
+            margin: '14px 0 0',
+            fontSize: 12.5,
+            color: 'var(--text-faint)',
+            textWrap: 'pretty',
+          }}
+        >
+          Real fields, real thresholds, mock traffic. This is the dashboard that ships with the
+          SFU — not a picture of one.
+        </p>
       </div>
     </section>
   );
