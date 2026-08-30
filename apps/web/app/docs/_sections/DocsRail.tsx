@@ -17,7 +17,12 @@ export function DocsRail() {
     const ids = DOC_NAV.map((n) => n.id);
     const io = new IntersectionObserver(
       (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
+        // IntersectionObserver does not guarantee entries are delivered in document order, so
+        // sort by vertical position before taking the topmost one; if nothing is visible, leave
+        // the previously active section as-is rather than guessing.
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible.length) setActive(visible[0].target.id);
       },
       { rootMargin: '0px 0px -70% 0px', threshold: 0 },

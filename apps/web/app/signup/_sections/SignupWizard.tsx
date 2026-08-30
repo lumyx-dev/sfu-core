@@ -207,13 +207,16 @@ function ProjectStep({
 
       <div className={s.stagingRow}>
         <span className={s.stagingCopy}>
-          <span className={s.stagingTitle}>Also create a staging environment</span>
+          <span id="staging-toggle-title" className={s.stagingTitle}>
+            Also create a staging environment
+          </span>
           <span className={s.stagingDesc}>Separate keys and quota. Data kept 24h.</span>
         </span>
         <button
           type="button"
           onClick={() => onStaging(!staging)}
           aria-pressed={staging}
+          aria-labelledby="staging-toggle-title"
           className={s.toggle}
           style={{ background: staging ? 'var(--accent)' : 'var(--n-300)' }}
         >
