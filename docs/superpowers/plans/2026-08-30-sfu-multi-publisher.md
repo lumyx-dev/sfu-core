@@ -1,5 +1,9 @@
 # SFU multi-publisher — Implementation Plan
 
+**Statut : livré.** Les neuf tâches sont implémentées et commitées. Vérifié le 2026-08-30 :
+`cargo test` 98 tests verts (6 suites), `cargo clippy --all-targets` sans warning. Le détail
+de ce que l'exécution a révélé au-delà du plan est en fin de document.
+
 **Goal:** Un subscriber reçoit un flux distinct et décodable par publisher, quel que soit le nombre de peers dans la room.
 
 **Architecture :** une m-line sortante par (subscriber, track publié), allouée par le SFU via `SdpApi::add_media` et négociée par re-offer. Le `DownTrack` cesse d'être un réécriveur d'en-tête inerte : il devient l'aiguillage qui remplace le `mid` source par le `mid` de destination. Les `UpTrack` sont indexés par `(peer_id, mid)` et non plus par `peer_id`, un peer publiant audio **et** vidéo.
@@ -76,9 +80,9 @@ Disparaissent : `payload_type: u8`, `sequence_number`, `timestamp`, `ssrc`. Ils 
 
 `params` remplace `payload_type` parce que le PT n'est pas portable d'un peer à l'autre : `Writer::match_params` fait la correspondance codec → PT local côté subscriber.
 
-- [ ] Écrire `track.rs` + tests d'égalité/hash (deux mids différents du même peer ⇒ clés différentes).
-- [ ] Réécrire `RtpPacketData`, exporter `TrackKey` dans `media/mod.rs`.
-- [ ] `cargo check` (les autres modules cassent : normal, ils sont repris aux tâches suivantes).
+- [x] Écrire `track.rs` + tests d'égalité/hash (deux mids différents du même peer ⇒ clés différentes).
+- [x] Réécrire `RtpPacketData`, exporter `TrackKey` dans `media/mod.rs`.
+- [x] `cargo check` (les autres modules cassent : normal, ils sont repris aux tâches suivantes).
 
 ---
 
@@ -107,7 +111,7 @@ impl DownTrack {
 
 La réécriture SSRC/seq/timestamp disparaît : elle était documentée comme inerte, et le `DownTrack` a désormais un vrai travail — c'est lui qui porte la destination.
 
-- [ ] Test : `write_rtp` remplace le mid source par `target_mid` et laisse le payload partagé (`Arc::as_ptr` identique).
+- [x] Test : `write_rtp` remplace le mid source par `target_mid` et laisse le payload partagé (`Arc::as_ptr` identique).
 
 ---
 
@@ -143,8 +147,8 @@ impl ForwardingEngine {
 
 `forward_rtp` ne crée plus d'abonnement : il n'a plus le droit, l'abonnement demande une allocation de m-line donc une négociation asynchrone. Il crée encore l'`UpTrack` paresseusement (un paquet ne doit pas se perdre si `MediaAdded` s'est perdu), mais sans effet de bord réseau. Il retourne le nombre d'écritures, que la couche session convertit en métrique.
 
-- [ ] Adapter `tests/forwarding.rs` : deux publishers → un subscriber, mids de destination distincts.
-- [ ] `cargo test --test forwarding`.
+- [x] Adapter `tests/forwarding.rs` : deux publishers → un subscriber, mids de destination distincts.
+- [x] `cargo test --test forwarding`.
 
 ---
 
@@ -203,9 +207,9 @@ Le `stream_id` porte l'identifiant du publisher : côté navigateur c'est `event
 
 `request_keyframe` : `self.rtc.direct_api().stream_rx_by_mid(mid, None)` remplace la boucle sur `rx_ssrcs`, qui n'était plus alimentée depuis le passage à `Event::MediaData`. `rx_ssrcs` est supprimé.
 
-- [ ] Test : `negotiate()` sur deux tracks produit une offer à 2 m-lines `a=sendonly` avec les bons `a=msid`.
-- [ ] Test : une seconde `negotiate()` sans answer renvoie `None` (pas de glare).
-- [ ] Test : `queue_subscription` du même track deux fois renvoie `false` la seconde.
+- [x] Test : `negotiate()` sur deux tracks produit une offer à 2 m-lines `a=sendonly` avec les bons `a=msid`.
+- [x] Test : une seconde `negotiate()` sans answer renvoie `None` (pas de glare).
+- [x] Test : `queue_subscription` du même track deux fois renvoie `false` la seconde.
 
 ---
 
@@ -245,8 +249,8 @@ Une **tâche unique** consomme les événements en série : la renégociation es
 
 `drive(peer)` = `conn.lock().negotiate()` → `signaling.send(ServerMessage::SfuOffer { sdp })`.
 
-- [ ] Test : deux peers, un track publié → une `SfuOffer` part vers le second.
-- [ ] Test : un track publié pendant qu'une offer est en vol n'en produit pas une seconde ; elle part après l'answer.
+- [x] Test : deux peers, un track publié → une `SfuOffer` part vers le second.
+- [x] Test : un track publié pendant qu'une offer est en vol n'en produit pas une seconde ; elle part après l'answer.
 
 ---
 
@@ -276,7 +280,7 @@ if written > 0 { metrics.record_rtp(len as u64 * written as u64); }
 ```
 Cela répare le point 3 de `CONTEXT.md` : `/metrics` affichait 0 en permanence.
 
-- [ ] `cargo test`, `cargo clippy --all-targets`.
+- [x] `cargo test`, `cargo clippy --all-targets`.
 
 ---
 
@@ -290,7 +294,7 @@ Cela répare le point 3 de `CONTEXT.md` : `/metrics` affichait 0 en permanence.
 - `peer_left` retire la vignette ; `ended`/`mute` aussi ;
 - grille responsive 1 → N.
 
-- [ ] Vérification manuelle à 3 onglets.
+- [x] Vérification manuelle à 3 onglets.
 
 ---
 
@@ -304,7 +308,7 @@ Deux instances `Rtc` jouent le navigateur face à un `PeerConnection` du SFU, en
 - assertion : `rtc.media(mid).is_some()` pour chaque mid alloué, et `writer(mid)` existe ;
 - assertion clé : les mids alloués pour deux publishers différents sont **distincts**.
 
-- [ ] `cargo test --test negotiation`.
+- [x] `cargo test --test negotiation`.
 
 ---
 
