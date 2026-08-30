@@ -61,7 +61,7 @@ export function LiveCard() {
             <StatusDot status="live" />
             <span className={s.roomName}>live-classroom</span>
             <span className={`sl-num ${s.roomMeta}`}>eu-west-3 · 6 peers · 2.4 Mbps · up 2h 14m</span>
-            <span style={{ flex: 1 }} />
+            <span className="flex-1" />
             <Pill status="connected">Live</Pill>
           </div>
 
@@ -213,14 +213,7 @@ export function LiveCard() {
           </div>
         </div>
 
-        <p
-          style={{
-            margin: '14px 0 0',
-            fontSize: 12.5,
-            color: 'var(--text-faint)',
-            textWrap: 'pretty',
-          }}
-        >
+        <p className={s.disclaimer}>
           Real fields, real thresholds, mock traffic. This is the dashboard that ships with the
           SFU — not a picture of one.
         </p>
