@@ -26,3 +26,6 @@ apps/cloud/
 # Worktrees Claude Code
 .claude/worktrees/
 .gstack/
+# Certificats TLS locaux (mkcert) — jamais committés, régénérés par chaque dev
+*.pem
+*.key
