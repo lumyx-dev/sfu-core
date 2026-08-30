@@ -53,10 +53,49 @@ export function NavigationSection() {
 
       <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">
+          Sidebar — item de type section (etiquette non cliquable, pas de Row) et item sans icone
+        </span>
+        <div
+          style={{
+            height: 200,
+            display: 'flex',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            overflow: 'hidden',
+          }}
+        >
+          <Sidebar
+            items={[
+              { section: 'Monitoring' },
+              { id: 'overview', label: 'Overview', icon: 'layout-dashboard' },
+              { id: 'notes', label: 'Notes (sans icone)' },
+            ]}
+            activeId="overview"
+            brandMeta="demo"
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">
           Breadcrumb — dernier item non cliquable (&quot;test-room&quot;, texte fort, curseur
           default)
         </span>
         <Breadcrumb items={[{ id: 'rooms', label: 'Rooms' }, { label: 'test-room' }]} />
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">
+          Breadcrumb — 3 niveaux : le maillon du milieu porte a la fois le chevron (i &gt; 0) et
+          reste cliquable (non last)
+        </span>
+        <Breadcrumb
+          items={[
+            { id: 'rooms', label: 'Rooms' },
+            { id: 'test-room', label: 'test-room' },
+            { label: 'Peers' },
+          ]}
+        />
       </div>
 
       <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
@@ -83,6 +122,19 @@ export function NavigationSection() {
             </>
           }
         />
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">
+          Toolbar — children (distinct de left, tous deux rendus dans le meme slot gauche apres
+          left)
+        </span>
+        <Toolbar
+          left={<strong style={{ color: 'var(--text-strong)', fontSize: 'var(--fs-14)' }}>test-room</strong>}
+          right={<Button variant="quiet" size="sm">Action</Button>}
+        >
+          <span style={{ color: 'var(--text-muted)', fontSize: 'var(--fs-12)' }}>children slot</span>
+        </Toolbar>
       </div>
 
       <div style={{ display: 'grid', gap: 'var(--space-5)' }}>

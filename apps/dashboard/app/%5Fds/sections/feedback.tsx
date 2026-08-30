@@ -62,6 +62,15 @@ export function FeedbackSection() {
       </div>
 
       <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">AlertBanner — sans meta (le bloc meta est absent quand la prop n&apos;est pas fournie)</span>
+        <AlertBanner
+          severity="info"
+          title="No meta on this banner"
+          message="meta is omitted here — no 'sl-num' line renders below the message."
+        />
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">SeverityBadge — 4 severites, avec et sans icone</span>
         <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
           {SEVERITIES.map((severity) => (
@@ -181,6 +190,16 @@ export function FeedbackSection() {
               </ToastStack>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: 380 }}>
+        <span className="sl-label">
+          Toast — sans onDismiss (pas de bouton fermer) et sans time (pas d&apos;horodatage)
+        </span>
+        <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+          <Toast severity="info" title="No dismiss button" message="onDismiss is not provided." time="14:07:02" />
+          <Toast severity="warning" title="No timestamp" message="time is not provided." onDismiss={() => {}} />
         </div>
       </div>
     </div>

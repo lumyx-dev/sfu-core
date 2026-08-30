@@ -15,7 +15,7 @@ export function CoreSection() {
   return (
     <div style={{ display: 'grid', gap: 'var(--space-8)' }}>
       <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
-        <span className="sl-label">Button — 5 variants x 3 tailles, + disabled et block</span>
+        <span className="sl-label">Button — 5 variants x 3 tailles, + disabled, block, icon (leading) et trailing</span>
         {SIZES.map((size) => (
           <div key={size} style={{ display: 'flex', gap: 'var(--space-5)', alignItems: 'center', flexWrap: 'wrap' }}>
             {VARIANTS.map((variant) => (
@@ -23,6 +23,7 @@ export function CoreSection() {
             ))}
             <Button variant="primary" size={size} disabled>disabled</Button>
             <Button variant="secondary" size={size} icon={<Icon name="download" />}>with icon</Button>
+            <Button variant="secondary" size={size} trailing={<Icon name="chevron-down" />}>with trailing</Button>
           </div>
         ))}
         <div style={{ maxWidth: 320 }}><Button variant="primary" block>block</Button></div>
@@ -60,6 +61,7 @@ export function CoreSection() {
           <IconButton label="Refresh"><Icon name="refresh-cw" /></IconButton>
           <IconButton label="Settings" active><Icon name="settings" /></IconButton>
           <IconButton label="Delete" tone="danger" active><Icon name="x" /></IconButton>
+          <IconButton label="Remove" tone="danger"><Icon name="x" /></IconButton>
           <IconButton label="Close" disabled><Icon name="x" /></IconButton>
         </div>
       </div>

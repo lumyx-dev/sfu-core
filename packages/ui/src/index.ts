@@ -38,8 +38,6 @@ export * from './components/data/ProgressBar';
 export * from './components/data/Sparkline';
 export * from './components/data/TimeSeriesChart';
 
-export * from './components/_probe';
-
 export * from './components/webrtc/LatencyChip';
 export * from './components/webrtc/PeerCard';
 export * from './components/webrtc/QualityIndicator';

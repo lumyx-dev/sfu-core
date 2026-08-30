@@ -11,6 +11,7 @@ import {
   type DataTableRow,
   EventList,
   type EventListEntry,
+  type EventListEntryType,
   MetricCard,
   MetricGrid,
   ProgressBar,
@@ -36,7 +37,7 @@ const PEER_COLUMNS: DataTableColumn[] = [
   { key: 'rtt', header: 'RTT', numeric: true, align: 'right', render: (r) => `${(r as unknown as Peer).rtt} ms` },
   { key: 'jitter', header: 'Jitter', numeric: true, align: 'right', render: (r) => `${(r as unknown as Peer).jitter} ms` },
   { key: 'loss', header: 'Loss', numeric: true, align: 'right', render: (r) => `${(r as unknown as Peer).loss}%` },
-  { key: 'codec', header: 'Codec', muted: true },
+  { key: 'codec', header: 'Codec', muted: true, width: 90 },
   {
     key: 'status',
     header: 'Status',
@@ -64,13 +65,26 @@ const EVENTS: EventListEntry[] = [
   { time: '14:07:33', message: 'Peer joined', detail: '2f81be07', type: 'event' },
 ];
 
+// Type hors de l'union EventListEntryType (ex: un canal ajoute cote serveur apres coup, ou une
+// source externe pas typee). s[e.type] est alors undefined et `|| s.info` (EventList.tsx :54)
+// retombe silencieusement sur le style visuel d'info — pas de crash, pas de classe manquante.
+const UNKNOWN_TYPE_EVENT: EventListEntry[] = [
+  {
+    time: '14:08:02',
+    message: 'Custom channel event',
+    detail: 'plugin-x',
+    type: 'debug' as unknown as EventListEntryType,
+  },
+];
+
 export function DataSection() {
   return (
     <div style={{ display: 'grid', gap: 'var(--space-8)' }}>
       <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">
-          DataTable — normal, colonnes PEERS (align/numeric/muted/strong/render), selectedIndex=2
-          (ligne 5e7b21f4 : accent-tint + liseré 2px accent, cf. source :605)
+          DataTable — normal, colonnes PEERS (align/numeric/muted/strong/render, Codec porte
+          width=90), selectedIndex=2 (ligne 5e7b21f4 : accent-tint + liseré 2px accent, cf.
+          source :605)
         </span>
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
           <DataTable columns={PEER_COLUMNS} rows={PEER_ROWS} selectedIndex={2} onRowClick={() => {}} />
@@ -120,15 +134,24 @@ export function DataSection() {
         </MetricGrid>
       </div>
 
+      <div style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: 260 }}>
+        <span className="sl-label">MetricCard — status=&quot;error&quot; (3e valeur de l&apos;enum ok/warn/error)</span>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+          <MetricCard label="ice_failures" value={3} status="error" sublabel="last 5m" />
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gap: 'var(--space-6)', maxWidth: 420 }}>
         <span className="sl-label">
           ProgressBar — tones accent/warn/danger/secondary, valeur au-dessus du threshold (marqueur
-          2px, pas de changement de couleur — cf. source :845), et indeterminate (sl-shimmer)
+          2px, pas de changement de couleur — cf. source :845), indeterminate (sl-shimmer), et
+          showValue sans label (le head ne rend que la valeur)
         </span>
         <ProgressBar label="CPU" value={42} showValue tone="accent" />
         <ProgressBar label="Memory" value={88} showValue tone="warn" />
         <ProgressBar label="Packet loss" value={7.9} max={10} threshold={2} showValue unit="%" tone="danger" />
         <ProgressBar label="Buffering" tone="secondary" indeterminate />
+        <ProgressBar value={64} showValue tone="ok" />
       </div>
 
       <div style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: 520 }}>
@@ -145,6 +168,15 @@ export function DataSection() {
         <span className="sl-label">EventList — dense=true, height=160</span>
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
           <EventList entries={EVENTS} height={160} dense />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: 520 }}>
+        <span className="sl-label">
+          EventList — type non reconnu (repli silencieux sur le style visuel d&apos;info)
+        </span>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+          <EventList entries={UNKNOWN_TYPE_EVENT} height={64} />
         </div>
       </div>
 
@@ -217,19 +249,22 @@ export function DataSection() {
         <span className="sl-label">
           TimeSeriesChart — 3 series (rtt de 3 peers), threshold=150 + thresholdLabel=&quot;SLA&quot;,
           unit=&quot;ms&quot; — chaque serie choisit sa couleur via sa propre prop tone (pas de
-          rotation automatique sur --series-1..5 par index, cf. task-9-report.md)
+          rotation automatique sur --series-1..5 par index, cf. task-9-report.md) ; d41f9ab7 porte
+          fill=false (pas de degrade sous sa courbe) ; cursor=62 positionne le repere vertical a
+          62% de la largeur
         </span>
         <div style={{ maxWidth: 640 }}>
           <TimeSeriesChart
             series={[
               { name: 'a3f91c02', data: PEERS[0].series, tone: 'accent' },
               { name: '5e7b21f4', data: PEERS[2].series, tone: 'warn' },
-              { name: 'd41f9ab7', data: PEERS[3].series, tone: 'ok' },
+              { name: 'd41f9ab7', data: PEERS[3].series, tone: 'ok', fill: false },
             ]}
             labels={TIME_LABELS}
             threshold={150}
             thresholdLabel="SLA"
             unit="ms"
+            cursor={62}
           />
         </div>
       </div>
