@@ -12,7 +12,7 @@
    courbes ni les durées. */
 @keyframes sl-rise {
   from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: none; }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes sl-fade {
   from { opacity: 0; }
@@ -20,11 +20,11 @@
 }
 @keyframes sl-slide {
   from { opacity: 0; transform: translateX(-14px); }
-  to   { opacity: 1; transform: none; }
+  to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes sl-word {
   from { opacity: 0; transform: translateY(14px) scale(.985); filter: blur(4px); }
-  to   { opacity: 1; transform: none; filter: blur(0); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 @keyframes sl-marquee {
   from { transform: translateX(0); }
