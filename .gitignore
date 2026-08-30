@@ -22,3 +22,7 @@ apps/cloud/
 # Turborepo
 .turbo/
 .rtk/
+
+# Certificats TLS locaux (mkcert) — jamais committés, régénérés par chaque dev
+*.pem
+*.key
