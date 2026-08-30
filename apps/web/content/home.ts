@@ -4,6 +4,8 @@
 // status vocabulary, snippet title/note) made to fit this app's types and the design system's
 // actual component contracts.
 
+import type { FaqEntry } from './pricing';
+
 export interface Snippet {
   title: string;
   body: string;
@@ -179,11 +181,8 @@ export const TOPO_LEGEND: TopoLegendEntry[] = [
 // ported from the separate Pricing.dc.html). The two are not the same array — Home.dc.html
 // defines PRICING_FAQ locally with its own wording, so it is kept here rather than reusing
 // content/pricing.ts's FAQ.
-export interface FaqEntry {
-  q: string;
-  a: string;
-}
-
+// FaqEntry is content/pricing.ts's type (same shape, sibling file) — imported above rather
+// than redeclared here.
 export const PRICING_FAQ: FaqEntry[] = [
   {
     q: 'What exactly is a participant-minute?',

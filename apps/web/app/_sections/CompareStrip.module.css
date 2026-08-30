@@ -23,25 +23,8 @@
   }
 }
 
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-width: 0;
-}
-
-.headerRow {
-  display: flex;
-  align-items: flex-end;
-  gap: 24px;
-  flex-wrap: wrap;
-}
+/* .rail, .content and .headerRow moved to Tailwind utilities in CompareStrip.tsx — plain
+   flex containers with on-scale gaps, no off-scale or responsive rule to anchor them here. */
 
 .headline {
   margin: 0;

@@ -8,16 +8,16 @@ import s from './OpenSource.module.css';
 export function OpenSource() {
   return (
     <section className={s.layout}>
-      <div className={s.rail}>
+      <div className="flex flex-col gap-2">
         <span className="sl-num" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
           04
         </span>
         <span className="sl-label">Open source</span>
       </div>
 
-      <div className={s.content}>
-        <div className={s.badgesCol}>
-          <div className={s.badges}>
+      <div className="flex items-center gap-10 flex-wrap min-w-0">
+        <div className="flex flex-col gap-3.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {/* External status badges from shields.io, not content images — next/no-img-element
                 doesn't apply the way it would to real content imagery. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}

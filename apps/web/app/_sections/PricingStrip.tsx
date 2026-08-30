@@ -24,7 +24,7 @@ export function PricingStrip() {
   return (
     <section id="pricing" style={{ borderTop: '1px solid var(--border)' }}>
       <div className={s.layout}>
-        <div className={s.rail}>
+        <div className={`flex flex-col gap-2 ${s.rail}`}>
           <span className="sl-num" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
             03
           </span>
@@ -32,8 +32,8 @@ export function PricingStrip() {
           <p className={s.railNote}>Free forever self-hosted. Per participant-minute on Cloud.</p>
         </div>
 
-        <div className={s.content}>
-          <div className={s.headerRow}>
+        <div className="flex flex-col gap-6 min-w-0">
+          <div className="flex items-end gap-6 flex-wrap">
             <div className={s.headerText}>
               <h2 data-anim="rise" className={s.headline}>
                 You only pay for minutes you didn&rsquo;t want to operate yourself.
@@ -60,17 +60,17 @@ export function PricingStrip() {
                   className={s.planCell}
                   style={{ boxShadow: plan.featured ? 'inset 0 2px 0 var(--accent)' : 'none' }}
                 >
-                  <div className={s.planNameRow}>
+                  <div className="flex items-center gap-2 min-h-5">
                     <span className="sl-label">{plan.name}</span>
                     {plan.featured && <Badge tone="accent">Most chosen</Badge>}
                   </div>
-                  <div className={s.priceRow}>
+                  <div className="flex items-baseline gap-1.25">
                     <span className={`sl-num ${s.price}`}>{plan.price}</span>
                     <span className={s.per}>{plan.per}</span>
                   </div>
                   <span className={`sl-num ${s.planHeadline}`}>{plan.headline}</span>
                   <span className={s.who}>{plan.who}</span>
-                  <div className={s.features}>
+                  <div className="flex flex-col gap-2.25">
                     {plan.features.map((f) => (
                       <span key={f} className={`sl-num ${s.feature}`}>
                         {f}
@@ -97,7 +97,7 @@ export function PricingStrip() {
             </span>
           </div>
 
-          <div className={s.ctaRow}>
+          <div className="flex items-center gap-3.5 flex-wrap">
             <Link href="/signup">
               <Button variant="primary">Get started free</Button>
             </Link>

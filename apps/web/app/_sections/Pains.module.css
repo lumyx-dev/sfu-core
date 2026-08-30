@@ -26,11 +26,9 @@
   }
 }
 
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* Base flex layout (flex-col, gap-2) is a Tailwind utility on the element itself in Pains.tsx —
+   this rule only adds the sticky behaviour at this custom breakpoint, which can't be expressed
+   as a plain utility. */
 @media (min-width: 900px) {
   .rail {
     position: sticky;
@@ -90,14 +88,6 @@
   color: var(--text-muted);
   max-width: 460px;
   text-wrap: pretty;
-}
-
-.chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding-top: 2px;
 }
 
 .chip {

@@ -93,7 +93,7 @@ export function Pains() {
   return (
     <section id="why" style={{ borderTop: '1px solid var(--border)', background: 'var(--surface-card)' }}>
       <div className={s.layout}>
-        <div className={s.rail}>
+        <div className={`flex flex-col gap-2 ${s.rail}`}>
           <span className="sl-num" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
             01
           </span>
@@ -113,7 +113,7 @@ export function Pains() {
                 </span>
                 <h2 className={s.headline}>{p.headline}</h2>
                 <p className={s.body}>{p.body}</p>
-                <div className={s.chips}>
+                <div className="flex items-center gap-2 flex-wrap pt-0.5">
                   {p.chips.map((chip) => (
                     <span key={chip} className={`sl-num ${s.chip}`}>
                       {chip}

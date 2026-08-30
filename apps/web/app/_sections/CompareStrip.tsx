@@ -13,15 +13,15 @@ export function CompareStrip() {
       style={{ background: 'var(--surface-page)', color: 'var(--text-body)', borderTop: '1px solid var(--border)' }}
     >
       <div className={s.layout}>
-        <div className={s.rail}>
+        <div className="flex flex-col gap-2">
           <span className="sl-num" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
             02
           </span>
           <span className="sl-label">Coming from LiveKit</span>
         </div>
 
-        <div className={s.content}>
-          <div className={s.headerRow}>
+        <div className="flex flex-col gap-6 min-w-0">
+          <div className="flex items-end gap-6 flex-wrap">
             <h2 data-anim="rise" className={s.headline}>
               Same signaling. Different priorities.
             </h2>

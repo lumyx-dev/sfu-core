@@ -25,32 +25,9 @@
   }
 }
 
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.content {
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.badgesCol {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.badges {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+/* .rail, .content, .badgesCol and .badges moved to Tailwind utilities in OpenSource.tsx —
+   plain flex containers with on-scale gaps, no off-scale or responsive rule to anchor them
+   here (this section's rail isn't sticky, unlike #why/#pricing). */
 
 .link {
   font-size: 13px;
