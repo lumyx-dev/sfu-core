@@ -5,8 +5,9 @@
 //! optional-persistence promise requires.
 
 use sfu::config::TelemetryConfig;
-use sfu::telemetry::{Batch, Entry, PgWriter};
+use sfu::telemetry::{Batch, Entry, EventKind, EventRecord, PeerSample, PgWriter, TrackKind, TrackSample};
 use chrono::Utc;
+use serde_json::json;
 use uuid::Uuid;
 
 /// Builds a writer against the test database, or `None` when it is absent.
@@ -112,16 +113,30 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
 
     let room = Uuid::new_v4();
     let peer = Uuid::new_v4();
+    let track = Uuid::new_v4();
     let now = Utc::now();
     w.write(&Batch::from_entries(vec![
         Entry::RoomOpened { id: room, name: "orpheline".into(), at: now },
         Entry::PeerJoined { id: peer, room_id: room, at: now },
+        // Un track resté publié : sans lui, la branche `tracks` de
+        // `recover_open_sessions` pourrait disparaître sans faire échouer ce
+        // test (room + peer suffisent déjà à satisfaire une simple `>= 2`).
+        Entry::TrackPublished {
+            id: track,
+            peer_id: peer,
+            mid: "0".into(),
+            kind: TrackKind::Audio,
+            at: now,
+        },
     ]))
     .await
     .expect("écriture");
 
     let closed = w.recover_open_sessions().await.expect("reprise");
-    assert!(closed >= 2, "la room et le peer restés ouverts doivent être fermés");
+    // Exactement trois lignes restées ouvertes : la room, le peer, le track.
+    // Une assertion exacte fait échouer ce test si une des trois branches
+    // disparaît silencieusement, ce qu'une simple `>=` ne détecterait pas.
+    assert_eq!(closed, 3, "la room, le peer et le track restés ouverts doivent être fermés");
 
     let (reason,): (Option<String>,) =
         sqlx::query_as("select ended_reason from telemetry.rooms where id = $1")
@@ -138,4 +153,321 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
             .await
             .expect("requête");
     assert!(left.is_some(), "un peer resté ouvert doit être fermé aussi");
+
+    let (ended,): (Option<chrono::DateTime<Utc>>,) =
+        sqlx::query_as("select ended_at from telemetry.tracks where id = $1")
+            .bind(track)
+            .fetch_one(w.pool())
+            .await
+            .expect("requête");
+    assert!(ended.is_some(), "un track resté publié doit être fermé aussi");
+}
+
+/// Une room et un peer pour porter les entités qui en dépendent. Les
+/// timestamps sont sans conséquence dans ces tests : seule leur cohérence
+/// relative aux clés primaires compte.
+async fn room_and_peer(w: &PgWriter) -> (Uuid, Uuid) {
+    let room = Uuid::new_v4();
+    let peer = Uuid::new_v4();
+    let now = Utc::now();
+    w.write(&Batch::from_entries(vec![
+        Entry::RoomOpened { id: room, name: "support".into(), at: now },
+        Entry::PeerJoined { id: peer, room_id: room, at: now },
+    ]))
+    .await
+    .expect("room + peer de support");
+    (room, peer)
+}
+
+#[derive(sqlx::FromRow, Debug, PartialEq)]
+struct TrackSampleRow {
+    bytes: i64,
+    packets: i64,
+    nacks: i32,
+    plis: i32,
+    firs: i32,
+    jitter_ms: Option<f32>,
+    loss: Option<f32>,
+    rtt_ms: Option<f32>,
+}
+
+#[tokio::test]
+async fn a_track_sample_round_trips_every_column_without_transposition() {
+    let Some(w) = writer().await else { return };
+    let (_, peer) = room_and_peer(&w).await;
+
+    let track = Uuid::new_v4();
+    let t1 = Utc::now();
+    let t2 = t1 + chrono::Duration::seconds(1);
+
+    w.write(&Batch::from_entries(vec![Entry::TrackPublished {
+        id: track,
+        peer_id: peer,
+        mid: "0".into(),
+        kind: TrackKind::Video,
+        at: t1,
+    }]))
+    .await
+    .expect("publication du track");
+
+    // Des valeurs toutes différentes : une transposition entre deux colonnes
+    // adjacentes de même type (nacks/plis, par exemple) doit faire échouer
+    // l'assertion, ce qu'une même valeur partout ne détecterait pas.
+    w.write(&Batch::from_entries(vec![Entry::TrackSample(TrackSample {
+        track_id: track,
+        at: t1,
+        bytes: 11,
+        packets: 22,
+        nacks: 3,
+        plis: 4,
+        firs: 5,
+        jitter_ms: Some(6.6),
+        loss: Some(0.7),
+        rtt_ms: Some(8.8),
+    })]))
+    .await
+    .expect("échantillon complet");
+
+    // Un second échantillon sans aucun rapport RTCP reçu : les trois colonnes
+    // optionnelles doivent rester `null`, pas `0.0`.
+    w.write(&Batch::from_entries(vec![Entry::TrackSample(TrackSample {
+        track_id: track,
+        at: t2,
+        bytes: 111,
+        packets: 222,
+        nacks: 33,
+        plis: 44,
+        firs: 55,
+        jitter_ms: None,
+        loss: None,
+        rtt_ms: None,
+    })]))
+    .await
+    .expect("échantillon sans rtcp");
+
+    let row1: TrackSampleRow = sqlx::query_as(
+        "select bytes, packets, nacks, plis, firs, jitter_ms, loss, rtt_ms
+         from telemetry.track_samples where track_id = $1 and at = $2",
+    )
+    .bind(track)
+    .bind(t1)
+    .fetch_one(w.pool())
+    .await
+    .expect("requête échantillon 1");
+    assert_eq!(
+        row1,
+        TrackSampleRow {
+            bytes: 11,
+            packets: 22,
+            nacks: 3,
+            plis: 4,
+            firs: 5,
+            jitter_ms: Some(6.6),
+            loss: Some(0.7),
+            rtt_ms: Some(8.8),
+        }
+    );
+
+    let row2: TrackSampleRow = sqlx::query_as(
+        "select bytes, packets, nacks, plis, firs, jitter_ms, loss, rtt_ms
+         from telemetry.track_samples where track_id = $1 and at = $2",
+    )
+    .bind(track)
+    .bind(t2)
+    .fetch_one(w.pool())
+    .await
+    .expect("requête échantillon 2");
+    assert_eq!(
+        row2,
+        TrackSampleRow {
+            bytes: 111,
+            packets: 222,
+            nacks: 33,
+            plis: 44,
+            firs: 55,
+            jitter_ms: None,
+            loss: None,
+            rtt_ms: None,
+        }
+    );
+}
+
+#[derive(sqlx::FromRow, Debug, PartialEq)]
+struct PeerSampleRow {
+    bytes_rx: i64,
+    bytes_tx: i64,
+    transport_bytes_rx: i64,
+    transport_bytes_tx: i64,
+    egress_loss: Option<f32>,
+    bwe_bps: Option<i64>,
+}
+
+#[tokio::test]
+async fn a_peer_sample_round_trips_every_column_without_transposition() {
+    let Some(w) = writer().await else { return };
+    let (_, peer) = room_and_peer(&w).await;
+    let at = Utc::now();
+
+    // Encore des valeurs toutes différentes, y compris `bytes_rx`/`bytes_tx`
+    // et les deux compteurs "transport_" : ce sont les paires les plus
+    // faciles à intervertir par erreur dans `pg.rs`.
+    w.write(&Batch::from_entries(vec![Entry::PeerSample(PeerSample {
+        peer_id: peer,
+        at,
+        bytes_rx: 101,
+        bytes_tx: 102,
+        transport_bytes_rx: 103,
+        transport_bytes_tx: 104,
+        egress_loss: Some(0.55),
+        bwe_bps: Some(123_456),
+    })]))
+    .await
+    .expect("échantillon peer");
+
+    let row: PeerSampleRow = sqlx::query_as(
+        "select bytes_rx, bytes_tx, transport_bytes_rx, transport_bytes_tx, egress_loss, bwe_bps
+         from telemetry.peer_samples where peer_id = $1 and at = $2",
+    )
+    .bind(peer)
+    .bind(at)
+    .fetch_one(w.pool())
+    .await
+    .expect("requête échantillon peer");
+    assert_eq!(
+        row,
+        PeerSampleRow {
+            bytes_rx: 101,
+            bytes_tx: 102,
+            transport_bytes_rx: 103,
+            transport_bytes_tx: 104,
+            egress_loss: Some(0.55),
+            bwe_bps: Some(123_456),
+        }
+    );
+}
+
+#[derive(sqlx::FromRow, Debug)]
+struct EventRow {
+    kind: String,
+    severity: String,
+    room_id: Option<Uuid>,
+    peer_id: Option<Uuid>,
+    track_id: Option<Uuid>,
+    payload: serde_json::Value,
+}
+
+#[tokio::test]
+async fn an_event_round_trips_kind_severity_and_payload() {
+    let Some(w) = writer().await else { return };
+
+    // Des marqueurs uniques plutôt que des ids réels : `events` n'a pas de
+    // clé étrangère sur room_id/peer_id/track_id (§6.3), donc n'importe quel
+    // uuid identifie la ligne sans polluer une autre table.
+    let room_marker = Uuid::new_v4();
+    let peer_marker = Uuid::new_v4();
+    let track_marker = Uuid::new_v4();
+    let at = Utc::now();
+    let payload = json!({"metric": "loss", "value": 0.42});
+
+    // `ThresholdBreached` porte une sévérité "critical" par défaut, pas
+    // "info" : ça vérifie que la sévérité écrite est bien celle du kind, pas
+    // une valeur par défaut codée en dur dans `write`.
+    let event = EventRecord::new(EventKind::ThresholdBreached, at)
+        .room(room_marker)
+        .peer(peer_marker)
+        .track(track_marker)
+        .payload(payload.clone());
+
+    w.write(&Batch::from_entries(vec![Entry::Event(event)]))
+        .await
+        .expect("événement");
+
+    let row: EventRow = sqlx::query_as(
+        "select kind::text, severity::text, room_id, peer_id, track_id, payload
+         from telemetry.events where peer_id = $1",
+    )
+    .bind(peer_marker)
+    .fetch_one(w.pool())
+    .await
+    .expect("requête événement");
+
+    assert_eq!(row.kind, "threshold_breached");
+    assert_eq!(row.severity, "critical");
+    assert_eq!(row.room_id, Some(room_marker));
+    assert_eq!(row.peer_id, Some(peer_marker));
+    assert_eq!(row.track_id, Some(track_marker));
+    assert_eq!(row.payload, payload);
+}
+
+#[tokio::test]
+async fn a_track_moves_through_published_codec_and_ended() {
+    let Some(w) = writer().await else { return };
+    let (_, peer) = room_and_peer(&w).await;
+
+    let track = Uuid::new_v4();
+    let published_at = Utc::now();
+    let ended_at = published_at + chrono::Duration::seconds(30);
+
+    w.write(&Batch::from_entries(vec![Entry::TrackPublished {
+        id: track,
+        peer_id: peer,
+        mid: "1".into(),
+        kind: TrackKind::Video,
+        at: published_at,
+    }]))
+    .await
+    .expect("publication");
+
+    w.write(&Batch::from_entries(vec![Entry::TrackCodec {
+        id: track,
+        codec: "vp8".into(),
+        clock_rate: 90_000,
+    }]))
+    .await
+    .expect("codec");
+
+    w.write(&Batch::from_entries(vec![Entry::TrackEnded { id: track, at: ended_at }]))
+        .await
+        .expect("fin");
+
+    let (kind, codec, clock_rate, ended): (String, Option<String>, Option<i32>, Option<chrono::DateTime<Utc>>) =
+        sqlx::query_as(
+            "select kind::text, codec, clock_rate, ended_at from telemetry.tracks where id = $1",
+        )
+        .bind(track)
+        .fetch_one(w.pool())
+        .await
+        .expect("requête track");
+
+    assert_eq!(kind, "video");
+    assert_eq!(codec.as_deref(), Some("vp8"));
+    assert_eq!(clock_rate, Some(90_000));
+    assert_eq!(ended, Some(ended_at));
+}
+
+#[tokio::test]
+async fn peer_left_and_ice_state_round_trip() {
+    let Some(w) = writer().await else { return };
+    let (_, peer) = room_and_peer(&w).await;
+    let at = Utc::now();
+
+    w.write(&Batch::from_entries(vec![
+        Entry::IceState { peer_id: peer, state: "disconnected".into(), at },
+        Entry::PeerLeft { id: peer, at, close_code: Some(1006) },
+    ]))
+    .await
+    .expect("écriture");
+
+    let (left, close_code, ice_state): (Option<chrono::DateTime<Utc>>, Option<i32>, Option<String>) =
+        sqlx::query_as(
+            "select left_at, close_code, ice_state from telemetry.peers where id = $1",
+        )
+        .bind(peer)
+        .fetch_one(w.pool())
+        .await
+        .expect("requête peer");
+
+    assert_eq!(left, Some(at));
+    assert_eq!(close_code, Some(1006));
+    assert_eq!(ice_state.as_deref(), Some("disconnected"));
 }
