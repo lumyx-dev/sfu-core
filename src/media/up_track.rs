@@ -1,11 +1,11 @@
-//! Flux entrant d'un publisher, et ses subscribers.
+//! A publisher's inbound stream, and its subscribers.
 
 use super::down_track::DownTrack;
 use super::packet::RtpPacketData;
 use dashmap::DashMap;
 use std::sync::Arc;
 
-/// Le flux publié par un peer, avec la liste des [`DownTrack`] qui le consomment.
+/// The stream published by a peer, with the list of [`DownTrack`]s consuming it.
 pub struct UpTrack {
     pub track_id: String,
     pub peer_id: String,
@@ -35,7 +35,7 @@ impl UpTrack {
         self.down_tracks.remove(peer_id);
     }
 
-    /// Diffuse un paquet à tous les subscribers.
+    /// Broadcasts a packet to every subscriber.
     pub fn forward(&self, packet: &RtpPacketData) {
         for entry in self.down_tracks.iter() {
             entry.value().write_rtp(packet);

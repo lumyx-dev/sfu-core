@@ -1,20 +1,20 @@
-//! Destination d'un flux RTP sortant.
+//! Destination of an outbound RTP stream.
 
 use super::packet::RtpPacketData;
 
-/// Où [`crate::media::ForwardingEngine`] dépose les paquets destinés à un peer.
+/// Where [`crate::media::ForwardingEngine`] drops the packets bound for a peer.
 ///
-/// C'est la frontière entre la couche média et la couche transport : le moteur
-/// de forwarding manipule des `Arc<dyn RtpSink>` sans jamais voir une
-/// `PeerConnection`. L'implémentation de production est
-/// [`crate::transport::PeerSink`] ; les tests injectent un sink en mémoire.
+/// This is the boundary between the media layer and the transport layer: the
+/// forwarding engine handles `Arc<dyn RtpSink>` values without ever seeing a
+/// `PeerConnection`. The production implementation is
+/// [`crate::transport::PeerSink`]; tests inject an in-memory sink.
 ///
-/// Les deux méthodes doivent être non bloquantes — elles sont appelées depuis
-/// le chemin chaud, une fois par paquet et par subscriber.
+/// Both methods must be non-blocking — they are called from the hot path, once
+/// per packet per subscriber.
 pub trait RtpSink: Send + Sync {
-    /// Remet un paquet au peer. Un sink fermé absorbe silencieusement.
+    /// Hands a packet to the peer. A closed sink silently swallows it.
     fn write_rtp(&self, packet: RtpPacketData);
 
-    /// Demande une keyframe au peer (PLI).
+    /// Requests a keyframe from the peer (PLI).
     fn request_keyframe(&self);
 }

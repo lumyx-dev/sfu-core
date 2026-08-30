@@ -1,4 +1,4 @@
-//! Routes de service.
+//! Service routes.
 
 use crate::app::AppState;
 use axum::{
@@ -6,7 +6,7 @@ use axum::{
     response::{Html, IntoResponse},
 };
 
-/// Sonde de vivacité.
+/// Liveness probe.
 pub async fn health() -> impl IntoResponse {
     axum::Json(serde_json::json!({
         "status": "ok",
@@ -14,7 +14,7 @@ pub async fn health() -> impl IntoResponse {
     }))
 }
 
-/// Compteurs d'exploitation.
+/// Operational counters.
 pub async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
     axum::Json(serde_json::json!({
         "rooms": state.rooms.room_count(),
@@ -23,8 +23,8 @@ pub async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
     }))
 }
 
-/// Client de test livré avec le serveur. Route montée seulement si
-/// `Config::serve_test_client` est actif.
+/// Test client shipped with the server. The route is mounted only when
+/// `Config::serve_test_client` is enabled.
 pub async fn test_client(State(state): State<AppState>) -> Html<String> {
     let path = state.config.test_client_path();
     match std::fs::read_to_string(&path) {

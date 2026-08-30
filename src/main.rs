@@ -1,4 +1,4 @@
-//! Point d'entrée du serveur SFU.
+//! SFU server entry point.
 
 use sfu::app::{AppState, build_router};
 use sfu::config::Config;

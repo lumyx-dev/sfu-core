@@ -1,8 +1,7 @@
-//! Tests du moteur de forwarding, sans réseau.
+//! Tests for the forwarding engine, without a network.
 //!
-//! Le moteur ne parle qu'au trait `RtpSink` : on lui injecte des sinks en
-//! mémoire et on observe ce qui en sort. Aucune socket, aucun handshake,
-//! aucun runtime asynchrone.
+//! The engine only talks to the `RtpSink` trait: we inject in-memory sinks and
+//! observe what comes out. No socket, no handshake, no async runtime.
 
 use sfu::media::{ForwardingEngine, RtpPacketData, RtpSink};
 use str0m::media::Mid;
@@ -11,7 +10,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-/// Sink de test : garde tout ce qu'on lui écrit.
+/// Test sink: keeps everything written to it.
 #[derive(Default)]
 struct RecordingSink {
     packets: Mutex<Vec<RtpPacketData>>,
@@ -46,8 +45,8 @@ impl RtpSink for RecordingSink {
     }
 }
 
-/// Un paquet vidéo plausible. `payload_type >= 96` est ce sur quoi le moteur
-/// se base pour classer le flux en vidéo.
+/// A plausible video packet. `payload_type >= 96` is what the engine relies on
+/// to classify the stream as video.
 fn video_packet(payload: &[u8]) -> RtpPacketData {
     RtpPacketData {
         payload_type: 96,
@@ -63,25 +62,25 @@ fn video_packet(payload: &[u8]) -> RtpPacketData {
     }
 }
 
-/// Room des scénarios qui n'en font intervenir qu'une.
+/// The room used by the scenarios that involve only one.
 const ROOM: &str = "standup";
 
-/// Fait rejoindre `room_id` à un peer, et rend le sink qui lui a été attribué.
+/// Makes a peer join `room_id`, and returns the sink assigned to it.
 fn join(engine: &ForwardingEngine, room_id: &str, peer_id: &str) -> Arc<RecordingSink> {
     let sink = RecordingSink::new();
     engine.add_peer(room_id.to_string(), peer_id.to_string(), sink.clone());
     sink
 }
 
-/// Monte un moteur avec les peers nommés dans une même room, et rend leurs
-/// sinks dans l'ordre.
+/// Builds an engine with the named peers in a single room, and returns their
+/// sinks in order.
 fn engine_with(peers: &[&str]) -> (Arc<ForwardingEngine>, Vec<Arc<RecordingSink>>) {
     let engine = ForwardingEngine::new();
     let sinks: Vec<Arc<RecordingSink>> = peers.iter().map(|id| join(&engine, ROOM, id)).collect();
     (engine, sinks)
 }
 
-// --- Routage de base -------------------------------------------------------
+// --- Basic routing ---------------------------------------------------------
 
 #[test]
 fn a_publisher_never_receives_its_own_stream() {
@@ -130,7 +129,7 @@ fn a_peer_joining_later_starts_receiving() {
     assert_eq!(&bob.received()[0].payload[..], b"apres");
 }
 
-// --- Cloisonnement par room ------------------------------------------------
+// --- Room isolation --------------------------------------------------------
 
 #[test]
 fn two_rooms_do_not_see_each_other() {
@@ -159,8 +158,8 @@ fn a_peer_that_joined_no_room_receives_nothing() {
     let engine = ForwardingEngine::new();
     join(&engine, ROOM, "alice");
 
-    // Le sink de bob existe dès sa connexion WebSocket — sa task d'écriture
-    // tourne — mais le moteur ne le connaît qu'à partir du `Join`.
+    // Bob's sink exists from his WebSocket connection onwards — his writer task
+    // is running — but the engine only learns about it from `Join` onwards.
     let bob = RecordingSink::new();
     engine.forward_rtp("alice", video_packet(b"frame"));
 
@@ -221,7 +220,7 @@ fn each_new_subscriber_triggers_its_own_keyframe_request() {
     assert_eq!(alice.keyframe_requests(), 2);
 }
 
-// --- Réécriture par DownTrack ---------------------------------------------
+// --- Rewriting by DownTrack ------------------------------------------------
 
 #[test]
 fn sequence_numbers_advance_by_one_per_subscriber() {
@@ -258,7 +257,7 @@ fn two_subscribers_get_distinct_ssrcs() {
     assert_ne!(bob_ssrc, carol_ssrc);
 }
 
-// --- Départs ---------------------------------------------------------------
+// --- Departures ------------------------------------------------------------
 
 #[test]
 fn removing_a_peer_takes_it_out_of_the_engine() {
@@ -291,10 +290,11 @@ fn removing_a_publisher_drops_its_up_track() {
     assert!(engine.up_track("alice").is_none());
 }
 
-// --- Coût des écritures ----------------------------------------------------
+// --- Cost of the writes ----------------------------------------------------
 //
-// Un paquet publié coûte exactement une écriture par subscriber — au premier
-// paquet, pendant que les down_tracks se créent, comme en régime établi.
+// A published packet costs exactly one write per subscriber — on the first
+// packet, while the down_tracks are being created, just as in the steady
+// state.
 
 #[test]
 fn the_first_packet_reaches_each_subscriber_exactly_once() {
@@ -351,9 +351,9 @@ fn a_departed_peer_stops_receiving_while_others_publish() {
 
 #[test]
 fn a_departure_releases_the_down_tracks_other_publishers_held_on_it() {
-    // Chaque down_track garde un `Arc` sur le sink du subscriber, donc sur sa
-    // task d'écriture et sa `PeerConnection` : les oublier fuirait à chaque
-    // départ.
+    // Every down_track keeps an `Arc` on the subscriber's sink, hence on its
+    // writer task and its `PeerConnection`: forgetting them would leak on every
+    // departure.
     let (engine, _sinks) = engine_with(&["alice", "bob", "carol"]);
 
     engine.forward_rtp("alice", video_packet(b"frame"));
@@ -371,9 +371,9 @@ fn a_departure_releases_the_down_tracks_other_publishers_held_on_it() {
 
 #[test]
 fn the_payload_is_shared_not_copied_between_subscribers() {
-    // Le fanout ne doit pas recopier le payload par subscriber : `Arc<[u8]>` est
-    // un tampon partagé, donc les tranches reçues par bob et carol doivent
-    // pointer sur la même adresse de base que celle publiée par alice.
+    // The fanout must not copy the payload per subscriber: `Arc<[u8]>` is a
+    // shared buffer, so the slices bob and carol receive must point at the same
+    // base address as the one alice published.
     let (engine, sinks) = engine_with(&["alice", "bob", "carol"]);
 
     let packet = video_packet(&[0xABu8; 1200]);

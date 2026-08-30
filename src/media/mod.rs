@@ -1,9 +1,9 @@
-//! Couche média : routage des paquets RTP entre publishers et subscribers.
+//! Media layer: routing RTP packets from publishers to subscribers.
 //!
-//! Ce module ne connaît ni UDP, ni WebSocket. Il parle uniquement au trait
-//! [`RtpSink`], ce qui le rend testable sans réseau. De str0m il n'emprunte
-//! que le type `Mid` porté par [`RtpPacketData`], pour éviter une allocation
-//! par paquet et par subscriber.
+//! This module knows nothing about UDP or WebSocket. It only talks to the
+//! [`RtpSink`] trait, which makes it testable without a network. The only
+//! thing it borrows from str0m is the `Mid` type carried by
+//! [`RtpPacketData`], to avoid one allocation per packet per subscriber.
 
 pub mod down_track;
 pub mod engine;

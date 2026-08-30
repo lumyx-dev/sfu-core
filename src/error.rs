@@ -1,20 +1,20 @@
-//! Type d'erreur du SFU.
+//! SFU error type.
 
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SfuError {
-    /// Négociation SDP (parsing d'offer, génération d'answer).
+    /// SDP negotiation (offer parsing, answer generation).
     Sdp(String),
-    /// Candidat ICE invalide.
+    /// Invalid ICE candidate.
     Ice(String),
-    /// Couche transport (socket, str0m).
+    /// Transport layer (socket, str0m).
     Transport(String),
 }
 
 impl fmt::Display for SfuError {
-    /// Rend le message brut sans préfixe : les appelants composent déjà
-    /// leur propre contexte ("Erreur offer : {e}").
+    /// Renders the bare message with no prefix: callers already compose
+    /// their own context ("Erreur offer : {e}").
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SfuError::Sdp(m) | SfuError::Ice(m) | SfuError::Transport(m) => write!(f, "{}", m),

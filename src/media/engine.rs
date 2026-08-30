@@ -1,4 +1,4 @@
-//! Moteur de forwarding : aiguille les paquets RTP entre peers d'une même room.
+//! Forwarding engine: routes RTP packets between peers of the same room.
 
 use super::down_track::DownTrack;
 use super::packet::RtpPacketData;
@@ -7,22 +7,23 @@ use super::up_track::UpTrack;
 use dashmap::DashMap;
 use std::sync::Arc;
 
-/// Les peers joignables d'une room, indexés par peer_id.
+/// The reachable peers of a room, indexed by peer_id.
 ///
-/// Le sink est stocké là plutôt que dans un index global : le fanout itère
-/// alors sur les seuls membres de la room, sans balayer le serveur entier.
+/// The sink is stored here rather than in a global index: the fanout then
+/// iterates over the members of that room alone, without scanning the whole
+/// server.
 type RoomSinks = DashMap<String, Arc<dyn RtpSink>>;
 
-/// Route les paquets RTP d'un publisher vers les autres peers de sa room.
+/// Routes a publisher's RTP packets to the other peers of its room.
 ///
-/// Le `room_id` n'est ici qu'une clé de regroupement : le moteur ne connaît
-/// pas le module `room/` et ne manipule que des `Arc<dyn RtpSink>`.
+/// The `room_id` is only a grouping key here: the engine knows nothing about
+/// the `room/` module and handles nothing but `Arc<dyn RtpSink>` values.
 pub struct ForwardingEngine {
-    /// Ce que chaque peer publie, indexé par peer_id.
+    /// What each peer publishes, indexed by peer_id.
     up_tracks: DashMap<String, Arc<UpTrack>>,
-    /// Où écrire pour joindre les peers, groupés par room_id.
+    /// Where to write to reach the peers, grouped by room_id.
     rooms: DashMap<String, Arc<RoomSinks>>,
-    /// Index peer_id → room_id, pour retrouver la room d'un peer en O(1).
+    /// peer_id → room_id index, to find a peer's room in O(1).
     peer_rooms: DashMap<String, String>,
 }
 
@@ -35,13 +36,13 @@ impl ForwardingEngine {
         })
     }
 
-    /// Déclare un peer joignable dans une room.
+    /// Declares a peer as reachable within a room.
     ///
-    /// Appelé quand le peer rejoint effectivement une room, pas à la connexion :
-    /// tant qu'il n'a rejoint personne, il ne reçoit rien et ne diffuse rien.
-    /// Un peer déjà enregistré ailleurs est d'abord retiré de son ancienne room.
+    /// Called when the peer actually joins a room, not on connection: as long
+    /// as it has joined nobody, it receives nothing and broadcasts nothing. A
+    /// peer already registered elsewhere is first removed from its old room.
     pub fn add_peer(&self, room_id: String, peer_id: String, sink: Arc<dyn RtpSink>) {
-        // La `Ref` est relâchée avant `remove_peer`, qui écrit dans la même map.
+        // The `Ref` is released before `remove_peer`, which writes to the same map.
         let previous = self.peer_rooms.get(&peer_id).map(|r| r.clone());
         if previous.is_some_and(|previous| previous != room_id) {
             self.remove_peer(&peer_id);
@@ -63,13 +64,13 @@ impl ForwardingEngine {
         );
     }
 
-    /// Retire un peer : son sink, le flux qu'il publiait, et les down_tracks
-    /// que les autres publishers de sa room tenaient sur lui.
+    /// Removes a peer: its sink, the stream it was publishing, and the
+    /// down_tracks the other publishers of its room held on it.
     ///
-    /// Ce dernier point est ce qui libère sa task d'écriture : chaque
-    /// down_track garde un `Arc` sur son sink.
+    /// That last point is what frees its writer task: every down_track keeps
+    /// an `Arc` on its sink.
     pub fn remove_peer(&self, peer_id: &str) {
-        // Les down_tracks du partant tombent avec son up_track.
+        // The leaver's down_tracks fall with its up_track.
         self.up_tracks.remove(peer_id);
 
         let Some((_, room_id)) = self.peer_rooms.remove(peer_id) else {
@@ -81,7 +82,7 @@ impl ForwardingEngine {
         };
         room.remove(peer_id);
 
-        // Seuls les peers restés dans la room ont pu s'abonner à lui.
+        // Only the peers still in the room could have subscribed to it.
         for entry in room.iter() {
             if let Some(up_track) = self.up_tracks.get(entry.key()) {
                 up_track.remove_subscriber(peer_id);
@@ -99,33 +100,35 @@ impl ForwardingEngine {
         );
     }
 
-    /// Nombre de peers joignables, toutes rooms confondues.
+    /// Number of reachable peers, across all rooms.
     pub fn peer_count(&self) -> usize {
         self.peer_rooms.len()
     }
 
-    /// Nombre de rooms qui comptent au moins un peer.
+    /// Number of rooms holding at least one peer.
     pub fn room_count(&self) -> usize {
         self.rooms.len()
     }
 
-    /// Flux publié par un peer, s'il en a un.
+    /// Stream published by a peer, if it has one.
     pub fn up_track(&self, peer_id: &str) -> Option<Arc<UpTrack>> {
         self.up_tracks.get(peer_id).map(|t| t.clone())
     }
 
-    /// Reçoit un paquet d'un publisher et le distribue aux autres peers de sa room.
+    /// Receives a packet from a publisher and distributes it to the other
+    /// peers of its room.
     ///
-    /// Un peer qui n'a rejoint aucune room ne diffuse à personne : le paquet est
-    /// alors ignoré, sans même créer d'up_track.
+    /// A peer that has joined no room broadcasts to nobody: the packet is then
+    /// dropped, without even creating an up_track.
     ///
-    /// Le flux du publisher et les abonnements sont créés à la volée, au premier
-    /// paquet : c'est le seul moment où l'on sait qu'un peer publie réellement.
-    /// Chaque nouvel abonnement déclenche une demande de keyframe côté source,
-    /// sans quoi le subscriber attendrait la prochaine keyframe spontanée.
+    /// The publisher's stream and the subscriptions are created lazily, on the
+    /// first packet: that is the only moment we know a peer is actually
+    /// publishing. Every new subscription triggers a keyframe request on the
+    /// source side, without which the subscriber would wait for the next
+    /// spontaneous keyframe.
     pub fn forward_rtp(&self, from_peer_id: &str, packet: RtpPacketData) {
-        // Résolu avant toute itération : on clone l'`Arc` et on lâche la `Ref` —
-        // qui tient un verrou de shard — immédiatement.
+        // Resolved before any iteration: we clone the `Arc` and drop the `Ref`
+        // — which holds a shard lock — right away.
         let Some(room_id) = self.peer_rooms.get(from_peer_id).map(|r| r.clone()) else {
             return;
         };
@@ -133,11 +136,11 @@ impl ForwardingEngine {
             return;
         };
 
-        // `entry` réclame une clé possédée : l'appeler d'emblée allouerait une
-        // `String` à chaque paquet, y compris — et surtout — quand l'up_track
-        // existe déjà. Un `get()` d'abord réduit le régime établi à une simple
-        // recherche ; la `Ref`, qui tient un verrou de shard, est relâchée à la
-        // fin de cette ligne, avant l'écriture qui touche la même map.
+        // `entry` demands an owned key: calling it upfront would allocate a
+        // `String` for every packet, including — and especially — when the
+        // up_track already exists. A `get()` first reduces the steady state to
+        // a plain lookup; the `Ref`, which holds a shard lock, is released at
+        // the end of this line, before the write that touches the same map.
         let existing = self.up_tracks.get(from_peer_id).map(|t| t.clone());
 
         let up_track = match existing {
@@ -156,12 +159,12 @@ impl ForwardingEngine {
                 .clone(),
         };
 
-        // Même précaution : `room.get()` pendant `room.iter()` est un accès
-        // ré-entrant à la DashMap, susceptible de bloquer si un writer attend
-        // sur le même shard.
+        // Same precaution: `room.get()` during `room.iter()` is a re-entrant
+        // access to the DashMap, liable to deadlock if a writer is waiting on
+        // the same shard.
         let source_sink = room.get(from_peer_id).map(|r| Arc::clone(&*r));
 
-        // Cette boucle ne fait que créer les down_tracks manquants.
+        // This loop does nothing but create the missing down_tracks.
         for entry in room.iter() {
             let subscriber_id = entry.key();
             if subscriber_id == from_peer_id {
@@ -176,15 +179,15 @@ impl ForwardingEngine {
                 ));
                 up_track.add_subscriber(subscriber_id.clone(), down_track);
 
-                // Une demande par nouvel abonnement, pas une par paquet.
+                // One request per new subscription, not one per packet.
                 if let Some(source) = &source_sink {
                     source.request_keyframe();
                 }
             }
         }
 
-        // Une seule diffusion par paquet : `forward()` écrit déjà à tous les
-        // down_tracks. L'appeler dans la boucle coûterait S² écritures.
+        // A single broadcast per packet: `forward()` already writes to every
+        // down_track. Calling it inside the loop would cost S² writes.
         up_track.forward(&packet);
     }
 }
