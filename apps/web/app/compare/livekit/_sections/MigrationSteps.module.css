@@ -103,23 +103,16 @@
   flex: 1;
 }
 
-/* Global constraint: diff lines starting with `-` read as --danger, `+` as --ok, the rest as
-   --text-muted. The source itself renders every line in a flat var(--text-body) (no per-line
-   colour at all) — this is a deliberate divergence from the literal handoff HTML, following the
-   explicit instruction in the task brief's global constraints instead. See task-9-report.md. */
+/* Compare LiveKit.dc.html:153-155 — every line of `st.lines` renders identically: flat
+   var(--text-body), no colour keyed off the `-`/`+` prefix. A prior pass here added per-line
+   danger/ok colouring on a brief instruction that turned out not to trace to the design and that
+   also contradicted the design system's own rule (colour signals a crossed threshold, never
+   decoration) — reverted. See task-9-report.md. */
 .line {
   font-size: 12.5px;
   line-height: 1.6;
+  color: var(--text-body);
   white-space: pre-wrap;
-}
-.lineRemoved {
-  color: var(--danger);
-}
-.lineAdded {
-  color: var(--ok);
-}
-.lineNeutral {
-  color: var(--text-muted);
 }
 
 .cardNote {
