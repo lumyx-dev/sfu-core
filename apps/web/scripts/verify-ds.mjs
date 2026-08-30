@@ -15,6 +15,7 @@ const CLIENT_ALLOWED = new Set([
   'ScrollProgress.tsx',
   'Spotlight.tsx',
   'SnippetTabs.tsx',
+  'PricingStrip.tsx',
   'CostEstimator.tsx',
   'PlanSwitcher.tsx',
   'DocsRail.tsx',

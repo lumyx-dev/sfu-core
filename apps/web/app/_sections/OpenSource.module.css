@@ -1,0 +1,67 @@
+/* Source: Home.dc.html:315-333 — the first `<section>` inside the second `.theme-dark` wrapper
+   (which also holds FinalCta and the footer; that wrapper is applied at page composition, in
+   app/page.tsx, since it spans three separate components). Not sticky, unlike #why/#pricing. */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 48px 20px;
+}
+@media (min-width: 640px) {
+  .layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 180px minmax(0, 1fr);
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.badgesCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.link {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.copy {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 440px;
+  text-wrap: pretty;
+}
