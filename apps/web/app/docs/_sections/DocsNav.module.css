@@ -1,0 +1,46 @@
+.nav {
+  overflow: auto;
+  padding: 24px 16px 40px;
+  border-right: 1px solid var(--border);
+  background: var(--surface-card);
+}
+
+/* Responsive collapse — this task's own choice (source has no responsive behaviour). Below the
+   desktop breakpoint the shell drops to a single scrolling column (page.module.css) and this
+   nav disappears rather than moving above the content (task-10-brief.md correction 6 allows
+   either). Unverified without a browser. */
+@media (max-width: 959px) {
+  .nav {
+    display: none;
+  }
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 22px;
+}
+
+.groupTitle {
+  padding: 0 10px 8px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.item[data-active='1'] {
+  color: var(--text-strong);
+  background: var(--surface-active);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
