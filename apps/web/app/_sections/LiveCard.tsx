@@ -53,7 +53,7 @@ const heroPeerCols: DataTableColumn<HeroPeer>[] = [
 
 export function LiveCard() {
   return (
-    <section className="relative" style={{ background: 'var(--surface-page)' }}>
+    <section id="observability" className="relative" style={{ background: 'var(--surface-page)' }}>
       <span aria-hidden className={s.band} />
       <div className="relative mx-auto max-w-[1280px] px-5 pb-18 md:px-6 lg:px-10">
         <div data-anim="rise" data-anim-now data-anim-delay="420" className={`${s.card} -mt-2`}>
@@ -65,30 +65,32 @@ export function LiveCard() {
             <Pill status="connected">Live</Pill>
           </div>
 
-          <MetricGrid columns={5}>
-            <MetricCard
-              label="Round-trip time"
-              value={38}
-              unit="ms"
-              sublabel="p50 · threshold 200ms"
-            />
-            <MetricCard label="Jitter" value={11} unit="ms" sublabel="threshold 30ms" />
-            <MetricCard label="Packet loss" value="0.20" unit="%" sublabel="threshold 2%" />
-            <MetricCard
-              label="NACK ratio"
-              value="6.20"
-              unit="%"
-              status="error"
-              sublabel="threshold 5%"
-            />
-            <MetricCard
-              label="Freeze ratio"
-              value="1.40"
-              unit="%"
-              status="warn"
-              sublabel="threshold 1%"
-            />
-          </MetricGrid>
+          <div className={s.metricGrid}>
+            <MetricGrid columns={5}>
+              <MetricCard
+                label="Round-trip time"
+                value={38}
+                unit="ms"
+                sublabel="p50 · threshold 200ms"
+              />
+              <MetricCard label="Jitter" value={11} unit="ms" sublabel="threshold 30ms" />
+              <MetricCard label="Packet loss" value="0.20" unit="%" sublabel="threshold 2%" />
+              <MetricCard
+                label="NACK ratio"
+                value="6.20"
+                unit="%"
+                status="error"
+                sublabel="threshold 5%"
+              />
+              <MetricCard
+                label="Freeze ratio"
+                value="1.40"
+                unit="%"
+                status="warn"
+                sublabel="threshold 1%"
+              />
+            </MetricGrid>
+          </div>
 
           <div className={s.body}>
             <div className={s.chartCol}>
