@@ -27,11 +27,10 @@
   flex-wrap: wrap;
 }
 
+/* display/align-items/gap/flex-wrap moved to Tailwind utilities in PlanSwitcher.tsx — plain
+   flex mechanics with an on-scale gap, same pattern as Home's PricingStrip.module.css
+   .overageBar (task-13 cleanup). */
 .overageBar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
   padding: 16px 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
