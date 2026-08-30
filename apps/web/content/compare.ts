@@ -1,8 +1,19 @@
-// Ported verbatim from $HANDOFF/designs/Compare LiveKit.dc.html — the <script data-dc-script>
+// UNVERIFIED — every claim below is proposed by the design handoff, not verified against the
+// implementation. Origin: $HANDOFF/designs/Compare LiveKit.dc.html — the <script data-dc-script>
 // logic class. SUMMARY, GROUPS, REPLACES, STEPS and NOT_FOR_YOU are copied word for word; only
 // the TypeScript shapes below are new. The source's own FOOTER constant is not reproduced here —
 // it is the same set of links already extracted into content/nav.ts's FOOTER_COLUMNS and rendered
 // by the shared SiteFooter component (task-7).
+//
+// GROUPS' "LiveKit" column is an unverified characterisation of a named third party's product —
+// a materially higher-risk category than unverified claims about Sightline itself. It must be
+// checked against LiveKit's actual documentation and behaviour before this page is published.
+// Nothing here has been compiled from public documentation or reviewed against the SFU's source
+// (apps/sfu/src): claims like "Per-peer quality metrics: Six, built in, live", "Session replay:
+// Included", "Room topology view: Included, with per-edge bitrate", "Dashboard: Ships with the
+// SFU", and REPLACES' "Every peer already reports loss, RTT, jitter, NACK and freeze ratios" do
+// not correspond to anything apps/sfu/src implements today (see content/metrics.ts and
+// README.md's "Planned — next milestone" status for these fields).
 
 export interface SummaryEntry {
   index: string;

@@ -1,8 +1,14 @@
+// UNVERIFIED — claims proposed by the design handoff, not verified against the implementation.
 // Ported from $HANDOFF/designs/Home.dc.html — the <script data-dc-script> logic class.
 // HERO_PEERS, START, COMPARE, TOPO_LEGEND, MARQUEE_ITEMS and series() are copied from that
 // source; see task-6-report.md for the handful of shape adjustments (field names, HeroPeer.
 // status vocabulary, snippet title/note) made to fit this app's types and the design system's
 // actual component contracts.
+//
+// COMPARE_ROWS and HERO_PEERS in particular assert things about the SFU (metrics collected,
+// dashboard capabilities, per-peer figures) that have not been checked against apps/sfu/src —
+// see content/metrics.ts and README.md's "Planned — next milestone" status for the same class
+// of claim. Confirm against the implementation before publication.
 
 import type { FaqEntry } from './pricing';
 
