@@ -6,8 +6,10 @@
 
 pub mod batch;
 pub mod entry;
+pub mod pg;
 pub mod sink;
 
 pub use batch::Batch;
 pub use entry::{Entry, EventKind, EventRecord, PeerSample, Severity, TrackKind, TrackSample};
+pub use pg::PgWriter;
 pub use sink::{MemorySink, NoopSink, TelemetrySink};
