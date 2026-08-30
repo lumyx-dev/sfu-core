@@ -34,9 +34,14 @@ create index on telemetry.rooms (instance_id, started_at desc);
 create index on telemetry.rooms (instance_id, name, started_at desc);
 create index on telemetry.rooms (instance_id) where ended_at is null;
 
+-- `id` est l'occupation : une ligne par présence dans une room, un uuid frais
+-- à chaque `join` (Task 6 review, finding 3 — un même `peer_id` qui visite
+-- deux rooms produit deux lignes `peers`, pas une seule qu'on écraserait).
+-- `peer_id` est la connexion WebSocket : c'est ce que le dashboard affiche.
 create table telemetry.peers (
-  id          uuid primary key,              -- le peer_id du SFU, un uuid v4 déjà
+  id          uuid primary key,
   instance_id uuid        not null references telemetry.instance,
+  peer_id     uuid        not null,
   room_id     uuid        not null references telemetry.rooms,
   joined_at   timestamptz not null,
   left_at     timestamptz,
@@ -45,6 +50,7 @@ create table telemetry.peers (
 );
 create index on telemetry.peers (room_id, joined_at);
 create index on telemetry.peers (instance_id) where left_at is null;
+create index on telemetry.peers (instance_id, peer_id);
 
 create table telemetry.tracks (
   id           uuid primary key,
