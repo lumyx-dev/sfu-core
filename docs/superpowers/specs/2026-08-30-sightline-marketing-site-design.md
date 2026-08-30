@@ -57,12 +57,26 @@ la création d'un logo (le handoff confirme qu'il n'en existe aucun — la marqu
 Quatre décisions ont été prises pendant le brainstorming et ne sont pas rouvertes par
 l'implémentation.
 
-**4.1 — CSS Modules et tokens, pas Tailwind.** Chaque section est un `Nom.tsx` plus un
-`Nom.module.css`, toutes les valeurs passant par `var(--*)`. C'est la convention de
-`packages/ui`, ce qui permet d'étendre `verify:ds` à l'app. Tailwind n'est pas installé
-dans `apps/web` : son preflight n'apporterait rien ici et risquerait d'écraser les tokens.
-Les valeurs marketing qui sortent de l'échelle UI (62px, `-0.035em`, `minmax(0,1.05fr)`)
-s'écrivent telles quelles — elles sont exactes dans la source.
+**4.1 — Tailwind pour le layout, CSS Modules pour le reste, tokens partout.** C'est la
+frontière que `apps/dashboard` applique déjà (68 `className` mêlant utilitaires Tailwind,
+classes du design system et `var(--*)`), et pour laquelle `packages/ui/src/styles.css`
+fournit un pont `@theme` délibéré — dix-neuf tokens sémantiques exposés en couleurs
+Tailwind, avec le conflit de `--font-sans` contre le preflight déjà résolu. Le commentaire
+de ce fichier dit explicitement que le pont « sert la mise en page au niveau des apps, pas
+les composants ».
+
+| | Outil |
+|---|---|
+| Layout de page, flux, espacement, breakpoints | utilitaires Tailwind (`flex`, `grid`, `gap-6`, `px-10`, `max-w-*`, `md:`, `lg:`) |
+| Typo display, grilles à ratios exacts, dégradés, ombres composées, keyframes | CSS Modules (`Nom.module.css`) |
+| **Toute couleur, tout rayon, toute durée** | **token `var(--*)`, sans exception** |
+
+La troisième ligne est la seule règle non négociable, et c'est celle que `verify:ds`
+vérifie. Le critère pour trancher entre les deux premières : une valeur qui existe dans
+l'échelle du système passe en utilitaire, une valeur hors échelle passe en CSS. Écrire
+`text-[62px] tracking-[-0.035em] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]` en classes
+arbitraires ne gagne rien sur du CSS écrit et se relit mal — c'est exactement le cas des
+titres marketing et des grilles à ratios.
 
 **4.2 — Contenu en TypeScript, pas de MDX.** Docs se limite à la page maquettée
 (référence des six métriques et « Overriding a threshold ») et Changelog à une liste de
@@ -88,7 +102,7 @@ qui le remplacera. Aucun prix, quota ou benchmark n'est écrit en dur dans du JS
 L'app est créée avec le CLI de bun :
 
 ```bash
-bun create next-app apps/web --ts --app --no-tailwind --no-src-dir --eslint \
+bun create next-app apps/web --ts --app --tailwind --no-src-dir --eslint \
   --use-bun --import-alias "@/*"
 ```
 
@@ -102,7 +116,11 @@ Puis alignée sur le monorepo :
   `apps/sightline-cloud` (via le catalogue bun de la racine quand la dépendance y figure)
 - `"dev": "next dev --port 3002"` — 3000 est pris par le dashboard, 3001 par le cloud
 - `next.config.ts` : `transpilePackages: ['@sightline/ui']`
-- `@sightline/ui` en `workspace:*`
+- `@sightline/ui` en `workspace:*`, `tailwindcss` et `@tailwindcss/postcss` en `^4` comme
+  les deux autres apps
+- `globals.css` importe `@sightline/ui/styles.css` **avant** `tailwindcss`, dans cet ordre
+  exact — c'est l'ordre de `apps/dashboard`, et celui que le pont `@theme` du design system
+  suppose
 - scripts `build`, `start`, `lint`, `check-types` identiques aux autres apps pour que
   Turborepo les prenne
 
@@ -131,6 +149,10 @@ apps/web/
     releases.ts                changelog
     nav.ts                     navigation d'en-tête et colonnes de pied de page
 ```
+
+Une section est un `Nom.tsx` qui porte ses utilitaires Tailwind en `className`, plus un
+`Nom.module.css` frère dès qu'elle a du display typographique, une grille à ratios ou une
+animation. Une section purement structurelle n'a pas de fichier CSS du tout.
 
 Les sections sont colocalisées dans `_sections/` sous leur route : l'App Router ne route
 que `page`, `layout` et `route`, donc un dossier préfixé reste hors du graphe d'URL tout
@@ -363,11 +385,19 @@ breakpoints sont à ajouter au port. Les grilles produit utilisent déjà
 `repeat(auto-fit, minmax(…, 1fr))` ; les grilles marketing sont en colonnes fixes et
 doivent être traitées une par une.
 
-| Palier | Comportement |
-|---|---|
-| ≥ 1120px | la maquette telle quelle, contenu `max-width: 1280px`, `padding: 0 40px` |
-| 720–1119px | grilles deux colonnes en une seule, pricing 5 colonnes en 3 puis 2, `padding: 0 24px` |
-| < 720px | une colonne, h1 62 → 40px, h2 40 → 30px, CTA 52 → 34px, nav repliée |
+Les paliers s'écrivent en breakpoints Tailwind, ce qui évite de répéter trois blocs
+`@media` dans chaque module CSS. On travaille mobile-first, donc la base est la colonne
+unique et les préfixes ajoutent les colonnes :
+
+| Palier | Préfixe | Comportement |
+|---|---|---|
+| < 768px | (base) | une colonne, h1 62 → 40px, h2 40 → 30px, CTA 52 → 34px, nav repliée, `px-5` |
+| 768–1119px | `md:` | grilles deux colonnes rétablies, pricing 5 colonnes en 3 puis 2, `md:px-6` |
+| ≥ 1120px | `lg:` | la maquette telle quelle, `max-w-[1280px]`, `lg:px-10` |
+
+Les tailles de titre, elles, restent en CSS Modules : ce sont des valeurs hors échelle et
+elles changent à chaque palier, donc leurs trois valeurs se lisent mieux groupées dans un
+`@media` du module que dispersées en `text-[40px] md:text-[62px]` sur le JSX.
 
 La grille comparative de Pricing et celle de Compare LiveKit, à six et cinq colonnes, ne
 peuvent pas se replier proprement : elles défilent horizontalement dans leur propre
