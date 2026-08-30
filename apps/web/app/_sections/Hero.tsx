@@ -3,16 +3,19 @@ import { Button } from '@sightline/ui';
 import { SiteHeader } from '@/components/chrome/SiteHeader';
 import { Spotlight } from '@/components/motion/Spotlight';
 import { GITHUB_URL } from '@/content/nav';
+import { MARQUEE_ITEMS } from '@/content/home';
 import { SnippetTabs } from './SnippetTabs';
 import s from './Hero.module.css';
 
-// Source: Home.dc.html:41-98 (the `.theme-dark[data-hero]` container through the end of
-// `section#top`). The marquee strip that follows it in the source (:101-110, a decorative
-// ticker of metric names) is not part of this task's brief and is left out — see
-// task-6-report.md.
+// Source: Home.dc.html:41-111 (the `.theme-dark[data-hero]` container, `section#top` through
+// the marquee strip that closes it).
 export function Hero() {
   return (
-    <div data-hero className="theme-dark relative overflow-hidden" style={{ background: 'var(--surface-page)', color: 'var(--text-body)' }}>
+    <div
+      data-hero
+      className="theme-dark relative overflow-hidden"
+      style={{ background: 'var(--surface-page)', color: 'var(--text-body)' }}
+    >
       <span aria-hidden className={s.dots} />
       <Spotlight />
 
@@ -67,6 +70,19 @@ export function Hero() {
           </div>
         </div>
       </section>
+
+      <div aria-hidden className={s.marquee}>
+        <div className={s.marqueeTrack}>
+          {[0, 1].map((rep) =>
+            MARQUEE_ITEMS.map((item, i) => (
+              <span key={`${rep}-${item}-${i}`} className={`sl-num ${s.marqueeItem}`}>
+                {item}
+                <span className={s.marqueeDot} />
+              </span>
+            )),
+          )}
+        </div>
+      </div>
     </div>
   );
 }
