@@ -22,6 +22,15 @@ function walk(dir) {
 const files = walk(SRC);
 const rel = (p) => p.slice(ROOT.length);
 const isTokenFile = (p) => p.startsWith(TOKENS + '/') || p === TOKENS;
+// tokens/ is exempt from BOTH content rules below (no-hardcoded-color, no-monospace) — not
+// narrowed out of the walk, exempted on purpose. Reason: tokens/*.css is already pinned
+// byte-for-byte against the handoff by rule 5 (tokens-verbatim), which is strictly stronger
+// than any content regex here — a token file cannot acquire a stray hardcoded colour or a
+// monospace declaration without tokens-verbatim failing first. Running these two rules over
+// files that are already guarded by an external source of truth adds no coverage and only
+// produces false positives (e.g. a comment that *denies* monospace, like "no monospace",
+// tripping a naive substring match). Do not "fix" this back to scanning tokens/ — add the
+// stronger check to tokens-verbatim instead if real coverage is missing there.
 
 // 1. Aucune couleur en dur hors tokens/
 // Strategie inversee : tout #hex ou rgb()/rgba() est presume etre une
@@ -37,7 +46,7 @@ const SAFE_HEX_REF =
 const HEX = /#[0-9a-fA-F]{3,8}\b/;
 const RGB = /\brgba?\(/;
 for (const f of files) {
-  if (isTokenFile(f)) continue; // tokens/ is where hardcoded colour values live by design
+  if (isTokenFile(f)) continue; // tokens/ is exempt — see isTokenFile above
   const body = readFileSync(f, 'utf8');
   body.split('\n').forEach((line, i) => {
     const scrubbed = line.replace(SAFE_HEX_REF, '');
@@ -59,6 +68,7 @@ for (const f of files.filter((f) => extname(f) === '.tsx')) {
 
 // 3. Zéro monospace
 for (const f of files) {
+  if (isTokenFile(f)) continue; // tokens/ is exempt — see isTokenFile above
   const body = readFileSync(f, 'utf8');
   if (/monospace|ui-monospace|'SF Mono'|Menlo|Consolas/i.test(body)) {
     fail('no-monospace', `${rel(f)} contient une font monospace`);
