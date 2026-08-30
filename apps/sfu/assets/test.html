@@ -726,9 +726,9 @@ a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offse
           <div class="card-body card-body-padded">
             <div class="controls">
               <button class="btn btn-primary" id="btnConnect">Connect</button>
-              <button class="btn btn-secondary" id="btnJoin" disabled>Join room</button>
               <button class="btn btn-secondary" id="btnCamera" disabled>Enable camera</button>
               <button class="btn btn-secondary" id="btnCall" disabled>Call SFU</button>
+              <button class="btn btn-secondary" id="btnJoin" disabled>Join room</button>
               <button class="btn btn-danger" id="btnDisconnect" disabled>Disconnect</button>
             </div>
           </div>
@@ -891,14 +891,19 @@ a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offse
         document.getElementById('localPlaceholder').style.display = 'none';
         document.getElementById('localIndicator').classList.add('live');
         log("Camera enabled", "event");
-        document.getElementById("btnCall").disabled = false;
       } catch (e) {
         log(`Camera error: ${e.message}`, "error");
       }
     };
 
     document.getElementById("btnCall").onclick = () => startCall();
-    document.getElementById("btnDisconnect").onclick = () => { ws?.close(); pc?.close(); };
+    document.getElementById("btnDisconnect").onclick = () => {
+      ws?.close();
+      pc?.close();
+      pc = null;
+      roster = new Set();
+      clearRemotes();
+    };
 
     // ── Messages ─────────────────────────────────────────
     async function handleMessage(msg) {
@@ -906,25 +911,39 @@ a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offse
         case "connected":
           peerId = msg.peer_id;
           document.getElementById('footerPeerId').textContent = peerId.slice(0, 8) + '...';
-          document.getElementById("btnJoin").disabled = false;
           document.getElementById("btnCamera").disabled = false;
+          document.getElementById("btnCall").disabled = false;
           break;
         case "joined_room":
-          log(`Joined room · ${msg.peers.length} peers`, "event");
+          roster = new Set(msg.peers);
+          log(`Joined room · ${msg.peers.length} peer(s) already here`, "event");
+          reconcile();
           break;
         case "peer_joined":
-          log(`Peer joined · ${msg.peer_id.slice(0, 8)}`, "event");
+          roster.add(msg.peer_id);
+          log(`Peer joined · ${short(msg.peer_id)}`, "event");
           break;
         case "peer_left":
-          log(`Peer left · ${msg.peer_id.slice(0, 8)}`, "event");
+          roster.delete(msg.peer_id);
+          log(`Peer left · ${short(msg.peer_id)}`, "event");
+          // The SFU closes its m-lines on its side; the tile goes with them.
+          removeRemote(msg.peer_id);
           break;
         case "sfu_answer":
           await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
           log("Remote description set", "event");
+          // Routing only starts once the transport exists: joining any earlier
+          // would have the SFU re-offer to a connection that is not there yet.
+          document.getElementById("btnJoin").disabled = false;
+          break;
+        case "sfu_offer":
+          // The SFU re-offers whenever the room gains or loses a published
+          // track: each one needs its own m-line here.
+          await answerSfuOffer(msg.sdp);
           break;
         case "sfu_ice_candidate":
           if (pc && msg.candidate) {
-            try { await pc.addIceCandidate({ candidate: msg.candidate, sdpMid: "0" }); } catch { }
+            try { await pc.addIceCandidate({ candidate: msg.candidate, sdpMLineIndex: 0 }); } catch { }
           }
           break;
         case "error":
@@ -933,22 +952,31 @@ a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offse
       }
     }
 
+    const short = (id) => (id || "").slice(0, 8);
+
     // ── Start Call ───────────────────────────────────────
     async function startCall() {
       log("Creating RTCPeerConnection");
 
       if (pc) { pc.close(); pc = null; }
+      clearRemotes();
 
       pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
 
       if (localStream) {
+        // `sendonly`, not `sendrecv`: what this peer publishes and what it
+        // receives are different m-lines. Sharing one would put every
+        // publisher of the room into a single stream.
         localStream.getTracks().forEach(track => {
-          pc.addTransceiver(track, { direction: 'sendrecv', streams: [localStream] });
-          log(`Track added · ${track.kind}`);
+          pc.addTransceiver(track, { direction: 'sendonly', streams: [localStream] });
+          log(`Publishing · ${track.kind}`);
         });
       } else {
+        // Viewer with no camera: the offer still has to carry ICE and DTLS,
+        // which live in the m-lines. These two stay unused — everything this
+        // peer watches arrives on m-lines the SFU adds later.
         pc.addTransceiver('audio', { direction: 'recvonly' });
         pc.addTransceiver('video', { direction: 'recvonly' });
       }
@@ -958,24 +986,8 @@ a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offse
       };
 
       pc.oniceconnectionstatechange = () => log(`ICE · ${pc.iceConnectionState}`, "event");
-      pc.onconnectionstatechange = () => {
-        log(`Connection · ${pc.connectionState}`, "event");
-        if (pc.connectionState === 'connected') {
-          // force the browser to request a keyframe
-          setTimeout(() => {
-            pc.getReceivers().forEach(receiver => {
-              if (receiver.track.kind === 'video') {
-                receiver.playoutDelayHint = 0;
-              }
-            });
-          }, 500);
-        }
-      };
-
-      pc.ontrack = (e) => {
-        log(`Remote track added · ${e.track.kind}`, "event");
-        addTrackToRemote(e.track);
-      };
+      pc.onconnectionstatechange = () => log(`Connection · ${pc.connectionState}`, "event");
+      pc.ontrack = onRemoteTrack;
 
       try {
         const offer = await pc.createOffer();
@@ -987,38 +999,109 @@ a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offse
       }
     }
 
-    // ── Remote Video ─────────────────────────────────────
-    function addTrackToRemote(track) {
-      const grid = document.getElementById('videoGrid');
-      let card = document.getElementById('card-remote');
+    /// Answers a re-offer from the SFU.
+    async function answerSfuOffer(sdp) {
+      if (!pc) {
+        log("SFU offer received before the call started — ignored", "error");
+        return;
+      }
+      try {
+        await pc.setRemoteDescription({ type: "offer", sdp });
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        send({ type: "sfu_answer", sdp: answer.sdp });
+      } catch (e) {
+        log(`Answer error: ${e.message}`, "error");
+      }
+    }
 
-      if (!card) {
-        card = document.createElement('div');
-        card.className = 'video-card';
-        card.id = 'card-remote';
+    // ── Remote tiles ─────────────────────────────────────
+    //
+    // One tile per publisher, not per track. The SFU names each m-line it adds
+    // with the publisher's id as the msid stream id, so `streams[0].id` says
+    // who a track belongs to — audio and video of one peer land in the same
+    // MediaStream, and two peers never share a tile.
 
-        const video = document.createElement('video');
-        video.id = 'remoteVideo';
-        video.autoplay = true;
-        video.playsinline = true;
-        video.srcObject = new MediaStream();
+    const remotes = new Map(); // publisher peer_id → { card, stream }
 
-        const label = document.createElement('div');
-        label.className = 'label';
-        label.textContent = 'remote';
+    // Who the SFU says is in the room. A track is only ever shown for a peer on
+    // this list: mid-renegotiation the browser can surface a stream whose msid
+    // it has not resolved yet, under an id of its own making, and that would
+    // otherwise leave a tile nothing ever fills.
+    let roster = new Set();
 
-        const indicator = document.createElement('div');
-        indicator.className = 'indicator live';
-
-        card.appendChild(video);
-        card.appendChild(label);
-        card.appendChild(indicator);
-        grid.appendChild(card);
+    function onRemoteTrack(e) {
+      const publisher = e.streams[0]?.id;
+      if (!publisher) {
+        // An m-line with no msid: one of the unused recvonly slots a
+        // camera-less viewer offered. Nothing to show.
+        return;
+      }
+      if (!roster.has(publisher)) {
+        log(`Track from an unknown peer ignored · ${short(publisher)}`, "info");
+        return;
       }
 
-      const video = document.getElementById('remoteVideo');
-      video.srcObject.addTrack(track);
-      log(`Track added to remote · ${track.kind}`, "event");
+      const entry = remotes.get(publisher) ?? createRemote(publisher);
+      entry.stream.addTrack(e.track);
+      log(`Remote ${e.track.kind} · ${short(publisher)}`, "event");
+
+      e.track.onended = () => removeTrack(publisher, e.track);
+      e.track.onmute = () => entry.card.querySelector('.indicator').classList.remove('live');
+      e.track.onunmute = () => entry.card.querySelector('.indicator').classList.add('live');
+    }
+
+    function createRemote(publisher) {
+      const card = document.createElement('div');
+      card.className = 'video-card';
+      card.id = `remote-${publisher}`;
+
+      const stream = new MediaStream();
+
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = short(publisher);
+
+      const indicator = document.createElement('div');
+      indicator.className = 'indicator live';
+
+      card.append(video, label, indicator);
+      document.getElementById('videoGrid').appendChild(card);
+
+      const entry = { card, stream };
+      remotes.set(publisher, entry);
+      return entry;
+    }
+
+    function removeTrack(publisher, track) {
+      const entry = remotes.get(publisher);
+      if (!entry) return;
+      entry.stream.removeTrack(track);
+      if (entry.stream.getTracks().length === 0) removeRemote(publisher);
+    }
+
+    function removeRemote(publisher) {
+      const entry = remotes.get(publisher);
+      if (!entry) return;
+      entry.card.remove();
+      remotes.delete(publisher);
+      log(`Tile removed · ${short(publisher)}`, "event");
+    }
+
+    function clearRemotes() {
+      for (const publisher of [...remotes.keys()]) removeRemote(publisher);
+    }
+
+    /// Drops any tile whose peer is no longer in the room.
+    function reconcile() {
+      for (const publisher of [...remotes.keys()]) {
+        if (!roster.has(publisher)) removeRemote(publisher);
+      }
     }
   </script>
 </body>

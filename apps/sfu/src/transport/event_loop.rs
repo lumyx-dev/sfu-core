@@ -4,7 +4,12 @@ use super::peer_connection::PeerConnection;
 use crate::media::RtpPacketData;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use str0m::{Candidate, Event, Input, Output, media::MediaKind, net::Receive, net::Transmit};
+use str0m::{
+    Candidate, Event, Input, Output,
+    media::{MediaKind, Mid},
+    net::Receive,
+    net::Transmit,
+};
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::mpsc::error::TrySendError;
@@ -43,7 +48,7 @@ struct IngressDrops {
 /// `PeerSink`'s RTP writer task is not left stuck behind a burst of syscalls.
 pub async fn run(
     conn: Arc<Mutex<PeerConnection>>,
-    rtp_tx: Sender<(Arc<str>, RtpPacketData)>,
+    events: Sender<TransportEvent>,
     mut shutdown: oneshot::Receiver<()>,
 ) {
     let (socket, local_addr, peer_id) = {
@@ -92,7 +97,7 @@ pub async fn run(
                     // Set aside, not sent: see the send loop below.
                     Ok(Output::Transmit(t)) => outbound.push(t),
                     Ok(Output::Event(event)) => {
-                        handle_event(&mut c, event, &rtp_tx, &mut ingress_drops)
+                        handle_event(&mut c, event, &events, &mut ingress_drops)
                     }
                     Err(e) => {
                         tracing::error!("Peer {} — poll_output : {}", c.peer_id, e);
@@ -161,11 +166,36 @@ pub async fn run(
     tracing::debug!("Peer {} — boucle d'événements terminée", peer_id);
 }
 
+/// What the event loop reports to the session layer.
+///
+/// One channel rather than two: the announcement of a track and the packets of
+/// that track must stay in order, or the negotiator would wire a subscription
+/// for a source the engine has not heard of yet.
+#[derive(Debug)]
+pub enum TransportEvent {
+    /// The peer published a new track.
+    TrackAdded {
+        peer: Arc<str>,
+        mid: Mid,
+        kind: MediaKind,
+    },
+    /// A media packet from the peer, ready to be forwarded.
+    Media {
+        peer: Arc<str>,
+        packet: RtpPacketData,
+    },
+    /// The peer asked for a keyframe on one of the m-lines the SFU sends it.
+    ///
+    /// The SFU has no encoder: the request has to travel on to whoever
+    /// publishes that m-line's source.
+    KeyframeRequested { peer: Arc<str>, mid: Mid },
+}
+
 /// Handles a str0m event.
 fn handle_event(
     conn: &mut PeerConnection,
     event: Event,
-    rtp_tx: &Sender<(Arc<str>, RtpPacketData)>,
+    events: &Sender<TransportEvent>,
     drops: &mut IngressDrops,
 ) {
     match event {
@@ -177,19 +207,40 @@ fn handle_event(
         }
         Event::MediaAdded(media) => {
             tracing::info!(
-                "✅ Peer {} media ajouté : {:?} mid={:?}",
+                "✅ Peer {} publie {:?} sur mid={}",
                 conn.peer_id,
                 media.kind,
                 media.mid
             );
-            conn.tx_streams.insert(media.mid, media.kind);
-            conn.mid_kind.insert(media.mid, media.kind);
+            conn.rx_kind.insert(media.mid, media.kind);
+
+            // A lost announcement means a track nobody ever subscribes to:
+            // unlike a media packet, it cannot simply be dropped.
+            let announcement = TransportEvent::TrackAdded {
+                peer: Arc::clone(&conn.peer_id),
+                mid: media.mid,
+                kind: media.kind,
+            };
+            if let Err(e) = events.try_send(announcement) {
+                tracing::error!(
+                    "Peer {} — annonce de track perdue sur mid={} : {}",
+                    conn.peer_id,
+                    media.mid,
+                    e
+                );
+            }
         }
         Event::MediaData(data) => {
-            let packet = to_packet(conn, data);
+            let Some(packet) = conn.to_packet(data) else {
+                return;
+            };
             // `Arc::clone`: the peer_id never changes, so sending it per packet
             // no longer has to reallocate it.
-            match rtp_tx.try_send((Arc::clone(&conn.peer_id), packet)) {
+            let event = TransportEvent::Media {
+                peer: Arc::clone(&conn.peer_id),
+                packet,
+            };
+            match events.try_send(event) {
                 Ok(()) => drops.bursting = false,
                 // Real-time media: the engine is behind, this packet is already
                 // worthless. We drop it rather than wait.
@@ -208,44 +259,17 @@ fn handle_event(
                 Err(TrySendError::Closed(_)) => {}
             }
         }
-        Event::KeyframeRequest(_) => {
-            tracing::info!("Peer {} — keyframe request reçue", conn.peer_id);
+        Event::KeyframeRequest(request) => {
+            tracing::debug!(
+                "Peer {} — keyframe demandée sur mid={}",
+                conn.peer_id,
+                request.mid
+            );
+            let _ = events.try_send(TransportEvent::KeyframeRequested {
+                peer: Arc::clone(&conn.peer_id),
+                mid: request.mid,
+            });
         }
         _ => {}
-    }
-}
-
-/// Converts a str0m `MediaData` into an internal packet, rebasing the timestamp
-/// onto the media kind's RTP clock (90 kHz video, 48 kHz audio).
-///
-/// The `MediaData` is consumed: its `data` field — already an `Arc<[u8]>` — is
-/// moved into the packet as is, without conversion or copy. It is the same type
-/// `Writer::write` expects on the way out, so the buffer received from str0m is
-/// the very one handed back to it.
-fn to_packet(conn: &PeerConnection, data: str0m::media::MediaData) -> RtpPacketData {
-    let mid = data.mid;
-    let is_video = conn
-        .mid_kind
-        .get(&mid)
-        .map(|k| *k == MediaKind::Video)
-        .unwrap_or(false);
-
-    let freq = if is_video {
-        str0m::media::Frequency::NINETY_KHZ
-    } else {
-        str0m::media::Frequency::FORTY_EIGHT_KHZ
-    };
-
-    RtpPacketData {
-        payload_type: *data.pt,
-        sequence_number: 0,
-        timestamp: data.time.as_seconds() as u32,
-        ssrc: 0,
-        payload: data.data,
-        is_keyframe: data.contiguous,
-        mid,
-        network_time: data.network_time,
-        rtp_time: data.time.rebase(freq).numer(),
-        is_video,
     }
 }

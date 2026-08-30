@@ -2,9 +2,11 @@
 
 use super::dispatch::handle_message;
 use super::messages::{ClientMessage, ServerMessage};
+use super::negotiation::{NegotiationEvent, Negotiator};
 use crate::app::AppState;
-use crate::media::{ForwardingEngine, RtpPacketData, RtpSink};
-use crate::transport::{PeerConnection, PeerSink, event_loop};
+use crate::media::{ForwardingEngine, RtpSink};
+use crate::metrics::Metrics;
+use crate::transport::{PeerConnection, PeerSink, TransportEvent, event_loop};
 use axum::extract::ws::{Message, WebSocket};
 use futures::sink::SinkExt;
 use futures::stream::{SplitSink, StreamExt};
@@ -15,7 +17,7 @@ use tokio::sync::{Mutex, oneshot};
 /// Depth of the outbound signaling channel.
 const SIGNALING_CHANNEL_CAPACITY: usize = 100;
 
-/// Depth of the inbound packet channel, from the transport to the engine.
+/// Depth of the inbound event channel, from the transport to the session.
 ///
 /// This channel carries the stream of a single publisher — this peer's. At
 /// ~150 packets/s for 1080p video, 128 packets are worth **~850 ms of media**.
@@ -43,17 +45,18 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
         .await,
     ));
 
-    // WebRTC loop: emits the media packets it receives on `rtp_rx`.
+    // WebRTC loop: emits what it observes on `transport_rx` — the tracks the
+    // peer publishes, the media packets it sends, the keyframes it asks for.
     //
     // The loop waits indefinitely on the socket and on str0m's deadlines;
     // nothing in its lifecycle ties it to the WebSocket. Without an explicit
     // signal it would outlive the session, keeping the `Rtc` and the UDP file
     // descriptor alive. `shutdown_tx` stays armed for the whole session and is
     // fired on the way out.
-    let (rtp_tx, rtp_rx) =
-        tokio::sync::mpsc::channel::<(Arc<str>, RtpPacketData)>(RTP_INGRESS_CAPACITY);
+    let (transport_tx, transport_rx) =
+        tokio::sync::mpsc::channel::<TransportEvent>(RTP_INGRESS_CAPACITY);
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-    tokio::spawn(event_loop::run(conn.clone(), rtp_tx, shutdown_rx));
+    tokio::spawn(event_loop::run(conn.clone(), transport_tx, shutdown_rx));
 
     // The sink exists from the moment of connection — its writer task must be
     // running before the first packet — but the engine only learns about it on
@@ -61,7 +64,20 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     // nothing. Holding it here keeps it alive for the whole session.
     let sink: Arc<dyn RtpSink> = PeerSink::new(Arc::clone(&peer_id), conn.clone());
 
-    spawn_forwarding_pump(state.engine.clone(), Arc::clone(&peer_id), rtp_rx);
+    // The negotiator has to be able to re-offer to this peer from the moment
+    // it exists: a track published elsewhere can reach it before it has said a
+    // word.
+    state
+        .negotiator
+        .register(Arc::clone(&peer_id), conn.clone(), tx.clone());
+
+    spawn_transport_pump(
+        state.engine.clone(),
+        state.negotiator.clone(),
+        state.metrics.clone(),
+        Arc::clone(&peer_id),
+        transport_rx,
+    );
     spawn_signaling_pump(Arc::clone(&peer_id), rx, ws_sender);
 
     let _ = tx
@@ -100,21 +116,47 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
 
     state.rooms.leave_room(&peer_id);
     state.engine.remove_peer(&peer_id);
+    state.negotiator.notify(NegotiationEvent::PeerLeft {
+        peer: Arc::clone(&peer_id),
+    });
+    state.negotiator.unregister(&peer_id);
     state.metrics.record_disconnect();
     tracing::info!("Peer {} déconnecté", peer_id);
 }
 
-/// Drains the peer's media packets into the forwarding engine.
-fn spawn_forwarding_pump(
+/// Drains what the peer's WebRTC loop observes: media into the forwarding
+/// engine, everything else into the negotiator.
+fn spawn_transport_pump(
     engine: Arc<ForwardingEngine>,
+    negotiator: Arc<Negotiator>,
+    metrics: Arc<Metrics>,
     peer_id: Arc<str>,
-    mut rtp_rx: Receiver<(Arc<str>, RtpPacketData)>,
+    mut events: Receiver<TransportEvent>,
 ) {
     tokio::spawn(async move {
-        while let Some((from_peer_id, packet)) = rtp_rx.recv().await {
-            engine.forward_rtp(&from_peer_id, packet);
+        while let Some(event) = events.recv().await {
+            match event {
+                TransportEvent::Media { peer, packet } => {
+                    let bytes = packet.payload.len() as u64;
+                    // The media layer has no access to `Metrics` — it reports
+                    // how many writes the fanout cost and the session records
+                    // it. Without this, `/metrics` stayed at zero however much
+                    // traffic went through.
+                    let written = engine.forward_rtp(&peer, packet);
+                    for _ in 0..written {
+                        metrics.record_rtp(bytes);
+                    }
+                }
+                TransportEvent::TrackAdded { peer, mid, kind } => {
+                    negotiator.notify(NegotiationEvent::TrackPublished { peer, mid, kind });
+                }
+                TransportEvent::KeyframeRequested { peer, mid } => {
+                    metrics.record_keyframe();
+                    negotiator.notify(NegotiationEvent::KeyframeRequested { peer, mid });
+                }
+            }
         }
-        tracing::debug!("Peer {} — task de forwarding terminée", peer_id);
+        tracing::debug!("Peer {} — task de transport terminée", peer_id);
     });
 }
 

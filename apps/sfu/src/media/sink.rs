@@ -1,6 +1,7 @@
 //! Destination of an outbound RTP stream.
 
 use super::packet::RtpPacketData;
+use str0m::media::Mid;
 
 /// Where [`crate::media::ForwardingEngine`] drops the packets bound for a peer.
 ///
@@ -15,6 +16,9 @@ pub trait RtpSink: Send + Sync {
     /// Hands a packet to the peer. A closed sink silently swallows it.
     fn write_rtp(&self, packet: RtpPacketData);
 
-    /// Requests a keyframe from the peer (PLI).
-    fn request_keyframe(&self);
+    /// Asks this peer for a keyframe on one of the m-lines it publishes (PLI).
+    ///
+    /// The `mid` is the publisher's own inbound m-line, not a destination: a
+    /// peer publishing audio and video must be asked on the video one alone.
+    fn request_keyframe(&self, mid: Mid);
 }
