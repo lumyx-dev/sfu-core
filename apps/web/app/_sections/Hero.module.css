@@ -1,0 +1,52 @@
+.title {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  color: var(--text-strong);
+  text-wrap: pretty;
+}
+@media (min-width: 1120px) {
+  .title {
+    font-size: 62px;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  align-items: start;
+  padding-top: 56px;
+}
+@media (min-width: 1120px) {
+  .grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 56px;
+    padding-top: 84px;
+  }
+}
+
+/* Dot grid of the hero, masked to the top-left. Decorative — the only imagery on the site
+   besides the spotlight. The mask uses only its alpha channel, so the opaque stop's hue is
+   irrelevant — var(--n-950) stands in for the source's literal black stop. */
+.dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--n-700) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.5;
+  pointer-events: none;
+  mask-image: radial-gradient(130% 78% at 26% 0%, var(--n-950) 26%, transparent 74%);
+  -webkit-mask-image: radial-gradient(130% 78% at 26% 0%, var(--n-950) 26%, transparent 74%);
+}
+
+.lead {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 520px;
+  text-wrap: pretty;
+}
