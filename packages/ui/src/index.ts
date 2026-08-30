@@ -12,4 +12,10 @@ export * from './components/core/Input';
 export * from './components/core/Pill';
 export * from './components/core/Select';
 export * from './components/core/StatusDot';
+
+export * from './components/layout/AppShell';
+export * from './components/layout/DashboardGrid';
+export * from './components/layout/SplitPane';
+export * from './components/layout/StatusStrip';
+
 export * from './components/_probe';

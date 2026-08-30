@@ -1,5 +1,6 @@
 import { Icon, ICONS, Probe, type IconName } from '@sightline/ui';
 import { CoreSection } from './sections/core';
+import { LayoutSection } from './sections/layout-section';
 
 export default function DesignSystemPage() {
   return (
@@ -25,6 +26,10 @@ export default function DesignSystemPage() {
       <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">Core</span>
         <CoreSection />
+      </section>
+      <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
+        <span className="sl-label">Layout</span>
+        <LayoutSection />
       </section>
     </main>
   );
