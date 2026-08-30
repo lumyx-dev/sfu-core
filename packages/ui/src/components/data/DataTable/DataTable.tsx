@@ -6,7 +6,7 @@ export type DataTableAlign = 'left' | 'center' | 'right';
 
 export type DataTableRow = Record<string, unknown> & { id?: string | number };
 
-export interface DataTableColumn {
+export interface DataTableColumn<R = DataTableRow> {
   key: string;
   header?: ReactNode;
   align?: DataTableAlign;
@@ -14,13 +14,13 @@ export interface DataTableColumn {
   numeric?: boolean;
   muted?: boolean;
   strong?: boolean;
-  render?: (row: DataTableRow, index: number) => ReactNode;
+  render?: (row: R, index: number) => ReactNode;
 }
 
-export interface DataTableProps {
-  columns?: DataTableColumn[];
-  rows?: DataTableRow[];
-  onRowClick?: (row: DataTableRow, index: number) => void;
+export interface DataTableProps<R = DataTableRow> {
+  columns?: DataTableColumn<R>[];
+  rows?: R[];
+  onRowClick?: (row: R, index: number) => void;
   selectedIndex?: number;
   dense?: boolean;
   style?: CSSProperties;
@@ -30,14 +30,14 @@ export interface DataTableProps {
    Ligne selectionnee : accent-tint + inset 2px accent a gauche — la source a bien
    le liseré, contrairement a Sidebar.active (voir Sidebar.module.css :53). Ne pas
    aligner l'un sur l'autre : chacun reflete fidelement sa propre source. */
-export function DataTable({
+export function DataTable<R extends object = DataTableRow>({
   columns = [],
   rows = [],
   onRowClick,
   selectedIndex,
   dense = false,
   style,
-}: DataTableProps) {
+}: DataTableProps<R>) {
   return (
     <div className={cn('sl-scroll', s.wrap)} style={style}>
       <table className={cn(s.table, dense && s.dense)}>
@@ -55,7 +55,7 @@ export function DataTable({
             const active = selectedIndex === i;
             return (
               <tr
-                key={r.id ?? i}
+                key={((r as Record<string, unknown>).id as string | number | undefined) ?? i}
                 onClick={onRowClick ? () => onRowClick(r, i) : undefined}
                 className={cn(s.row, onRowClick && s.clickable, active && s.selected)}
               >
@@ -65,7 +65,7 @@ export function DataTable({
                     className={cn(s.td, c.numeric && 'sl-num', c.strong && s.strong, c.muted && s.muted)}
                     style={{ textAlign: c.align || 'left' }}
                   >
-                    {c.render ? c.render(r, i) : (r[c.key] as ReactNode)}
+                    {c.render ? c.render(r, i) : ((r as Record<string, unknown>)[c.key] as ReactNode)}
                   </td>
                 ))}
               </tr>

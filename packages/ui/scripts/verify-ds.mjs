@@ -19,8 +19,9 @@ function walk(dir) {
   });
 }
 
-const files = walk(COMPONENTS);
+const files = walk(SRC);
 const rel = (p) => p.slice(ROOT.length);
+const isTokenFile = (p) => p.startsWith(TOKENS + '/') || p === TOKENS;
 
 // 1. Aucune couleur en dur hors tokens/
 // Strategie inversee : tout #hex ou rgb()/rgba() est presume etre une
@@ -36,6 +37,7 @@ const SAFE_HEX_REF =
 const HEX = /#[0-9a-fA-F]{3,8}\b/;
 const RGB = /\brgba?\(/;
 for (const f of files) {
+  if (isTokenFile(f)) continue; // tokens/ is where hardcoded colour values live by design
   const body = readFileSync(f, 'utf8');
   body.split('\n').forEach((line, i) => {
     const scrubbed = line.replace(SAFE_HEX_REF, '');

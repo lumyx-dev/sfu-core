@@ -5,11 +5,11 @@ import { Icon } from '../../core/Icon';
 import { IconButton } from '../../core/IconButton';
 import s from './AlertBanner.module.css';
 
-export type AlertSeverity = 'critical' | 'warning' | 'info' | 'success';
+export type AlertBannerSeverity = 'critical' | 'warning' | 'info' | 'success';
 
 /* Icone par severite — source SEVERITY map :1170-1194 (identique a SeverityBadge/Toast).
    La couleur est portee par les classes CSS (source :1194-1217). */
-const SEVERITY_ICON: Record<AlertSeverity, IconName> = {
+const SEVERITY_ICON: Record<AlertBannerSeverity, IconName> = {
   critical: 'circle-alert',
   warning: 'triangle-alert',
   info: 'info',
@@ -17,7 +17,7 @@ const SEVERITY_ICON: Record<AlertSeverity, IconName> = {
 };
 
 export interface AlertBannerProps {
-  severity?: AlertSeverity;
+  severity?: AlertBannerSeverity;
   title?: ReactNode;
   message?: ReactNode;
   meta?: ReactNode;

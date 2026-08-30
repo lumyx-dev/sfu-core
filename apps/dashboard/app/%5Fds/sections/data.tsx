@@ -8,7 +8,6 @@
 import {
   DataTable,
   type DataTableColumn,
-  type DataTableRow,
   EventList,
   type EventListEntry,
   type EventListEntryType,
@@ -30,30 +29,29 @@ const SPARKLINE_TONES: SparklineTone[] = ['accent', 'secondary', 'warn', 'neutra
 // Recopie verbatim de `labels` (Dashboard UI.dc.html:342) — les memes libelles que la maquette.
 const TIME_LABELS = ['14:02', '14:17', '14:32', '14:47', '15:02'];
 
-const PEER_COLUMNS: DataTableColumn[] = [
+const PEER_COLUMNS: DataTableColumn<Peer>[] = [
   { key: 'peer_id', header: 'Peer', strong: true },
   { key: 'room', header: 'Room', muted: true },
   { key: 'score', header: 'Score', numeric: true, align: 'right', strong: true },
-  { key: 'rtt', header: 'RTT', numeric: true, align: 'right', render: (r) => `${(r as unknown as Peer).rtt} ms` },
-  { key: 'jitter', header: 'Jitter', numeric: true, align: 'right', render: (r) => `${(r as unknown as Peer).jitter} ms` },
-  { key: 'loss', header: 'Loss', numeric: true, align: 'right', render: (r) => `${(r as unknown as Peer).loss}%` },
+  { key: 'rtt', header: 'RTT', numeric: true, align: 'right', render: (r) => `${r.rtt} ms` },
+  { key: 'jitter', header: 'Jitter', numeric: true, align: 'right', render: (r) => `${r.jitter} ms` },
+  { key: 'loss', header: 'Loss', numeric: true, align: 'right', render: (r) => `${r.loss}%` },
   { key: 'codec', header: 'Codec', muted: true, width: 90 },
   {
     key: 'status',
     header: 'Status',
     render: (r) => {
-      const p = r as unknown as Peer;
       return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <StatusDot status={p.status === 'live' ? 'live' : 'degraded'} size={8} />
-          {p.status}
+          <StatusDot status={r.status === 'live' ? 'live' : 'degraded'} size={8} />
+          {r.status}
         </span>
       );
     },
   },
 ];
 
-const PEER_ROWS = PEERS as unknown as DataTableRow[];
+const PEER_ROWS = PEERS;
 
 const EVENTS: EventListEntry[] = [
   { time: '14:06:41', message: 'Peer joined', detail: 'a3f91c02', type: 'event' },

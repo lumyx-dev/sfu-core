@@ -7,7 +7,7 @@ export type LatencyChipMetric = 'rtt' | 'jitter' | 'loss' | 'nack' | 'freeze';
 export interface LatencyChipProps {
   value: number;
   unit?: string;
-  metric?: LatencyChipMetric | string;
+  metric?: LatencyChipMetric | (string & {});
   label?: string;
   plain?: boolean;
   style?: CSSProperties;
