@@ -1,7 +1,7 @@
-//! Couche transport : WebRTC (str0m) et sockets UDP.
+//! Transport layer: WebRTC (str0m) and UDP sockets.
 //!
-//! Un peer = une `Rtc` str0m + une socket UDP + une task d'event loop.
-//! [`PeerSink`] est le pont vers la couche média.
+//! One peer = one str0m `Rtc` + one UDP socket + one event-loop task.
+//! [`PeerSink`] is the bridge towards the media layer.
 
 pub mod event_loop;
 pub mod peer_connection;

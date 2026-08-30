@@ -605,7 +605,7 @@
       pc.onconnectionstatechange = () => {
         log(`Connection: ${pc.connectionState}`, "event");
         if (pc.connectionState === 'connected') {
-          // force le navigateur à demander une keyframe
+          // force the browser to request a keyframe
           setTimeout(() => {
             pc.getReceivers().forEach(receiver => {
               if (receiver.track.kind === 'video') {

@@ -1,4 +1,4 @@
-//! Signaling WebSocket : protocole JSON, session par peer, dispatch.
+//! WebSocket signaling: JSON protocol, per-peer session, dispatch.
 
 pub mod dispatch;
 pub mod messages;

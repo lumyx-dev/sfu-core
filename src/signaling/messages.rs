@@ -1,8 +1,8 @@
-//! Protocole de signaling, sérialisé en JSON avec un champ discriminant `type`.
+//! Signaling protocol, serialized to JSON with a `type` discriminant field.
 
 use serde::{Deserialize, Serialize};
 
-/// Client → serveur.
+/// Client → server.
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ClientMessage {
@@ -10,17 +10,17 @@ pub enum ClientMessage {
         room_id: String,
         peer_id: String,
     },
-    /// Offer SDP à destination du SFU.
+    /// SDP offer addressed to the SFU.
     SfuOffer {
         sdp: String,
     },
-    /// Candidat ICE à destination du SFU.
+    /// ICE candidate addressed to the SFU.
     SfuIceCandidate {
         candidate: String,
     },
     Leave,
 
-    // --- Relais P2P, hérité du mode maillé ---
+    // --- P2P relay, inherited from the mesh mode ---
     Offer {
         sdp: String,
     },
@@ -34,15 +34,15 @@ pub enum ClientMessage {
     },
 }
 
-/// Serveur → client.
+/// Server → client.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerMessage {
-    /// Session WebSocket établie, peer_id attribué.
+    /// WebSocket session established, peer_id assigned.
     Connected {
         peer_id: String,
     },
-    /// Room rejointe, avec les peers déjà présents.
+    /// Room joined, with the peers already present.
     JoinedRoom {
         room_id: String,
         peers: Vec<String>,
@@ -53,7 +53,7 @@ pub enum ServerMessage {
     PeerLeft {
         peer_id: String,
     },
-    /// Answer SDP du SFU.
+    /// SDP answer from the SFU.
     SfuAnswer {
         sdp: String,
     },
@@ -63,7 +63,7 @@ pub enum ServerMessage {
     SfuIceCandidate {
         candidate: String,
     },
-    /// Offer relayée d'un autre peer (mode maillé).
+    /// Offer relayed from another peer (mesh mode).
     Offer {
         sdp: String,
         from_peer_id: String,

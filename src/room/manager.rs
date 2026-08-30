@@ -1,11 +1,11 @@
-//! Une room et le registre global des rooms.
+//! A room, and the global room registry.
 
 use super::peer::RoomPeer;
 use crate::signaling::ServerMessage;
 use dashmap::DashMap;
 use std::sync::Arc;
 
-/// Un groupe de peers qui se voient mutuellement.
+/// A group of peers that see one another.
 pub struct Room {
     pub id: String,
     peers: DashMap<String, RoomPeer>,
@@ -19,7 +19,7 @@ impl Room {
         }
     }
 
-    /// Ajoute un peer, notifie les occupants et renvoie ceux déjà présents.
+    /// Adds a peer, notifies the occupants, and returns those already present.
     pub fn add_peer(&self, peer: RoomPeer) -> Vec<String> {
         let existing: Vec<String> = self.peers.iter().map(|p| p.peer_id.clone()).collect();
 
@@ -33,7 +33,7 @@ impl Room {
         existing
     }
 
-    /// Retire un peer et notifie les occupants restants.
+    /// Removes a peer and notifies the remaining occupants.
     pub fn remove_peer(&self, peer_id: &str) {
         self.peers.remove(peer_id);
         for p in self.peers.iter() {
@@ -58,12 +58,12 @@ impl Room {
     }
 }
 
-/// Possède les rooms et sait dans laquelle se trouve chaque peer.
+/// Owns the rooms and knows which one each peer is in.
 ///
-/// Les rooms vides sont supprimées automatiquement au départ du dernier peer.
+/// Empty rooms are dropped automatically when the last peer leaves.
 pub struct RoomManager {
     rooms: DashMap<String, Arc<Room>>,
-    /// Index peer_id → room_id, pour joindre un peer sans balayer les rooms.
+    /// peer_id → room_id index, to reach a peer without scanning the rooms.
     peer_room_index: DashMap<String, String>,
 }
 
@@ -81,19 +81,19 @@ impl RoomManager {
         }
     }
 
-    /// Fait entrer un peer dans une room, en la créant au besoin.
-    /// Renvoie les peers déjà présents.
+    /// Brings a peer into a room, creating it if needed.
+    /// Returns the peers already present.
     ///
-    /// Un peer déjà présent dans une autre room en sort d'abord. Sans ça il y
-    /// resterait indéfiniment : listé par `peer_ids`, notifié des arrivées et
-    /// des départs, renvoyé aux nouveaux arrivants comme occupant, et empêchant
-    /// la room de jamais être considérée comme vide — seul l'index bougeait, si
-    /// bien qu'un `leave_room` ultérieur ne le sortait que de la dernière room.
-    /// Même précaution que [`crate::media::ForwardingEngine::add_peer`].
+    /// A peer already present in another room leaves it first. Without that it
+    /// would stay there forever: listed by `peer_ids`, notified of arrivals and
+    /// departures, returned to newcomers as an occupant, and keeping the room
+    /// from ever being considered empty — only the index moved, so that a later
+    /// `leave_room` would remove it from the last room only. Same precaution as
+    /// [`crate::media::ForwardingEngine::add_peer`].
     pub fn join_room(&self, room_id: &str, peer: RoomPeer) -> Vec<String> {
         let peer_id = peer.peer_id.clone();
 
-        // La `Ref` est relâchée avant `leave_room`, qui écrit dans la même map.
+        // The `Ref` is released before `leave_room`, which writes to the same map.
         let previous = self.peer_room_index.get(&peer_id).map(|r| r.clone());
         if previous.is_some_and(|previous| previous != room_id) {
             self.leave_room(&peer_id);
@@ -110,7 +110,7 @@ impl RoomManager {
         room.add_peer(peer)
     }
 
-    /// Sort un peer de sa room, et supprime la room si elle devient vide.
+    /// Takes a peer out of its room, and drops the room if it becomes empty.
     pub fn leave_room(&self, peer_id: &str) {
         let Some((_, room_id)) = self.peer_room_index.remove(peer_id) else {
             return;
@@ -129,7 +129,7 @@ impl RoomManager {
         }
     }
 
-    /// Envoie un message à un peer, où qu'il soit.
+    /// Sends a message to a peer, wherever it is.
     pub fn send_to(&self, peer_id: &str, msg: ServerMessage) {
         let Some(room_id) = self.peer_room_index.get(peer_id) else {
             return;
@@ -139,7 +139,7 @@ impl RoomManager {
         }
     }
 
-    /// Room d'un peer, s'il en a une.
+    /// A peer's room, if it has one.
     pub fn get_room(&self, peer_id: &str) -> Option<Arc<Room>> {
         let room_id = self.peer_room_index.get(peer_id)?;
         self.rooms.get(room_id.as_str()).map(|r| r.clone())

@@ -1,4 +1,4 @@
-//! Rooms et appartenance des peers.
+//! Rooms and peer membership.
 
 pub mod manager;
 pub mod peer;

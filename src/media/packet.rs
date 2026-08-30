@@ -1,21 +1,21 @@
-//! Paquet RTP en transit dans le SFU.
+//! An RTP packet in transit through the SFU.
 
 use std::sync::Arc;
 use str0m::media::Mid;
 
-/// Un paquet RTP reçu d'un publisher, prêt à être forwardé.
+/// An RTP packet received from a publisher, ready to be forwarded.
 ///
-/// # Sur le coût du clone
+/// # On the cost of cloning
 ///
-/// Le chemin chaud clone ce paquet une fois par subscriber
-/// ([`DownTrack::write_rtp`][crate::media::DownTrack::write_rtp] réécrit un
-/// paquet complet pour chacun). Les deux champs volumineux sont donc choisis
-/// pour que ce clone ne coûte ni allocation ni copie :
+/// The hot path clones this packet once per subscriber
+/// ([`DownTrack::write_rtp`][crate::media::DownTrack::write_rtp] rewrites a
+/// full packet for each one). The two large fields are therefore chosen so
+/// that the clone costs neither an allocation nor a copy:
 ///
-/// - `payload` est un `Arc<[u8]>` — tampon partagé à comptage de références :
-///   le cloner est un incrément atomique, le buffer de ~1200 octets n'est
-///   jamais recopié entre subscribers ;
-/// - `mid` est un [`Mid`] str0m — tableau inline de 16 octets, `Copy`.
+/// - `payload` is an `Arc<[u8]>` — a reference-counted shared buffer: cloning
+///   it is an atomic increment, and the ~1200-byte buffer is never copied
+///   between subscribers;
+/// - `mid` is a str0m [`Mid`] — an inline 16-byte array, `Copy`.
 #[derive(Debug, Clone)]
 pub struct RtpPacketData {
     pub payload_type: u8,
