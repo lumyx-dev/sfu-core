@@ -135,12 +135,12 @@ impl PgWriter {
             .execute(&mut *tx).await?;
         }
 
-        for (id, room_id, at) in &batch.peers_joined {
+        for (id, peer_id, room_id, at) in &batch.peers_joined {
             sqlx::query(
-                "insert into telemetry.peers (id, instance_id, room_id, joined_at)
-                 values ($1, $2, $3, $4) on conflict (id) do nothing",
+                "insert into telemetry.peers (id, instance_id, peer_id, room_id, joined_at)
+                 values ($1, $2, $3, $4, $5) on conflict (id) do nothing",
             )
-            .bind(id).bind(iid).bind(room_id).bind(at)
+            .bind(id).bind(iid).bind(peer_id).bind(room_id).bind(at)
             .execute(&mut *tx).await?;
         }
 

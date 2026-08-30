@@ -58,11 +58,12 @@ async fn a_batch_lands_in_the_right_tables() {
 
     let room = Uuid::new_v4();
     let peer = Uuid::new_v4();
+    let connection = Uuid::new_v4();
     let now = Utc::now();
 
     let batch = Batch::from_entries(vec![
         Entry::RoomOpened { id: room, name: "test-room".into(), at: now },
-        Entry::PeerJoined { id: peer, room_id: room, at: now },
+        Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now },
     ]);
     w.write(&batch).await.expect("écriture");
 
@@ -80,6 +81,46 @@ async fn a_batch_lands_in_the_right_tables() {
             .await
             .expect("requête");
     assert_eq!(room_of_peer, room);
+}
+
+#[tokio::test]
+async fn a_connection_visiting_two_rooms_produces_two_peer_rows_sharing_one_peer_id() {
+    // Le point entier de la Task 6 review, finding 3 : `on conflict (id) do
+    // nothing` doit voir deux `id` différents, jamais deux insertions du même
+    // id — sans quoi la seconde room où ce connecteur apparaît serait avalée
+    // en silence par la déduplication.
+    let Some(w) = writer().await else { return };
+
+    let connection = Uuid::new_v4();
+    let room_a = Uuid::new_v4();
+    let room_b = Uuid::new_v4();
+    let occupancy_a = Uuid::new_v4();
+    let occupancy_b = Uuid::new_v4();
+    let now = Utc::now();
+
+    w.write(&Batch::from_entries(vec![
+        Entry::RoomOpened { id: room_a, name: "room-a".into(), at: now },
+        Entry::PeerJoined { id: occupancy_a, peer_id: connection, room_id: room_a, at: now },
+        Entry::RoomOpened { id: room_b, name: "room-b".into(), at: now },
+        Entry::PeerJoined { id: occupancy_b, peer_id: connection, room_id: room_b, at: now },
+    ]))
+    .await
+    .expect("écriture des deux occupations");
+
+    let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(
+        "select id, room_id from telemetry.peers where peer_id = $1 order by room_id",
+    )
+    .bind(connection)
+    .fetch_all(w.pool())
+    .await
+    .expect("requête");
+
+    let mut expected = vec![(occupancy_a, room_a), (occupancy_b, room_b)];
+    expected.sort_by_key(|(_, room)| *room);
+    assert_eq!(
+        rows, expected,
+        "une ligne par occupation, toutes deux rattachées à la même connexion"
+    );
 }
 
 #[tokio::test]
@@ -119,11 +160,12 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
 
     let room = Uuid::new_v4();
     let peer = Uuid::new_v4();
+    let connection = Uuid::new_v4();
     let track = Uuid::new_v4();
     let now = Utc::now();
     w.write(&Batch::from_entries(vec![
         Entry::RoomOpened { id: room, name: "orpheline".into(), at: now },
-        Entry::PeerJoined { id: peer, room_id: room, at: now },
+        Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now },
         // Un track resté publié : sans lui, la branche `tracks` de
         // `recover_open_sessions` pourrait disparaître sans faire échouer ce
         // test (room + peer suffisent déjà à satisfaire une simple `>= 2`).
@@ -175,10 +217,11 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
 async fn room_and_peer(w: &PgWriter) -> (Uuid, Uuid) {
     let room = Uuid::new_v4();
     let peer = Uuid::new_v4();
+    let connection = Uuid::new_v4();
     let now = Utc::now();
     w.write(&Batch::from_entries(vec![
         Entry::RoomOpened { id: room, name: "support".into(), at: now },
-        Entry::PeerJoined { id: peer, room_id: room, at: now },
+        Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now },
     ]))
     .await
     .expect("room + peer de support");
@@ -513,13 +556,14 @@ async fn entries_queued_through_the_sink_reach_the_database() {
 
     let room = Uuid::new_v4();
     let peer = Uuid::new_v4();
+    let connection = Uuid::new_v4();
     let now = Utc::now();
 
     // Un cycle de vie minimal mais significatif — ouverture de room puis
     // arrivée d'un peer — poussé par la file plutôt que par `PgWriter::write`
     // directement : c'est le chemin bout-en-bout que cette tâche assemble.
     sink.record(Entry::RoomOpened { id: room, name: "queue-e2e".into(), at: now });
-    sink.record(Entry::PeerJoined { id: peer, room_id: room, at: now });
+    sink.record(Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now });
 
     let name = poll_room_name(w.pool(), room, Duration::from_millis(500))
         .await

@@ -184,21 +184,32 @@ pub enum Entry {
         /// `"empty"` or `"instance_restart"`.
         reason: &'static str,
     },
+    /// `id` is the **occupancy** — one row per membership of a room, minted
+    /// fresh on every join (Task 6 review, finding 3). `peer_id` is the
+    /// **connection** — the WebSocket's uuid, what the dashboard displays.
+    /// A single connection visiting two rooms produces two `PeerJoined`, one
+    /// `id` each, sharing one `peer_id`.
     PeerJoined {
         id: Uuid,
+        peer_id: Uuid,
         room_id: Uuid,
         at: DateTime<Utc>,
     },
+    /// `id` is the occupancy that just ended, not the connection.
     PeerLeft {
         id: Uuid,
         at: DateTime<Utc>,
         close_code: Option<i32>,
     },
+    /// `peer_id` here is the occupancy, despite the field name kept for
+    /// symmetry with `TrackPublished.peer_id` — both reference `telemetry.peers.id`.
     IceState {
         peer_id: Uuid,
         state: String,
         at: DateTime<Utc>,
     },
+    /// `peer_id` is the occupancy: a track published in room A and one
+    /// published in room B by the same connection are two different tracks.
     TrackPublished {
         id: Uuid,
         peer_id: Uuid,
