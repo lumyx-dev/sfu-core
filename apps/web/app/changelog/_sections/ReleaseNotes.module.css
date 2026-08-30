@@ -119,16 +119,19 @@
 }
 
 /* Breaking-change callout — Changelog.dc.html:90-95. The source references
-   `var(--danger-border)`, which does not exist anywhere in the design system's tokens
-   (`packages/ui/src/tokens/*.css` defines only --danger / --danger-tint / --danger-solid) — an
-   undefined custom property would make the whole `border` shorthand invalid, so this substitutes
-   the nearest real token, `var(--danger)`. */
+   `var(--danger-border)`, which the design system never defines (`packages/ui/src/tokens/*.css`
+   has --danger / --danger-tint / --danger-solid, and a parallel --accent-border, but no
+   --danger-border) — an undefined custom property would make the whole `border` shorthand
+   invalid. `var(--danger)` is the 600-ink step meant for small text; used as a 1px border on a
+   tinted panel it reads heavier than intended, so this derives the soft weight the missing
+   token would have carried instead, the same color-mix technique already used for
+   `--spotlight-tint` in app/globals.css. Token-derived, so it still follows `.theme-dark`. */
 .breaking {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 13px 16px;
-  border: 1px solid var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
   border-radius: var(--radius-md);
   background: var(--danger-tint);
 }
