@@ -13,8 +13,8 @@ export const SITE_VERSION = 'v0.4.1';
 export const GITHUB_URL = 'https://github.com/FrekiManagarm/sightline';
 
 export const HEADER_NAV: NavLink[] = [
-  { label: 'Observability', href: '/#observability' },
   { label: 'Why Sightline', href: '/#why' },
+  { label: 'Observability', href: '/#observability' },
   { label: 'vs LiveKit', href: '/compare/livekit' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Docs', href: '/docs' },

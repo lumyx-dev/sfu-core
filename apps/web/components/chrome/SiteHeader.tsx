@@ -27,8 +27,17 @@ export function SiteHeader({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
           </span>
           <a
             href={GITHUB_URL}
-            className={s.link}
-            style={{ fontSize: 12.5 }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 32,
+              padding: '0 12px',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-body)',
+              fontSize: 12.5,
+            }}
             target="_blank"
             rel="noreferrer"
           >
