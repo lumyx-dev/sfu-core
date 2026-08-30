@@ -1,7 +1,14 @@
-// Source de vérité : la référence des métriques du README.md du dépôt. Ces six champs et
-// leurs seuils sont réels — contrairement au reste du contenu marketing. Cette constante
-// sera partagée avec apps/dashboard (sous-projet B) : la déplacer dans un package commun
-// le jour où le dashboard en a besoin, plutôt que de la dupliquer.
+// UNVERIFIED — ces six champs et leurs seuils viennent du handoff de design, PAS du dépôt.
+// Le README annonce explicitement « Quality metrics (jitter, loss, RTT, NACK) — ❌ Planned,
+// the whole point of the project — next milestone », et `apps/sfu/src/metrics/mod.rs` ne
+// compte que peers_connected / peers_disconnected plus deux compteurs jamais incrémentés.
+// Aucun de ces six champs n'existe aujourd'hui. Cette page documente donc une API prévue, pas
+// une API livrée : à confirmer contre l'implémentation réelle avant toute mise en ligne
+// publique. Le brief d'origine affirmait l'inverse — l'affirmation venait du handoff et était
+// fausse.
+//
+// Cette constante sera partagée avec apps/dashboard (sous-projet B) : la déplacer dans un
+// package commun le jour où le dashboard en a besoin, plutôt que de la dupliquer.
 
 export interface Metric {
   name: string;
