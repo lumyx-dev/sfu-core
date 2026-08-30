@@ -5,9 +5,15 @@
 //! optional-persistence promise requires.
 
 use sfu::config::TelemetryConfig;
-use sfu::telemetry::{Batch, Entry, EventKind, EventRecord, PeerSample, PgWriter, TrackKind, TrackSample};
+use sfu::telemetry::tasks::spawn_writer;
+use sfu::telemetry::{
+    Batch, Entry, EventKind, EventRecord, PeerSample, PgWriter, QueueSink, TelemetrySink,
+    TrackKind, TrackSample,
+};
 use chrono::Utc;
 use serde_json::json;
+use std::sync::Arc;
+use std::time::Duration;
 use uuid::Uuid;
 
 /// Builds a writer against the test database, or `None` when it is absent.
@@ -470,4 +476,89 @@ async fn peer_left_and_ice_state_round_trip() {
     assert_eq!(left, Some(at));
     assert_eq!(close_code, Some(1006));
     assert_eq!(ice_state.as_deref(), Some("disconnected"));
+}
+
+/// Interroge la base jusqu'à ce que la room apparaisse ou que le délai
+/// expire. La tâche d'écriture tourne en arrière-plan : une seule requête
+/// serait presque toujours suffisante mais rendrait le test aléatoire par
+/// nature — on préfère un scrutin borné à un `sleep` fixe.
+async fn poll_room_name(pool: &sqlx::PgPool, room: Uuid, timeout: Duration) -> Option<String> {
+    let deadline = tokio::time::Instant::now() + timeout;
+    loop {
+        let row: Option<(String,)> =
+            sqlx::query_as("select name from telemetry.rooms where id = $1")
+                .bind(room)
+                .fetch_optional(pool)
+                .await
+                .expect("requête");
+        if let Some((name,)) = row {
+            return Some(name);
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return None;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
+#[tokio::test]
+async fn entries_queued_through_the_sink_reach_the_database() {
+    let Some(w) = writer().await else { return };
+    let w = Arc::new(w);
+
+    let metrics = sfu::metrics::Metrics::new();
+    let (sink, rx) = QueueSink::new(64, metrics.clone());
+    // Un intervalle court : le test attend un tick, pas une seconde entière.
+    spawn_writer(w.clone(), rx, Duration::from_millis(50));
+
+    let room = Uuid::new_v4();
+    let peer = Uuid::new_v4();
+    let now = Utc::now();
+
+    // Un cycle de vie minimal mais significatif — ouverture de room puis
+    // arrivée d'un peer — poussé par la file plutôt que par `PgWriter::write`
+    // directement : c'est le chemin bout-en-bout que cette tâche assemble.
+    sink.record(Entry::RoomOpened { id: room, name: "queue-e2e".into(), at: now });
+    sink.record(Entry::PeerJoined { id: peer, room_id: room, at: now });
+
+    let name = poll_room_name(w.pool(), room, Duration::from_millis(500))
+        .await
+        .expect("la room doit apparaître après au moins un intervalle d'écriture");
+    assert_eq!(name, "queue-e2e");
+
+    let (room_of_peer,): (Uuid,) =
+        sqlx::query_as("select room_id from telemetry.peers where id = $1")
+            .bind(peer)
+            .fetch_one(w.pool())
+            .await
+            .expect("requête peer");
+    assert_eq!(room_of_peer, room);
+}
+
+#[tokio::test]
+async fn dropping_the_sink_flushes_pending_entries_before_shutdown() {
+    let Some(w) = writer().await else { return };
+    let w = Arc::new(w);
+
+    let metrics = sfu::metrics::Metrics::new();
+    // Intervalle volontairement long : si l'écriture n'arrivait que par le
+    // tick, ce test se contenterait d'attendre le tick. Il ne peut passer que
+    // grâce au chemin d'arrêt propre (flush avant break), ce qui est
+    // précisément ce qu'on veut vérifier ici.
+    let (sink, rx) = QueueSink::new(64, metrics.clone());
+    spawn_writer(w.clone(), rx, Duration::from_secs(60));
+
+    let room = Uuid::new_v4();
+    let now = Utc::now();
+    sink.record(Entry::RoomOpened { id: room, name: "shutdown-flush".into(), at: now });
+
+    // Seul moyen de faire tomber le dernier `Sender` : abandonner le sink
+    // lui-même, qui le possède. `rx.recv()` ne rend `None` qu'à ce prix, ce
+    // qui déclenche le flush du chemin d'arrêt propre.
+    drop(sink);
+
+    let name = poll_room_name(w.pool(), room, Duration::from_millis(500))
+        .await
+        .expect("l'arrêt propre doit vider la file avant de sortir, sans attendre le tick");
+    assert_eq!(name, "shutdown-flush");
 }
