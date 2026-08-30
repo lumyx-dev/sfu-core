@@ -5,6 +5,7 @@ use super::negotiation::NegotiationEvent;
 use crate::app::AppState;
 use crate::media::RtpSink;
 use crate::room::RoomPeer;
+use crate::telemetry::{Entry, EventKind, EventRecord};
 use crate::transport::PeerConnection;
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
@@ -24,13 +25,39 @@ pub async fn handle_message(
 ) {
     match msg {
         ClientMessage::Join { room_id, .. } => {
-            let existing_peers = state.rooms.join_room(
+            let outcome = state.rooms.join_room(
                 &room_id,
                 RoomPeer {
                     peer_id: peer_id.to_string(),
                     sender: tx.clone(),
                 },
             );
+
+            // Le cycle de vie n'est enregistré que si le peer_id est un uuid — il l'est
+            // toujours, `http/ws.rs` le génère. La télémétrie ne peut pas casser une session.
+            if let Some(peer_uuid) = crate::telemetry::peer_uuid(peer_id) {
+                let now = chrono::Utc::now();
+                if outcome.room_created {
+                    state.telemetry.record(Entry::RoomOpened {
+                        id: outcome.room_session,
+                        name: room_id.to_string(),
+                        at: now,
+                    });
+                    state.telemetry.record(Entry::Event(
+                        EventRecord::new(EventKind::RoomCreated, now).room(outcome.room_session),
+                    ));
+                }
+                state.telemetry.record(Entry::PeerJoined {
+                    id: peer_uuid,
+                    room_id: outcome.room_session,
+                    at: now,
+                });
+                state.telemetry.record(Entry::Event(
+                    EventRecord::new(EventKind::PeerJoined, now)
+                        .room(outcome.room_session)
+                        .peer(peer_uuid),
+                ));
+            }
 
             // Forwarding is scoped to the room: the peer only becomes
             // reachable here, and only to the members of that room.
@@ -41,7 +68,7 @@ pub async fn handle_message(
             let _ = tx
                 .send(ServerMessage::JoinedRoom {
                     room_id: room_id.clone(),
-                    peers: existing_peers,
+                    peers: outcome.occupants,
                 })
                 .await;
 
@@ -95,7 +122,11 @@ pub async fn handle_message(
         }
 
         ClientMessage::Leave => {
-            state.rooms.leave_room(peer_id);
+            // Pas d'enregistrement télémétrique ici : la connexion reste ouverte
+            // (le peer peut rejoindre une autre room), donc ni le peer ni ses
+            // tracks ne se terminent réellement — contrairement au teardown de
+            // session.rs. `let _ =` : même remarque que dans `join_room`.
+            let _ = state.rooms.leave_room(peer_id);
             state.engine.remove_peer(peer_id);
             state.negotiator.notify(NegotiationEvent::PeerLeft {
                 peer: Arc::clone(peer_id),

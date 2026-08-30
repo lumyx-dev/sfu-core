@@ -4,10 +4,15 @@ use super::peer::RoomPeer;
 use crate::signaling::ServerMessage;
 use dashmap::DashMap;
 use std::sync::Arc;
+use uuid::Uuid;
 
 /// A group of peers that see one another.
 pub struct Room {
     pub id: String,
+    /// Identity of this occupancy period. A room row in the database is one
+    /// period, not the name — two successive meetings under the same name
+    /// never merge.
+    pub session_id: Uuid,
     peers: DashMap<String, RoomPeer>,
 }
 
@@ -15,6 +20,7 @@ impl Room {
     pub fn new(id: String) -> Self {
         Room {
             id,
+            session_id: Uuid::new_v4(),
             peers: DashMap::new(),
         }
     }
@@ -58,6 +64,20 @@ impl Room {
     }
 }
 
+/// What a join tells the caller, so it can record the lifecycle.
+pub struct JoinOutcome {
+    pub occupants: Vec<String>,
+    /// Identity of the room's current occupancy period.
+    pub room_session: Uuid,
+    pub room_created: bool,
+}
+
+/// What a departure tells the caller.
+pub struct LeaveOutcome {
+    pub room_session: Uuid,
+    pub room_dropped: bool,
+}
+
 /// Owns the rooms and knows which one each peer is in.
 ///
 /// Empty rooms are dropped automatically when the last peer leaves.
@@ -82,7 +102,6 @@ impl RoomManager {
     }
 
     /// Brings a peer into a room, creating it if needed.
-    /// Returns the peers already present.
     ///
     /// A peer already present in another room leaves it first. Without that it
     /// would stay there forever: listed by `peer_ids`, notified of arrivals and
@@ -90,43 +109,60 @@ impl RoomManager {
     /// from ever being considered empty — only the index moved, so that a later
     /// `leave_room` would remove it from the last room only. Same precaution as
     /// [`crate::media::ForwardingEngine::add_peer`].
-    pub fn join_room(&self, room_id: &str, peer: RoomPeer) -> Vec<String> {
+    pub fn join_room(&self, room_id: &str, peer: RoomPeer) -> JoinOutcome {
         let peer_id = peer.peer_id.clone();
 
         // The `Ref` is released before `leave_room`, which writes to the same map.
         let previous = self.peer_room_index.get(&peer_id).map(|r| r.clone());
         if previous.is_some_and(|previous| previous != room_id) {
-            self.leave_room(&peer_id);
+            // `let _ =` obligatoire : `leave_room` rend désormais un `Option`, qui
+            // est `#[must_use]`. Sans ça, `cargo clippy` sort un warning et la
+            // contrainte globale « aucun warning » saute.
+            let _ = self.leave_room(&peer_id);
         }
 
+        let mut created = false;
         let room = self
             .rooms
             .entry(room_id.to_string())
-            .or_insert_with(|| Arc::new(Room::new(room_id.to_string())))
+            .or_insert_with(|| {
+                created = true;
+                Arc::new(Room::new(room_id.to_string()))
+            })
             .clone();
 
         self.peer_room_index.insert(peer_id, room_id.to_string());
 
-        room.add_peer(peer)
+        JoinOutcome {
+            occupants: room.add_peer(peer),
+            room_session: room.session_id,
+            room_created: created,
+        }
     }
 
     /// Takes a peer out of its room, and drops the room if it becomes empty.
-    pub fn leave_room(&self, peer_id: &str) {
-        let Some((_, room_id)) = self.peer_room_index.remove(peer_id) else {
-            return;
-        };
-
-        let Some(room) = self.rooms.get(&room_id) else {
-            return;
-        };
+    ///
+    /// `None` if the peer had no room to leave.
+    pub fn leave_room(&self, peer_id: &str) -> Option<LeaveOutcome> {
+        let (_, room_id) = self.peer_room_index.remove(peer_id)?;
+        // On clone l'`Arc<Room>` plutôt que de garder la `Ref` de la DashMap :
+        // la tenir pendant le `self.rooms.remove` qui suit garderait le verrou
+        // du shard qu'on modifie — la même famille de blocage que celle
+        // documentée dans CONTEXT.md pour le négociateur.
+        let room = self.rooms.get(&room_id)?.clone();
 
         room.remove_peer(peer_id);
 
-        if room.is_empty() {
-            drop(room);
+        let dropped = room.is_empty();
+        if dropped {
             self.rooms.remove(&room_id);
             tracing::info!("Room {} supprimée", room_id);
         }
+
+        Some(LeaveOutcome {
+            room_session: room.session_id,
+            room_dropped: dropped,
+        })
     }
 
     /// Sends a message to a peer, wherever it is.
@@ -188,7 +224,10 @@ mod tests {
         let (bob, _b) = peer("bob");
 
         mgr.join_room("standup", alice);
-        assert_eq!(mgr.join_room("standup", bob), vec!["alice".to_string()]);
+        assert_eq!(
+            mgr.join_room("standup", bob).occupants,
+            vec!["alice".to_string()]
+        );
     }
 
     #[test]
@@ -198,7 +237,7 @@ mod tests {
         let (bob, _b) = peer("bob");
 
         mgr.join_room("room-a", alice);
-        assert!(mgr.join_room("room-b", bob).is_empty());
+        assert!(mgr.join_room("room-b", bob).occupants.is_empty());
         assert_eq!(mgr.room_count(), 2);
     }
 
@@ -208,7 +247,7 @@ mod tests {
         let (alice, _a) = peer("alice");
 
         mgr.join_room("standup", alice);
-        mgr.leave_room("alice");
+        let _ = mgr.leave_room("alice");
 
         assert_eq!(mgr.room_count(), 0);
         assert_eq!(mgr.peer_count(), 0);
@@ -222,7 +261,7 @@ mod tests {
 
         mgr.join_room("standup", alice);
         mgr.join_room("standup", bob);
-        mgr.leave_room("alice");
+        let _ = mgr.leave_room("alice");
 
         assert_eq!(mgr.room_count(), 1);
         assert_eq!(mgr.peer_count(), 1);
@@ -234,15 +273,86 @@ mod tests {
         let (alice, _a) = peer("alice");
 
         mgr.join_room("standup", alice);
-        mgr.leave_room("alice");
-        mgr.leave_room("alice");
+        let _ = mgr.leave_room("alice");
+        let _ = mgr.leave_room("alice");
 
         assert_eq!(mgr.peer_count(), 0);
     }
 
     #[test]
     fn leaving_without_ever_joining_is_harmless() {
-        RoomManager::new().leave_room("ghost");
+        let _ = RoomManager::new().leave_room("ghost");
+    }
+
+    #[test]
+    fn the_first_peer_creates_the_room_and_says_so() {
+        let manager = RoomManager::new();
+        let (alice, _a) = peer("alice");
+        let outcome = manager.join_room("salon", alice);
+        assert!(outcome.room_created);
+        assert!(outcome.occupants.is_empty());
+    }
+
+    #[test]
+    fn the_second_peer_does_not_create_the_room() {
+        let manager = RoomManager::new();
+        let (alice, _a) = peer("alice");
+        let first = manager.join_room("salon", alice);
+        let (bob, _b) = peer("bob");
+        let second = manager.join_room("salon", bob);
+
+        assert!(!second.room_created);
+        // La session de room est la même tant que la room vit : c'est elle qui
+        // porte l'identité en base.
+        assert_eq!(second.room_session, first.room_session);
+        assert_eq!(second.occupants, vec!["alice".to_string()]);
+    }
+
+    #[test]
+    fn the_last_departure_reports_the_room_as_dropped() {
+        let manager = RoomManager::new();
+        let (alice, _a) = peer("alice");
+        let joined = manager.join_room("salon", alice);
+
+        let left = manager
+            .leave_room("alice")
+            .expect("alice était dans une room");
+        assert!(left.room_dropped);
+        assert_eq!(left.room_session, joined.room_session);
+    }
+
+    #[test]
+    fn a_departure_that_leaves_occupants_does_not_drop_the_room() {
+        let manager = RoomManager::new();
+        let (alice, _a) = peer("alice");
+        manager.join_room("salon", alice);
+        let (bob, _b) = peer("bob");
+        manager.join_room("salon", bob);
+
+        let left = manager
+            .leave_room("alice")
+            .expect("alice était dans une room");
+        assert!(!left.room_dropped);
+    }
+
+    #[test]
+    fn a_room_reused_after_emptying_gets_a_new_session() {
+        // Décision 4.5 : une ligne de `rooms` est une période d'occupation. Deux
+        // réunions successives du même nom ne doivent jamais fusionner.
+        let manager = RoomManager::new();
+        let (alice, _a) = peer("alice");
+        let first = manager.join_room("salon", alice);
+        let _ = manager.leave_room("alice");
+
+        let (bob, _b) = peer("bob");
+        let second = manager.join_room("salon", bob);
+        assert_ne!(first.room_session, second.room_session);
+    }
+
+    #[test]
+    fn leaving_without_a_room_reports_nothing() {
+        let manager = RoomManager::new();
+        assert!(manager.leave_room("fantome").is_none());
     }
 
     #[test]

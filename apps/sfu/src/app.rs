@@ -6,6 +6,7 @@ use crate::media::ForwardingEngine;
 use crate::metrics::Metrics;
 use crate::room::RoomManager;
 use crate::signaling::Negotiator;
+use crate::telemetry::{NoopSink, Telemetry};
 use axum::{Router, routing::get};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
@@ -20,6 +21,7 @@ pub struct AppState {
     /// publishes.
     pub negotiator: Arc<Negotiator>,
     pub config: Arc<Config>,
+    pub telemetry: Arc<Telemetry>,
 }
 
 impl AppState {
@@ -35,6 +37,9 @@ impl AppState {
             negotiator: Negotiator::new(engine.clone()),
             engine,
             config: Arc::new(config),
+            // Sans URL, un NoopSink : il n'y a jamais de branche `Option` dans le reste
+            // du code, seulement un puits qui avale.
+            telemetry: Telemetry::new(Arc::new(NoopSink)),
         }
     }
 }
