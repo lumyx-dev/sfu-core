@@ -1,78 +1,143 @@
-//! Flux sortant vers un subscriber donné.
+//! Outbound stream towards a given subscriber.
 
 use super::packet::RtpPacketData;
 use super::sink::RtpSink;
-use rand::RngExt;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU16, AtomicU32, Ordering};
+use str0m::media::Mid;
 
-/// Un couple (flux source, subscriber) : réécrit le paquet puis le remet au sink.
+/// A (source track, subscriber) pair: points the packet at the right outbound
+/// m-line, then hands it to the sink.
 ///
-/// # Sur la réécriture SSRC / seq / timestamp
+/// # Why this type exists
 ///
-/// Les champs `ssrc`, `sequence_number` et `timestamp` recalculés ci-dessous
-/// n'atteignent pas le réseau : `PeerConnection::write_rtp` passe par
-/// `str0m::media::Writer::write()`, qui régénère lui-même l'en-tête RTP. Ce
-/// remapping est donc inerte aujourd'hui.
+/// A packet arrives carrying the **publisher's** mid. Every browser numbers
+/// its m-lines the same way, so forwarding that mid as is made two publishers
+/// write into a single outbound stream on the subscriber — two encoded videos
+/// interleaved into one decoder. The down_track is where that is fixed: it
+/// holds the m-line the SFU negotiated on *this* subscriber's connection for
+/// *this* source, and stamps it on every packet on the way through.
 ///
-/// Il est conservé volontairement : il redevient nécessaire dès qu'on repasse
-/// str0m en `rtp_mode` (forwarding RTP transparent), où c'est le SFU qui écrit
-/// l'en-tête. Le retirer coûterait à le réécrire.
+/// It carries no SSRC, sequence or timestamp rewriting: str0m in media mode
+/// regenerates the RTP header itself, so the SFU's only job on the outbound
+/// path is picking the destination.
 pub struct DownTrack {
-    pub peer_id: String,
-    pub track_id: String,
+    pub subscriber_id: Arc<str>,
 
-    /// SSRC unique de ce flux sortant.
-    ssrc: u32,
-    /// Séquence RTP propre à ce subscriber.
-    sequence_number: AtomicU16,
-    /// Décalage de timestamp appliqué au flux source.
-    timestamp_offset: AtomicU32,
+    /// M-line allocated on the subscriber's connection for this source.
+    target_mid: Mid,
 
-    /// Destination des paquets réécrits.
+    /// Destination for the retargeted packets.
     sink: Arc<dyn RtpSink>,
 }
 
 impl DownTrack {
-    pub fn new(peer_id: String, track_id: String, sink: Arc<dyn RtpSink>) -> Self {
-        let mut rng = rand::rng();
-
+    pub fn new(subscriber_id: Arc<str>, target_mid: Mid, sink: Arc<dyn RtpSink>) -> Self {
         DownTrack {
-            peer_id,
-            track_id,
-            ssrc: rng.random::<u32>(),
-            sequence_number: AtomicU16::new(rng.random::<u16>()),
-            timestamp_offset: AtomicU32::new(rng.random::<u32>()),
+            subscriber_id,
+            target_mid,
             sink,
         }
     }
 
-    /// SSRC attribué à ce flux sortant.
-    pub fn ssrc(&self) -> u32 {
-        self.ssrc
+    /// M-line this stream is written to on the subscriber's connection.
+    pub fn target_mid(&self) -> Mid {
+        self.target_mid
     }
 
-    /// Réécrit le paquet pour ce subscriber et le remet au sink.
+    /// Retargets the packet at this subscriber's m-line and hands it to the sink.
     pub fn write_rtp(&self, packet: &RtpPacketData) {
-        let seq = self.sequence_number.fetch_add(1, Ordering::Relaxed);
-        let ts_offset = self.timestamp_offset.load(Ordering::Relaxed);
+        // Cloning is a refcount bump on the payload plus a few `Copy` fields —
+        // the ~1200-byte buffer stays shared across every subscriber.
+        let mut retargeted = packet.clone();
+        retargeted.mid = self.target_mid;
 
-        let rewritten = RtpPacketData {
-            payload_type: packet.payload_type,
-            sequence_number: seq,
-            timestamp: packet.timestamp.wrapping_add(ts_offset),
-            ssrc: self.ssrc,
-            // Clone d'un `Arc<[u8]>` : incrément de compteur, pas de copie du
-            // payload. Le tampon reste partagé par tous les subscribers.
-            payload: Arc::clone(&packet.payload),
-            is_keyframe: packet.is_keyframe,
-            // `Mid` est `Copy` (16 octets inline).
-            mid: packet.mid,
-            network_time: packet.network_time,
-            rtp_time: packet.rtp_time,
-            is_video: packet.is_video,
-        };
+        self.sink.write_rtp(retargeted);
+    }
+}
 
-        self.sink.write_rtp(rewritten);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+    use std::time::Instant;
+    use str0m::format::PayloadParams;
+    use str0m::media::Pt;
+
+    #[derive(Default)]
+    struct RecordingSink(Mutex<Vec<RtpPacketData>>);
+
+    impl RtpSink for RecordingSink {
+        fn write_rtp(&self, packet: RtpPacketData) {
+            self.0.lock().expect("sink non empoisonné").push(packet);
+        }
+        fn request_keyframe(&self, _mid: Mid) {}
+    }
+
+    fn vp8_params() -> PayloadParams {
+        PayloadParams::new(
+            Pt::from(96),
+            None,
+            str0m::format::CodecSpec {
+                codec: str0m::format::Codec::Vp8,
+                clock_rate: str0m::media::Frequency::NINETY_KHZ,
+                channels: None,
+                format: Default::default(),
+            },
+        )
+    }
+
+    fn packet(payload: &[u8], mid: &str) -> RtpPacketData {
+        RtpPacketData {
+            params: vp8_params(),
+            payload: Arc::from(payload),
+            mid: Mid::from(mid),
+            network_time: Instant::now(),
+            rtp_time: 90_000,
+            is_video: true,
+        }
+    }
+
+    #[test]
+    fn the_publishers_mid_is_replaced_by_the_subscribers() {
+        let sink = Arc::new(RecordingSink::default());
+        let track = DownTrack::new(Arc::from("bob"), Mid::from("7"), sink.clone());
+
+        // The publisher writes on its own mid "1"; bob's m-line for it is "7".
+        track.write_rtp(&packet(b"frame", "1"));
+
+        let received = sink.0.lock().unwrap();
+        assert_eq!(received[0].mid, Mid::from("7"));
+    }
+
+    #[test]
+    fn two_down_tracks_of_the_same_source_target_their_own_m_lines() {
+        // This is the regression that produced the corrupted picture: both
+        // subscribers used to be written on the publisher's mid.
+        let to_bob = Arc::new(RecordingSink::default());
+        let to_carol = Arc::new(RecordingSink::default());
+
+        DownTrack::new(Arc::from("bob"), Mid::from("2"), to_bob.clone())
+            .write_rtp(&packet(b"frame", "1"));
+        DownTrack::new(Arc::from("carol"), Mid::from("5"), to_carol.clone())
+            .write_rtp(&packet(b"frame", "1"));
+
+        assert_eq!(to_bob.0.lock().unwrap()[0].mid, Mid::from("2"));
+        assert_eq!(to_carol.0.lock().unwrap()[0].mid, Mid::from("5"));
+    }
+
+    #[test]
+    fn retargeting_does_not_copy_the_payload() {
+        let sink = Arc::new(RecordingSink::default());
+        let track = DownTrack::new(Arc::from("bob"), Mid::from("2"), sink.clone());
+
+        let packet = packet(&[0xABu8; 1200], "1");
+        let source = packet.payload.as_ptr();
+        track.write_rtp(&packet);
+
+        assert_eq!(
+            sink.0.lock().unwrap()[0].payload.as_ptr(),
+            source,
+            "le tampon doit rester partagé, pas recopié"
+        );
     }
 }

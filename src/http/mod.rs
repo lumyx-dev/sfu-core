@@ -1,4 +1,4 @@
-//! Surface HTTP : routes de service et upgrade WebSocket.
+//! HTTP surface: service routes and WebSocket upgrade.
 
 pub mod routes;
 pub mod ws;

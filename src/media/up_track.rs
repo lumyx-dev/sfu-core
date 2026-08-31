@@ -1,23 +1,27 @@
-//! Flux entrant d'un publisher, et ses subscribers.
+//! A published track, and the subscribers consuming it.
 
 use super::down_track::DownTrack;
 use super::packet::RtpPacketData;
+use super::track::TrackKey;
 use dashmap::DashMap;
 use std::sync::Arc;
 
-/// Le flux publié par un peer, avec la liste des [`DownTrack`] qui le consomment.
+/// One track published by one peer, with the [`DownTrack`]s consuming it.
+///
+/// There is one of these per `(publisher, mid)` pair, not one per publisher: a
+/// peer publishes audio and video at once, and each needs its own fanout and
+/// its own outbound m-line on every subscriber.
 pub struct UpTrack {
-    pub track_id: String,
-    pub peer_id: String,
+    pub key: TrackKey,
     pub is_video: bool,
-    down_tracks: DashMap<String, Arc<DownTrack>>,
+    /// Subscribers, by peer_id. One down_track per subscriber and per source.
+    down_tracks: DashMap<Arc<str>, Arc<DownTrack>>,
 }
 
 impl UpTrack {
-    pub fn new(track_id: String, peer_id: String, is_video: bool) -> Self {
+    pub fn new(key: TrackKey, is_video: bool) -> Self {
         UpTrack {
-            track_id,
-            peer_id,
+            key,
             is_video,
             down_tracks: DashMap::new(),
         }
@@ -27,7 +31,7 @@ impl UpTrack {
         self.down_tracks.get(peer_id).map(|d| d.clone())
     }
 
-    pub fn add_subscriber(&self, peer_id: String, down_track: Arc<DownTrack>) {
+    pub fn add_subscriber(&self, peer_id: Arc<str>, down_track: Arc<DownTrack>) {
         self.down_tracks.insert(peer_id, down_track);
     }
 
@@ -35,11 +39,19 @@ impl UpTrack {
         self.down_tracks.remove(peer_id);
     }
 
-    /// Diffuse un paquet à tous les subscribers.
-    pub fn forward(&self, packet: &RtpPacketData) {
+    /// Broadcasts a packet to every subscriber, and reports how many writes it
+    /// cost.
+    ///
+    /// The count is what the session layer turns into the `/metrics` counter:
+    /// the media layer has no access to `Metrics`, so it reports rather than
+    /// records.
+    pub fn forward(&self, packet: &RtpPacketData) -> usize {
+        let mut written = 0;
         for entry in self.down_tracks.iter() {
             entry.value().write_rtp(packet);
+            written += 1;
         }
+        written
     }
 
     pub fn subscriber_count(&self) -> usize {

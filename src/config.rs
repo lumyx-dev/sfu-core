@@ -1,28 +1,28 @@
-//! Configuration du serveur SFU.
+//! SFU server configuration.
 //!
-//! Toutes les valeurs sont surchargeables par variable d'environnement ;
-//! les défauts reproduisent le comportement historique codé en dur.
+//! Every value can be overridden through an environment variable; the
+//! defaults reproduce the historical hard-coded behaviour.
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-/// Répertoire du crate, utilisé pour résoudre les chemins par défaut
-/// (certificats, client de test).
+/// Crate directory, used to resolve the default paths (certificates, test
+/// client).
 const MANIFEST_DIR: &str = env!("CARGO_MANIFEST_DIR");
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    /// Adresse d'écoute HTTPS.
+    /// HTTPS listen address.
     pub bind_addr: SocketAddr,
-    /// Certificat TLS au format PEM.
+    /// TLS certificate in PEM format.
     pub cert_path: PathBuf,
-    /// Clé privée TLS au format PEM.
+    /// TLS private key in PEM format.
     pub key_path: PathBuf,
-    /// Hôte annoncé dans les candidats ICE locaux.
+    /// Host advertised in the local ICE candidates.
     pub ice_host: String,
-    /// Filtre `tracing-subscriber`.
+    /// `tracing-subscriber` filter.
     pub log_filter: String,
-    /// Sert `assets/test.html` sur `/`. Utile en dev, à couper en prod.
+    /// Serves `assets/test.html` on `/`. Handy in dev, turn it off in prod.
     pub serve_test_client: bool,
 }
 
@@ -40,8 +40,8 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Construit la configuration depuis l'environnement, en retombant sur
-    /// les défauts pour chaque variable absente ou invalide.
+    /// Builds the configuration from the environment, falling back to the
+    /// defaults for every variable that is missing or invalid.
     pub fn from_env() -> Self {
         let defaults = Config::default();
 
@@ -65,7 +65,7 @@ impl Config {
         }
     }
 
-    /// Chemin du client de test HTML.
+    /// Path to the HTML test client.
     pub fn test_client_path(&self) -> PathBuf {
         PathBuf::from(format!("{}/assets/test.html", MANIFEST_DIR))
     }

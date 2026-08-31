@@ -1,4 +1,4 @@
-//! Point d'entrée WebSocket.
+//! WebSocket entry point.
 
 use crate::app::AppState;
 use crate::signaling::handle_socket;
@@ -9,10 +9,11 @@ use axum::{
 use std::sync::Arc;
 use uuid::Uuid;
 
-/// Attribue un peer_id et bascule la connexion en session de signaling.
+/// Assigns a peer_id and hands the connection over to a signaling session.
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
-    // `Arc<str>` dès l'attribution : l'identifiant est immuable et suit chaque
-    // paquet sur le chemin chaud, où le cloner ne doit rien allouer.
+    // `Arc<str>` from the moment it is assigned: the identifier is immutable
+    // and follows every packet on the hot path, where cloning it must allocate
+    // nothing.
     let peer_id: Arc<str> = Arc::from(Uuid::new_v4().to_string());
     state.metrics.record_connect();
     tracing::info!("Nouveau peer : {}", peer_id);
