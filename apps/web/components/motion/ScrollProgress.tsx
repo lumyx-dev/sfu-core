@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import s from './ScrollProgress.module.css';
 
 export function ScrollProgress() {
   const [ratio, setRatio] = useState(0);
@@ -25,7 +24,7 @@ export function ScrollProgress() {
     <div
       aria-hidden
       data-progress
-      className={`fixed left-0 top-0 z-[60] h-0.5 ${s.bar}`}
+      className="fixed left-0 top-0 z-[60] h-0.5 bg-accent"
       style={{ width: `${ratio * 100}%` }}
     />
   );
