@@ -8,7 +8,6 @@ import { DocsRail } from './_sections/DocsRail';
 import { ThresholdsTable } from './_sections/ThresholdsTable';
 import { MetricSection } from './_sections/MetricSection';
 import { Overrides } from './_sections/Overrides';
-import s from './page.module.css';
 
 const CRUMBS = ['Docs', 'Observability', 'Metrics reference'];
 
@@ -26,14 +25,17 @@ export const metadata: Metadata = {
 // item is a hardcoded flag ("the page you are on"), not client state.
 export default function DocsPage() {
   return (
-    <div className={`grid ${s.shell}`}>
+    <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-screen min-[960px]:h-screen bg-page text-body">
       <DocsHeader />
-      <div className={`min-h-0 min-w-0 ${s.columns}`}>
+      <div className="min-h-0 min-w-0 block min-[960px]:grid min-[960px]:grid-cols-[264px_minmax(0,1fr)_224px]">
         <DocsNav />
 
-        <main className={`sl-scroll min-w-0 ${s.main}`}>
-          <div className={`flex flex-col gap-7 ${s.mainInner}`}>
-            <nav className={`flex items-center gap-2 flex-wrap min-w-0 ${s.breadcrumb}`} aria-label="Breadcrumb">
+        <main className="sl-scroll min-w-0 overflow-visible min-[960px]:overflow-auto">
+          <div className="flex flex-col gap-7 max-w-none pt-6 px-5 pb-14 min-[960px]:max-w-[820px] min-[960px]:pt-9 min-[960px]:px-11 min-[960px]:pb-20">
+            <nav
+              className="flex items-center gap-2 flex-wrap min-w-0 text-13"
+              aria-label="Breadcrumb"
+            >
               {CRUMBS.map((label, i) => (
                 <Fragment key={label}>
                   {i > 0 && (
@@ -45,12 +47,18 @@ export default function DocsPage() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.75"
-                      className={`flex-none ${s.crumbChevron}`}
+                      className="flex-none text-faint"
                     >
                       <path d="m9 18 6-6-6-6" />
                     </svg>
                   )}
-                  <span className={i === CRUMBS.length - 1 ? `${s.crumb} ${s.crumbLast}` : s.crumb}>
+                  <span
+                    className={
+                      i === CRUMBS.length - 1
+                        ? 'text-13 font-medium text-strong'
+                        : 'text-13 font-normal text-muted'
+                    }
+                  >
                     {label}
                   </span>
                 </Fragment>
@@ -58,8 +66,10 @@ export default function DocsPage() {
             </nav>
 
             <div className="flex flex-col gap-3.5">
-              <h1 className={s.title}>Metrics reference</h1>
-              <p className={s.lead}>
+              <h1 className="m-0 font-semibold text-strong [text-wrap:pretty] text-[30px] leading-[1.1] tracking-[-0.03em] min-[960px]:text-[38px]">
+                Metrics reference
+              </h1>
+              <p className="m-0 text-[15px] leading-body text-body [text-wrap:pretty]">
                 Six measurements are collected in the media path, per peer and per room, and
                 emitted on every stats interval. Each has a documented default threshold;
                 crossing it for longer than the debounce window raises an alert.
@@ -94,17 +104,20 @@ export default function DocsPage() {
               message="These six fields and their thresholds are the target shape, not shipped behavior. The SFU's /metrics endpoint reports rooms, peers, connects and disconnects today — packet loss, RTT, jitter, NACK ratio, freeze ratio and bitrate land in a future milestone."
             />
 
-            <div className={`flex items-center gap-4 flex-wrap pt-2 ${s.pagination}`}>
-              <a href="#" className={`flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline ${s.pagerLink}`}>
+            <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-border">
+              <a
+                href="#"
+                className="flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline border border-border rounded-tile"
+              >
                 <span className="sl-label">Previous</span>
-                <span className={s.pagerLabel}>Peers and tracks</span>
+                <span className="text-[13.5px] font-medium text-strong">Peers and tracks</span>
               </a>
               <a
                 href="#"
-                className={`flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline text-right ${s.pagerLink}`}
+                className="flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline text-right border border-border rounded-tile"
               >
                 <span className="sl-label">Next</span>
-                <span className={s.pagerLabel}>Alerting and webhooks</span>
+                <span className="text-[13.5px] font-medium text-strong">Alerting and webhooks</span>
               </a>
             </div>
           </div>

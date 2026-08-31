@@ -1,7 +1,7 @@
 import {
   Activity, ArrowDownRight, ArrowUpRight, Bell, Check, ChevronDown, ChevronLeft,
   ChevronRight, CircleAlert, CircleCheck, CirclePlay, Clock, Copy, Database,
-  Download, ExternalLink, Eye, Funnel, Gauge, GitBranch, Info, LayoutDashboard,
+  Download, ExternalLink, Eye, Filter as Funnel, Gauge, GitBranch, Info, LayoutDashboard,
   List, Mic, MicOff, Monitor, PanelLeft, Pause, Play, RadioTower, RefreshCw,
   Search, Server, Settings, Share2, Signal, SlidersHorizontal, Telescope,
   Terminal, TrendingDown, TrendingUp, TriangleAlert, Users, Video, VideoOff,

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { DOC_NAV } from '@/content/metrics';
 import { GITHUB_URL } from '@/content/nav';
-import s from './DocsRail.module.css';
 
 // Source: Docs.dc.html:148-159. The only client island in this route (task-10-brief.md
 // correction 6) — everything else on the page, including the left nav, is static. Highlights
@@ -35,24 +34,29 @@ export function DocsRail() {
   }, []);
 
   return (
-    <aside className={`sl-scroll overflow-auto pt-9 px-5 pb-10 flex-col gap-2.5 ${s.rail}`}>
+    <aside className="sl-scroll overflow-auto pt-9 px-5 pb-10 flex-col gap-2.5 hidden min-[960px]:flex border-l border-border">
       <span className="sl-label">On this page</span>
       {DOC_NAV.map((item) => (
         <a
           key={item.id}
           href={`#${item.id}`}
-          className={`pl-2.5 border-l-2 border-solid no-underline ${s.item}`}
+          className="pl-2.5 border-l-2 border-solid no-underline text-[12.5px] leading-[1.5] text-muted border-border data-[active=1]:text-strong data-[active=1]:border-accent"
           data-active={item.id === active ? '1' : undefined}
         >
           {item.label}
         </a>
       ))}
-      <div className={`flex flex-col gap-2.5 mt-5 pt-4 ${s.contribute}`}>
+      <div className="flex flex-col gap-2.5 mt-5 pt-4 border-t border-border-subtle">
         <span className="sl-label">Contribute</span>
-        <a href={GITHUB_URL} className={`no-underline ${s.contributeLink}`} target="_blank" rel="noreferrer">
+        <a
+          href={GITHUB_URL}
+          className="no-underline text-[12.5px] text-muted"
+          target="_blank"
+          rel="noreferrer"
+        >
           Edit this page on GitHub
         </a>
-        <a href="#" className={`no-underline ${s.contributeLink}`}>
+        <a href="#" className="no-underline text-[12.5px] text-muted">
           Report an inaccuracy
         </a>
       </div>

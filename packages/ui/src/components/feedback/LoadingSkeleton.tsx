@@ -20,7 +20,13 @@ function Bar({
         className,
       )}
     >
-      <span className="absolute inset-0 animate-shimmer bg-[linear-gradient(90deg,transparent,rgba(107,120,125,.10),transparent)]" />
+      <span
+        className="absolute inset-0 animate-shimmer"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, color-mix(in srgb, var(--sl-text-muted) 12%, transparent), transparent)",
+        }}
+      />
     </span>
   );
 }
