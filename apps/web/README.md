@@ -1,7 +1,7 @@
-# @sightline/web
+# @lumyx/web
 
-The Sightline marketing site — the public pages (home, pricing, the LiveKit comparison, docs,
-changelog, sign up). A Next.js App Router app that consumes the shared `@sightline/ui` component
+The Lumyx marketing site — the public pages (home, pricing, the LiveKit comparison, docs,
+changelog, sign up). A Next.js App Router app that consumes the shared `@lumyx/ui` component
 and token library for all of its UI.
 
 ## Not production content

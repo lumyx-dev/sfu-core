@@ -12,9 +12,9 @@ const REGIONS = [
 ];
 
 const SDK: Record<string, string[]> = {
-  js: ['import { Room } from "livekit-client";', "", "const room = new Room();", "await room.connect(", '  "wss://live-classroom.REGION.sightline.cloud/ws",', "  token);"],
-  rust: ["let client = sightline::Client::new(", '  "wss://live-classroom.REGION.sightline.cloud/ws",', "  token,", ");", 'client.join("cohort-42").await?;'],
-  go: ["room, err := sightline.Connect(", '  "wss://live-classroom.REGION.sightline.cloud/ws",', "  token,", ")", "if err != nil { log.Fatal(err) }"],
+  js: ['import { Room } from "livekit-client";', "", "const room = new Room();", "await room.connect(", '  "wss://live-classroom.REGION.lumyx.cloud/ws",', "  token);"],
+  rust: ["let client = lumyx::Client::new(", '  "wss://live-classroom.REGION.lumyx.cloud/ws",', "  token,", ");", 'client.join("cohort-42").await?;'],
+  go: ["room, err := lumyx.Connect(", '  "wss://live-classroom.REGION.lumyx.cloud/ws",', "  token,", ")", "if err != nil { log.Fatal(err) }"],
 };
 
 const POINTS = [
@@ -50,7 +50,7 @@ export default function SignupPage() {
         />
         <Link href="/" className="relative flex items-center gap-2.5 no-underline hover:no-underline">
           <span className="size-5 rounded-[6px] bg-accent" />
-          <span className="text-[15px] font-semibold tracking-[-0.02em] text-strong">Sightline</span>
+          <span className="text-[15px] font-semibold tracking-[-0.02em] text-strong">Lumyx</span>
         </Link>
         <h1 className="relative max-w-[460px] text-[40px] font-semibold leading-[1.08] tracking-[-0.03em] text-strong text-pretty">
           Ten thousand participant-minutes a month, no card.
@@ -176,7 +176,7 @@ export default function SignupPage() {
 
               <div className="flex flex-col gap-2.5">
                 {[
-                  { label: "Signaling URL", value: `wss://live-classroom.${region}.sightline.cloud/ws` },
+                  { label: "Signaling URL", value: `wss://live-classroom.${region}.lumyx.cloud/ws` },
                   { label: "Publishable key", value: "pk_live_c27ad930f14b" },
                   { label: "Secret key — shown once", value: "sk_live_8f31c02a4d6e9b7f2a1c" },
                 ].map((c) => (

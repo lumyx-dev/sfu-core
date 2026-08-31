@@ -6,7 +6,7 @@ import { COMPARE_ROWS, REPO } from "@/lib/site-data";
 
 const MIGRATION = [
   ["Signaling messages", "sfu_offer, sfu_answer, ICE trickle — the same names on the wire."],
-  ["Token grants", "publish / subscribe, same shape. Sign with your Sightline secret key."],
+  ["Token grants", "publish / subscribe, same shape. Sign with your Lumyx secret key."],
   ["Client SDKs", "Unchanged. Point the Room at the new URL and connect."],
   ["What you gain", "Six metrics per peer with thresholds attached, and one binary to run."],
 ] as [string, string][];
@@ -24,7 +24,7 @@ export default function ComparePage() {
             <div className="overflow-hidden rounded-lg border border-hairline bg-card">
               <div className="grid grid-cols-[1.1fr_1fr_1fr] border-b border-subtle bg-sunken">
                 <span className="sl-label px-5 py-3.5">Architectural default</span>
-                <span className="sl-label px-5 py-3.5 text-accent-text">Sightline</span>
+                <span className="sl-label px-5 py-3.5 text-accent-text">Lumyx</span>
                 <span className="sl-label px-5 py-3.5">Typical Go SFU stack</span>
               </div>
               {COMPARE_ROWS.map((r) => (
@@ -54,7 +54,7 @@ export default function ComparePage() {
               </div>
               <div className="flex flex-col gap-1.5 px-5 py-4">
                 <span className="whitespace-pre-wrap text-13 text-danger">- url: wss://my-app.livekit.cloud</span>
-                <span className="whitespace-pre-wrap text-13 text-ok">+ url: wss://live-classroom.eu-west-3.sightline.cloud/ws</span>
+                <span className="whitespace-pre-wrap text-13 text-ok">+ url: wss://live-classroom.eu-west-3.lumyx.cloud/ws</span>
                 <span className="whitespace-pre-wrap text-13 text-muted">{"// client code unchanged"}</span>
                 <span className="whitespace-pre-wrap text-13 text-body">const room = new Room();</span>
                 <span className="whitespace-pre-wrap text-13 text-body">await room.connect(url, token);</span>

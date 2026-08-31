@@ -1,12 +1,12 @@
 export const VERSION = "v0.4.1";
-export const REPO = "https://github.com/FrekiManagarm/sightline";
+export const REPO = "https://github.com/FrekiManagarm/lumyx";
 
 export const START = {
   docker: {
     title: "Run the SFU",
     lines: [
       "docker run -p 3000:3000 \\",
-      "  ghcr.io/frekimanagarm/sightline:latest",
+      "  ghcr.io/frekimanagarm/lumyx:latest",
       "",
       "# signaling  ws://127.0.0.1:3000/ws",
       "# dashboard  http://127.0.0.1:3000",
@@ -15,16 +15,16 @@ export const START = {
   },
   cargo: {
     title: "Build from source",
-    lines: ["cargo add sightline-sfu", "", "# or run the workspace binary", "cargo run -p sightline-sfu --release"],
+    lines: ["cargo add lumyx-sfu", "", "# or run the workspace binary", "cargo run -p lumyx-sfu --release"],
     note: "Rust 1.79+. The media path has no GC and no CGO boundary.",
   },
   cloud: {
-    title: "Use Sightline Cloud",
+    title: "Use Lumyx Cloud",
     lines: [
-      "npx sightline@latest init live-classroom \\",
+      "npx lumyx@latest init live-classroom \\",
       "  --region eu-west-3",
       "",
-      "# → wss://live-classroom.eu-west-3.sightline.cloud/ws",
+      "# → wss://live-classroom.eu-west-3.lumyx.cloud/ws",
       "# → sk_live_… (shown once)",
     ],
     note: "Free tier: 10,000 participant-minutes/month, no card required.",
@@ -33,7 +33,7 @@ export const START = {
     title: "Migrate from LiveKit",
     lines: [
       "- url: wss://my-app.livekit.cloud",
-      "+ url: wss://live-classroom.eu-west-3.sightline.cloud/ws",
+      "+ url: wss://live-classroom.eu-west-3.lumyx.cloud/ws",
       "",
       "// client code unchanged",
       "const room = new Room();",

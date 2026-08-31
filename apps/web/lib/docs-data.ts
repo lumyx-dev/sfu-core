@@ -48,7 +48,7 @@ export const DOC_NAV = [
     { id: "x-intro", label: "Introduction" },
     { id: "x-quickstart", label: "Quickstart" },
     { id: "x-selfhost", label: "Self-hosting" },
-    { id: "x-cloud", label: "Sightline Cloud" },
+    { id: "x-cloud", label: "Lumyx Cloud" },
   ]},
   { title: "Core concepts", items: [
     { id: "x-rooms", label: "Rooms and sessions" },

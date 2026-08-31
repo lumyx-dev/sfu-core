@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button, Card } from '@lumyx/ui';
+import { Button, Card, LumyxMark } from '@lumyx/ui';
 import { DarkBand } from "@/components/site/chrome";
 import { CodePanel } from "@/components/site/code-panel";
 import { PlatformBento } from "@/components/site/platform-bento";
@@ -23,8 +23,8 @@ export default function HomePage() {
     <DarkBand className="min-h-dvh">
       <header className="flex h-[60px] items-center gap-[26px] border-b border-subtle px-8">
         <Link href="/" className="flex items-center gap-2.5 no-underline hover:no-underline">
-          <span className="size-[9px] rounded-[3px] bg-accent" />
-          <span className="text-[15px] font-semibold tracking-[-0.02em] text-strong">Sightline</span>
+          <LumyxMark size={18} className="text-accent" />
+          <span className="text-[15px] font-semibold tracking-[-0.02em] text-strong">Lumyx</span>
         </Link>
         <nav className="hidden items-center gap-5 md:flex">
           {NAV.map((n) => (
@@ -59,7 +59,7 @@ export default function HomePage() {
           Ship real-time video you can actually debug
         </h1>
         <p className="max-w-[620px] text-[17px] leading-relaxed text-muted text-pretty">
-          Sightline is an open-source WebRTC SFU written in Rust. Selective forwarding, with jitter, packet loss,
+          Lumyx is an open-source WebRTC SFU written in Rust. Selective forwarding, with jitter, packet loss,
           RTT, NACK and freeze measured inside the media path — per peer, per room, every 500ms.
         </p>
 

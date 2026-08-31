@@ -43,7 +43,7 @@ export default function DesignSystemPage() {
   return (
     <div className="mx-auto flex max-w-[1100px] flex-col gap-6 px-8 py-10">
       <div className="flex flex-col gap-2">
-        <span className="sl-label">Sightline design system</span>
+        <span className="sl-label">Lumyx design system</span>
         <h1 className="text-44 font-semibold tracking-[-0.02em] text-strong">Tokens &amp; components</h1>
         <p className="max-w-[620px] text-16 leading-relaxed text-muted text-pretty">
           Every value here comes from the design system’s token files, re-pointed onto Tailwind v4 and the shadcn/ui

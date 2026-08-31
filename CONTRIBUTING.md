@@ -1,6 +1,6 @@
-# Contributing to Sightline
+# Contributing to Lumyx
 
-Sightline is early. That means two things: the codebase is small enough to understand in an
+Lumyx is early. That means two things: the codebase is small enough to understand in an
 afternoon, and the decisions that will matter in two years are being made right now. Both make
 it a good moment to contribute.
 
@@ -15,8 +15,8 @@ You need [Rust](https://rustup.rs/) (edition 2024, so a recent stable toolchain)
 [Bun](https://bun.com).
 
 ```bash
-git clone git@github.com:FrekiManagarm/sightline.git
-cd sightline
+git clone git@github.com:FrekiManagarm/lumyx.git
+cd lumyx
 ```
 
 Browsers refuse `getUserMedia` and WebRTC over plain HTTP, so the SFU serves HTTPS and expects

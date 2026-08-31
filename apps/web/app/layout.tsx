@@ -3,7 +3,10 @@ import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Sightline — the WebRTC SFU that tells you why the call was bad',
+  // opengraph-image.png and twitter-image.png sit next to this file; Next turns them
+  // into meta tags, but only resolves them to absolute URLs once it has a base.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lumyx.dev'),
+  title: 'Lumyx — the WebRTC SFU that tells you why the call was bad',
   description:
     'Open-source Rust SFU with observability in the media path: jitter, packet loss, RTT, NACK ratio, freeze ratio — per peer, per room, live.',
 };

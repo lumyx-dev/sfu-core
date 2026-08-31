@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Button, StatusDot } from '@lumyx/ui';
+import { Button, StatusDot, LumyxMark } from '@lumyx/ui';
 import { FOOTER_COLS, VERSION, REPO } from "@/lib/site-data";
 
 function Mark({ size = 20 }: { size?: number }) {
-  return <span className="shrink-0 rounded-[6px] bg-accent" style={{ width: size, height: size }} />;
+  return <LumyxMark size={size} className="text-accent" />;
 }
 
 const NAV = [
-  { href: "/#why", label: "Why Sightline" },
+  { href: "/#why", label: "Why Lumyx" },
   { href: "/#observability", label: "Observability" },
   { href: "/compare", label: "vs LiveKit" },
   { href: "/pricing", label: "Pricing" },
@@ -20,7 +20,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-[30px] px-10">
         <Link href="/" className="flex flex-none items-center gap-2.5 no-underline hover:no-underline">
           <Mark />
-          <span className="text-[15px] font-semibold tracking-[-0.02em] text-strong">Sightline</span>
+          <span className="text-[15px] font-semibold tracking-[-0.02em] text-strong">Lumyx</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex">
           {NAV.map((n) => (
@@ -47,10 +47,10 @@ export function SiteFooter() {
         <div className="flex flex-col gap-3">
           <span className="flex items-center gap-2.5">
             <Mark size={18} />
-            <span className="text-13 font-semibold tracking-[-0.01em] text-strong">Sightline</span>
+            <span className="text-13 font-semibold tracking-[-0.01em] text-strong">Lumyx</span>
           </span>
           <span className="max-w-[260px] text-12 leading-relaxed text-muted text-pretty">
-            Open-source WebRTC SFU with observability in the media path. Self-host it, or use Sightline Cloud.
+            Open-source WebRTC SFU with observability in the media path. Self-host it, or use Lumyx Cloud.
           </span>
         </div>
         {FOOTER_COLS.map((col) => (
@@ -63,7 +63,7 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-4 px-10 pb-8">
-        <span className="sl-num text-12 text-faint">MIT licensed · © 2026 Sightline</span>
+        <span className="sl-num text-12 text-faint">MIT licensed · © 2026 Lumyx</span>
         <span className="flex-1" />
         <span className="sl-num text-12 text-faint">All systems operational</span>
         <StatusDot status="live" />

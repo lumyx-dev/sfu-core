@@ -4,8 +4,8 @@ import './globals.css';
 import { DashboardChrome } from '@/components/dashboard-chrome';
 
 export const metadata: Metadata = {
-  title: 'Sightline — self-hosted dashboard',
-  description: 'Rooms, peers, alerts and session replay for a self-hosted Sightline SFU.',
+  title: 'Lumyx — self-hosted dashboard',
+  description: 'Rooms, peers, alerts and session replay for a self-hosted Lumyx SFU.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,12 +1,12 @@
-# `@sightline/auth`
+# `@lumyx/auth`
 
-Authentication and session handling shared across Sightline apps.
+Authentication and session handling shared across Lumyx apps.
 
 > **Scaffold.** This package is empty — it exists to reserve the boundary. Nothing imports it
 > yet.
 
-Part of the [Sightline](../../README.md) monorepo. Add it to a consuming app with:
+Part of the [Lumyx](../../README.md) monorepo. Add it to a consuming app with:
 
 ```json
-"dependencies": { "@sightline/auth": "workspace:*" }
+"dependencies": { "@lumyx/auth": "workspace:*" }
 ```

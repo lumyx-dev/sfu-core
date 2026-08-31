@@ -19,7 +19,7 @@ export const SNIPPETS: Snippet[] = [
   {
     id: "alerts",
     label: "Alert rules",
-    file: "sightline.toml",
+    file: "lumyx.toml",
     lang: "toml",
     mark: [3, 4],
     src: [
@@ -48,7 +48,7 @@ export const SNIPPETS: Snippet[] = [
     mark: [6],
     src: [
       "// Same SDK as before. Only the URL changes.",
-      'const room = await connect("wss://eu.sightline.dev", token);',
+      'const room = await connect("wss://eu.lumyx.dev", token);',
       "",
       "// Every metric the SFU measures reaches the client too.",
       'room.on("quality", (peer, m) => {',
@@ -86,7 +86,7 @@ export const SNIPPETS: Snippet[] = [
     mark: [4],
     src: [
       "scrape_configs:",
-      "  - job_name: sightline",
+      "  - job_name: lumyx",
       "    metrics_path: /metrics",
       "    static_configs:",
       '      - targets: ["sfu-eu-west-3:9090"]',
@@ -102,9 +102,9 @@ export const SNIPPETS: Snippet[] = [
     lang: "sh",
     mark: [0],
     src: [
-      "docker run -p 7880:7880 sightline/sfu:0.4.1",
+      "docker run -p 7880:7880 lumyx/sfu:0.4.1",
       "",
-      "# sightline 0.4.1 · MIT",
+      "# lumyx 0.4.1 · MIT",
       "# listening on :7880 · dashboard on :7881",
       "# metrics collector armed · 6 metrics · 500ms",
       "# region eu-west-3 · 0 rooms · 0 peers",
@@ -148,7 +148,7 @@ export const NO_LIST = [
   },
   {
     title: "No migration",
-    body: "Same client SDKs and signaling as LiveKit. Point the URL at Sightline and deploy.",
+    body: "Same client SDKs and signaling as LiveKit. Point the URL at Lumyx and deploy.",
   },
 ];
 
