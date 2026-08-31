@@ -1,22 +1,19 @@
-import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import "./globals.css";
-
-const geist = Geist({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-geist",
-});
+import type { Metadata } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import './globals.css';
+import { DashboardChrome } from '@/components/dashboard-chrome';
 
 export const metadata: Metadata = {
-  title: "Lumyx",
-  description: "Sightline design system",
+  title: 'Sightline — self-hosted dashboard',
+  description: 'Rooms, peers, alerts and session replay for a self-hosted Sightline SFU.',
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={GeistSans.variable}>
+      <body>
+        <DashboardChrome>{children}</DashboardChrome>
+      </body>
     </html>
   );
 }
