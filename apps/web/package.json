@@ -1,5 +1,5 @@
 {
-  "name": "@sightline/web",
+  "name": "@lumyx/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@lumyx/ui": "workspace:*",
+    "geist": "^1.3.1",
+    "lucide-react": "^0.487.0",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"

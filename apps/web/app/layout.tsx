@@ -1,25 +1,17 @@
 import type { Metadata } from 'next';
-import { Geist } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 import './globals.css';
-import { MarketingMotion } from '@/components/motion/MarketingMotion';
-import { ScrollProgress } from '@/components/motion/ScrollProgress';
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
 
 export const metadata: Metadata = {
-  title: 'Sightline — observability in the media path',
+  title: 'Sightline — the WebRTC SFU that tells you why the call was bad',
   description:
-    'A Rust WebRTC SFU with jitter, packet loss, RTT and NACK ratio per peer and per room, live.',
+    'Open-source Rust SFU with observability in the media path: jitter, packet loss, RTT, NACK ratio, freeze ratio — per peer, per room, live.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full">
-        <ScrollProgress />
-        {children}
-        <MarketingMotion />
-      </body>
+    <html lang="en" className={GeistSans.variable}>
+      <body>{children}</body>
     </html>
   );
 }

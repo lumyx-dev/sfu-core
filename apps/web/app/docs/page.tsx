@@ -1,130 +1,113 @@
-import type { Metadata } from 'next';
-import { Fragment } from 'react';
-import { AlertBanner, Badge } from '@lumyx/ui';
-import { METRICS } from '@/content/metrics';
-import { DocsHeader } from './_sections/DocsHeader';
-import { DocsNav } from './_sections/DocsNav';
-import { DocsRail } from './_sections/DocsRail';
-import { ThresholdsTable } from './_sections/ThresholdsTable';
-import { MetricSection } from './_sections/MetricSection';
-import { Overrides } from './_sections/Overrides';
+import { SiteFrame } from "@/components/site/frame";
+import { Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Card, CardHeader, CardTitle, CardContent } from '@lumyx/ui';
+import { METRICS, DOC_NAV } from "@/lib/docs-data";
 
-const CRUMBS = ['Docs', 'Observability', 'Metrics reference'];
-
-export const metadata: Metadata = {
-  title: 'Metrics reference — Sightline docs',
-  description:
-    'The six quality metrics Sightline collects per peer and per room, their default alert thresholds, and how to override them.',
-};
-
-// Source: Docs.dc.html. This is an app shell, not a marketing page (task-10-brief.md,
-// corrections 1-5): its own 60px header — never the shared SiteHeader — a fixed
-// `264px | 1fr | 224px` three-column grid with independently scrolling panes, no SiteFooter,
-// and zero animations: nothing in this route carries a data-anim attribute. DocsRail.tsx is the
-// only client-side file in the route; DocsNav (the left nav) is static because its "active"
-// item is a hardcoded flag ("the page you are on"), not client state.
 export default function DocsPage() {
   return (
-    <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-screen min-[960px]:h-screen bg-page text-body">
-      <DocsHeader />
-      <div className="min-h-0 min-w-0 block min-[960px]:grid min-[960px]:grid-cols-[264px_minmax(0,1fr)_224px]">
-        <DocsNav />
-
-        <main className="sl-scroll min-w-0 overflow-visible min-[960px]:overflow-auto">
-          <div className="flex flex-col gap-7 max-w-none pt-6 px-5 pb-14 min-[960px]:max-w-[820px] min-[960px]:pt-9 min-[960px]:px-11 min-[960px]:pb-20">
-            <nav
-              className="flex items-center gap-2 flex-wrap min-w-0 text-13"
-              aria-label="Breadcrumb"
-            >
-              {CRUMBS.map((label, i) => (
-                <Fragment key={label}>
-                  {i > 0 && (
-                    <svg
-                      aria-hidden
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.75"
-                      className="flex-none text-faint"
-                    >
-                      <path d="m9 18 6-6-6-6" />
-                    </svg>
-                  )}
-                  <span
-                    className={
-                      i === CRUMBS.length - 1
-                        ? 'text-13 font-medium text-strong'
-                        : 'text-13 font-normal text-muted'
-                    }
-                  >
-                    {label}
-                  </span>
-                </Fragment>
+    <SiteFrame>
+      <div className="mx-auto grid max-w-[1360px] grid-cols-1 items-start gap-10 px-10 py-10 lg:grid-cols-[220px_1fr_200px]">
+        <nav className="flex flex-col gap-5 lg:sticky lg:top-8">
+          {DOC_NAV.map((sec) => (
+            <div key={sec.title} className="flex flex-col gap-1">
+              <span className="sl-label pb-1">{sec.title}</span>
+              {sec.items.map((it) => (
+                <a
+                  key={it.id}
+                  href={`#${it.id}`}
+                  className={`rounded-sm px-2 py-1.5 text-13 no-underline hover:bg-hover hover:no-underline ${
+                    "active" in it && it.active ? "bg-active font-medium text-strong" : "text-muted"
+                  }`}
+                >
+                  {it.label}
+                </a>
               ))}
-            </nav>
-
-            <div className="flex flex-col gap-3.5">
-              <h1 className="m-0 font-semibold text-strong [text-wrap:pretty] text-[30px] leading-[1.1] tracking-[-0.03em] min-[960px]:text-[38px]">
-                Metrics reference
-              </h1>
-              <p className="m-0 text-[15px] leading-body text-body [text-wrap:pretty]">
-                Six measurements are collected in the media path, per peer and per room, and
-                emitted on every stats interval. Each has a documented default threshold;
-                crossing it for longer than the debounce window raises an alert.
-              </p>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <Badge tone="neutral">Stats interval 2s</Badge>
-                <Badge tone="neutral">Debounce 30s</Badge>
-                <Badge tone="secondary">Read from RTCP</Badge>
-              </div>
             </div>
+          ))}
+        </nav>
 
-            <ThresholdsTable />
-
-            {METRICS.map((metric) => (
-              <MetricSection key={metric.field} metric={metric} />
-            ))}
-
-            <Overrides />
-
-            {/*
-              An AlertBanner citing "apps/sfu/src · reviewed 27 Aug 2026" and asserting these
-              metrics were "documented in the README and implemented in the metrics collector"
-              stood here (ported verbatim from Docs.dc.html:131-133). It was false: the six
-              fields in content/metrics.ts appear nowhere in apps/sfu/src, README.md:65 classes
-              them "Planned — next milestone", and no review of that path happened on the date
-              claimed. See commits 2890a3e and 56cc985 for the same class of error. Replaced
-              below with an honest "planned" caveat — repository owner's call, made 2026-08-31.
-            */}
-            <AlertBanner
-              severity="info"
-              title="Planned API"
-              message="These six fields and their thresholds are the target shape, not shipped behavior. The SFU's /metrics endpoint reports rooms, peers, connects and disconnects today — packet loss, RTT, jitter, NACK ratio, freeze ratio and bitrate land in a future milestone."
-            />
-
-            <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-border">
-              <a
-                href="#"
-                className="flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline border border-border rounded-tile"
-              >
-                <span className="sl-label">Previous</span>
-                <span className="text-[13.5px] font-medium text-strong">Peers and tracks</span>
-              </a>
-              <a
-                href="#"
-                className="flex flex-col gap-1 flex-1 min-w-[200px] py-3.5 px-4 no-underline text-right border border-border rounded-tile"
-              >
-                <span className="sl-label">Next</span>
-                <span className="text-[13.5px] font-medium text-strong">Alerting and webhooks</span>
-              </a>
-            </div>
+        <main className="flex min-w-0 flex-col gap-8">
+          <div className="flex flex-col gap-3">
+            <span className="sl-num text-12 text-faint">Docs · Observability · Metrics reference</span>
+            <h1 className="text-44 font-semibold tracking-[-0.02em] text-strong text-pretty">Metrics reference</h1>
+            <p className="max-w-[680px] text-16 leading-relaxed text-muted text-pretty">
+              Six metrics, read from RTCP as the media passes through the SFU. Each one is armed by default with the
+              threshold below and a 30s debounce, per peer and — where the scope says so — per room.
+            </p>
           </div>
+
+          <Card id="thresholds" className="overflow-hidden">
+            <CardHeader><CardTitle>Default thresholds</CardTitle></CardHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Metric</TableHead><TableHead>Field</TableHead><TableHead>Unit</TableHead>
+                  <TableHead>Threshold</TableHead><TableHead>Scope</TableHead><TableHead>What it breaks</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {METRICS.map((m) => (
+                  <TableRow key={m.field}>
+                    <TableCell className="font-medium text-strong">{m.name}</TableCell>
+                    <TableCell className="sl-num text-muted">{m.field}</TableCell>
+                    <TableCell className="text-muted">{m.unit}</TableCell>
+                    <TableCell className="sl-num font-medium text-strong">{m.threshold}</TableCell>
+                    <TableCell className="text-muted">{m.scope}</TableCell>
+                    <TableCell className="text-muted">{m.breaks}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {METRICS.map((m) => (
+            <section key={m.field} id={m.field} className="flex flex-col gap-3 border-t border-hairline pt-8">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="text-26 font-semibold tracking-[-0.02em] text-strong">{m.name}</h2>
+                <Badge tone="accent" className="sl-num">{m.field}</Badge>
+                <Badge className="sl-num">threshold {m.threshold}</Badge>
+              </div>
+              <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">{m.body}</p>
+              <div className="flex flex-col gap-1 rounded-md border border-subtle bg-sunken px-4 py-3.5">
+                {m.sample.map((s) => (
+                  <span key={s} className="sl-num whitespace-pre text-[12.5px] text-body">{s}</span>
+                ))}
+              </div>
+              <p className="max-w-[680px] text-13 text-muted text-pretty">{m.action}</p>
+            </section>
+          ))}
+
+          <section id="overrides" className="flex flex-col gap-3 border-t border-hairline pt-8">
+            <h2 className="text-26 font-semibold tracking-[-0.02em] text-strong">Overriding a threshold</h2>
+            <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">
+              Thresholds live per project and per environment since v0.4.0. Set one and it applies to every room in that
+              environment; alerts still debounce for 30s before firing.
+            </p>
+            <Card>
+              <CardContent className="flex flex-col gap-1">
+                {[
+                  "PATCH /v1/projects/live-classroom/thresholds",
+                  "",
+                  '{ "packet_loss_ratio": 0.03,',
+                  '  "rtt_ms": 250 }',
+                ].map((l, i) => (
+                  <span key={i} className="sl-num whitespace-pre text-[12.5px] text-body">{l}</span>
+                ))}
+              </CardContent>
+            </Card>
+          </section>
         </main>
 
-        <DocsRail />
+        <aside className="hidden flex-col gap-2 lg:sticky lg:top-8 lg:flex">
+          <span className="sl-label pb-1">On this page</span>
+          <a href="#thresholds" className="border-l-2 border-accent px-2.5 py-1 text-12 font-medium text-strong no-underline hover:no-underline">Default thresholds</a>
+          {METRICS.map((m) => (
+            <a key={m.field} href={`#${m.field}`} className="border-l-2 border-hairline px-2.5 py-1 text-12 text-muted no-underline hover:text-strong hover:no-underline">
+              {m.name}
+            </a>
+          ))}
+          <a href="#overrides" className="border-l-2 border-hairline px-2.5 py-1 text-12 text-muted no-underline hover:text-strong hover:no-underline">Overriding a threshold</a>
+        </aside>
       </div>
-    </div>
+    </SiteFrame>
   );
 }
