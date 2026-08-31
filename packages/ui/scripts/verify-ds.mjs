@@ -5,8 +5,11 @@ import { join, extname, basename } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const SRC = join(ROOT, 'src');
 const COMPONENTS = join(SRC, 'components');
-const TOKENS = join(SRC, 'styles');
-const TOKENS_FILE = join(TOKENS, 'tokens.css');
+// tokens/ is the verbatim mirror of the $DS handoff (rule 5 diffs it byte-for-byte).
+// styles/tokens.css is the derived, `--sl-`-prefixed single file theme.css binds to Tailwind —
+// see that file's own header comment for the tokens/ -> styles/tokens.css sync recipe.
+const TOKENS = join(SRC, 'tokens');
+const DERIVED_TOKENS_FILE = join(SRC, 'styles', 'tokens.css');
 const DS = process.env.DS;
 
 const failures = [];
@@ -22,13 +25,13 @@ function walk(dir) {
 
 const files = walk(SRC);
 const rel = (p) => p.slice(ROOT.length);
-const isTokenFile = (p) => p === TOKENS_FILE;
-// Only styles/tokens.css is exempt from the two content rules below (no-hardcoded-color,
-// no-monospace) — not the whole styles/ directory. It is already pinned byte-for-byte
-// against the handoff by rule 5 (tokens-verbatim) when $DS is set, which is strictly
-// stronger than any content regex here — that file cannot acquire a stray hardcoded colour
-// or a monospace declaration without tokens-verbatim failing first. theme.css/base.css/
-// index.css carry no literal colors today and stay covered by the regular rules.
+const isTokenFile = (p) => p.startsWith(TOKENS + '/') || p === DERIVED_TOKENS_FILE;
+// tokens/*.css and styles/tokens.css are exempt from the two content rules below
+// (no-hardcoded-color, no-monospace) — not the rest of styles/. tokens/ is pinned
+// byte-for-byte against the handoff by rule 5 (tokens-verbatim) when $DS is set, and
+// styles/tokens.css is mechanically derived from tokens/ (see its header comment) — both are
+// guarded by a stronger check than any content regex here. theme.css/base.css/index.css carry
+// no literal colors today and stay covered by the regular rules.
 
 // 1. Aucune couleur en dur hors tokens/
 // Strategie inversee : tout #hex ou rgb()/rgba() est presume etre une

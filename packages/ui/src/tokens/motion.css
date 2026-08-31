@@ -1,0 +1,12 @@
+:root{
+  --dur-1:120ms; /* @kind other */ /* hover, tint changes */
+  --dur-2:180ms; /* @kind other */ /* the default */
+  --dur-3:260ms; /* @kind other */ /* size / position */
+  --ease-out:cubic-bezier(.2,.6,.2,1); /* @kind other */
+  --ease-in-out:cubic-bezier(.4,0,.2,1); /* @kind other */
+}
+
+/* The only looping animation in the system: a slow, low-contrast breath on a live indicator.
+   Nothing blinks, nothing pulses hard, nothing shimmers in a colour. */
+@keyframes sl-breathe{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes sl-shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
