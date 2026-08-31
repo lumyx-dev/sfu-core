@@ -16,9 +16,8 @@
 | `apps/dashboard` | pas d'écran produit, deux pages « spécimen » (`app/design-system/page.tsx`, `app/_ds/`) qui exercent la quasi-totalité des 32 composants | idem |
 | `apps/cloud` | scaffold vide (`packages/auth`/`packages/db` sont des coquilles) | aucun |
 
-Chaque composant a son propre `Nom.module.css` (32 dans `packages/ui`, 37 dans `apps/web`).
-`Button.tsx` fait déjà exception — écrit en utilitaires Tailwind purs — et sert de modèle
-pour ce que ce document généralise à tout le reste.
+Chaque composant a son propre `Nom.module.css` (32 dans `packages/ui`, 37 dans `apps/web`),
+sans exception — y compris les composants `core` les plus simples (`Button`, `Badge`).
 
 ## 2. Objectif
 
