@@ -1,7 +1,7 @@
 //! SFU server entry point.
 
-use sfu::app::{AppState, build_router};
-use sfu::config::Config;
+use lumyx_sfu::app::{AppState, build_router};
+use lumyx_sfu::config::Config;
 
 #[tokio::main]
 async fn main() {

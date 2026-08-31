@@ -9,7 +9,7 @@
 //! subscriber's connection** — the whole point of the model, since it is what
 //! keeps two publishers from landing in a single decoder.
 
-use sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
+use lumyx_sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Instant;
@@ -51,7 +51,10 @@ impl RecordingSink {
 
 impl RtpSink for RecordingSink {
     fn write_rtp(&self, packet: RtpPacketData) {
-        self.packets.lock().expect("sink non empoisonné").push(packet);
+        self.packets
+            .lock()
+            .expect("sink non empoisonné")
+            .push(packet);
     }
 
     fn request_keyframe(&self, mid: Mid) {
@@ -341,7 +344,11 @@ fn the_last_peer_leaving_drops_the_room() {
     engine.remove_peer("alice");
     engine.remove_peer("bob");
 
-    assert_eq!(engine.room_count(), 0, "une room vide ne doit pas subsister");
+    assert_eq!(
+        engine.room_count(),
+        0,
+        "une room vide ne doit pas subsister"
+    );
 }
 
 #[test]

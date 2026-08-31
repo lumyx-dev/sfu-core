@@ -1,6 +1,7 @@
-# Sightline SFU — Contexte de développement
+# Lumyx SFU — Contexte de développement
 
 ## Stack
+
 - Rust + Tokio + Axum + str0m (WebRTC)
 - str0m v0.23.1 en mode média (`MediaData`), pas `rtp_mode`
 - Payload RTP porté en `Arc<[u8]>` de bout en bout : c'est le type que str0m
@@ -20,7 +21,7 @@ transport/   WebRTC + UDP (str0m) — une connexion par peer
 ```
 
 | Chemin | Rôle |
-|---|---|
+| --- | --- |
 | `src/main.rs` | bootstrap seul |
 | `src/lib.rs` | racine du crate (permet les tests d'intégration) |
 | `src/config.rs` | config, surchargeable par `SFU_*` |
@@ -138,7 +139,7 @@ numéro que le subscriber a réservé à H.264.
 ### Le protocole de signaling
 
 | Client → serveur | |
-|---|---|
+| --- | --- |
 | `join` | rejoint une room |
 | `sfu_offer` | offer initiale du client — il publie en `sendonly` |
 | `sfu_answer` | **answer à une re-offer du SFU** |
@@ -146,7 +147,7 @@ numéro que le subscriber a réservé à H.264.
 | `leave` | quitte la room |
 
 | Serveur → client | |
-|---|---|
+| --- | --- |
 | `connected` | peer_id attribué |
 | `joined_room` / `peer_joined` / `peer_left` | composition de la room |
 | `sfu_answer` | réponse à l'offer du client |
