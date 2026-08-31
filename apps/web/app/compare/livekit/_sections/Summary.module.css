@@ -1,0 +1,43 @@
+/* Source: Compare LiveKit.dc.html:70-80 — same border-top/layout shape as Pricing's
+   PlanSwitcher.module.css (`.section`/`.layout`): a plain flex-column max-width container, no
+   180px rail. The 3-column hairline effect itself is HairlineGrid (components/marketing). */
+.section {
+  border-top: 1px solid var(--border);
+}
+
+.layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 20px;
+}
+@media (min-width: 640px) {
+  .layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+
+.cell {
+  background: var(--surface-card);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  text-wrap: pretty;
+}
+
+.body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}

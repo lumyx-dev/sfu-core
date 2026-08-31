@@ -1,0 +1,78 @@
+/* Source: Compare LiveKit.dc.html:35-68 — the `.theme-dark[data-hero]` wrapper. Same dot-grid
+   mask treatment (26%/74% stops) as Home's Hero.module.css `.dots` and Pricing's PricingHero
+   `.dots`, reused verbatim: the mask uses only its alpha channel, so var(--n-950) stands in for
+   the source's literal black stop. */
+.dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--n-700) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.5;
+  pointer-events: none;
+  mask-image: radial-gradient(130% 78% at 26% 0%, var(--n-950) 26%, transparent 74%);
+  -webkit-mask-image: radial-gradient(130% 78% at 26% 0%, var(--n-950) 26%, transparent 74%);
+}
+
+/* Compare LiveKit.dc.html:58 — `padding:72px 40px 56px` on a `flex-direction:column` section
+   with `gap:22px`. Horizontal padding lives on the section wrapper in CompareHero.tsx (Tailwind
+   `px-5 md:px-6 lg:px-10`, same convention as Home's Hero.tsx `section#top`), so only the
+   vertical padding and the column gap live here. The mobile floor is this task's own responsive
+   choice — the source is a fixed 1280px mockup with no narrower breakpoint. */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 44px 0 32px;
+}
+@media (min-width: 640px) {
+  .content {
+    padding: 72px 0 56px;
+  }
+}
+
+/* Compare LiveKit.dc.html:60 — 56px/600/-0.035em/lh 1.03, max-width 900px. */
+.title {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.03;
+  color: var(--text-strong);
+  max-width: 900px;
+  text-wrap: pretty;
+}
+@media (min-width: 640px) {
+  .title {
+    font-size: 56px;
+  }
+}
+
+.lead {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 660px;
+  text-wrap: pretty;
+}
+
+/* Compare LiveKit.dc.html:64 — the in-page anchor to #migrate, styled as its own bordered pill
+   rather than a Button variant (the border colour, height and radius don't match any exposed
+   Button variant — same treatment as SiteHeader's `.ghostButton`). */
+.migrateLink {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-strong);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.meta {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}

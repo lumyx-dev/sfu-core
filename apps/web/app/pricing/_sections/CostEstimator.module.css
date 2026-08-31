@@ -1,0 +1,8 @@
+/* Source: Pricing.dc.html:64-75. The range input carries only `accent-color` and `cursor` in
+   the source (no custom track/thumb) — kept minimal rather than inventing a thumb style the
+   source never specifies. */
+.range {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}

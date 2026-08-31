@@ -1,0 +1,74 @@
+.link {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--dur-1) var(--ease-out);
+}
+.link:hover {
+  color: var(--text-strong);
+  text-decoration: none;
+}
+
+/* Responsive fix (task-13, arithmetic pass): this used to be `hidden md:flex` (Tailwind's
+   768px). At 768px with md's 24px side padding (720px available), the five-link nav (~389px
+   incl. gaps) + wordmark (~99px) + version/GitHub/CTA (~240px) + the header's two 32px gaps
+   comes to roughly 792px against 720px — an overflow the arithmetic pass caught (no prior task
+   ever measured this; DocsHeader got the same treatment in an earlier round). 900px (this site's
+   existing custom "tablet" breakpoint, used by Pains/CompareStrip/PricingStrip/OpenSource) gives
+   ~852px available against the same ~792px demand — comfortable margin, so no further breakpoint
+   is needed above it (1024px only adds padding, not less room). */
+.nav {
+  display: none;
+}
+@media (min-width: 900px) {
+  .nav {
+    display: flex;
+  }
+}
+
+.meta {
+  display: none;
+  font-size: var(--fs-12);
+  color: var(--text-faint);
+}
+@media (min-width: 900px) {
+  .meta {
+    display: inline;
+  }
+}
+
+/* Pushes the actions group to the right edge while `.nav` (flex-1) is hidden; once the nav
+   reappears at 900px it already fills the gap on its own. */
+.actions {
+  margin-left: auto;
+}
+@media (min-width: 900px) {
+  .actions {
+    margin-left: 0;
+  }
+}
+
+.ghostButton {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-body);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+/* Responsive fix (task-13, arithmetic pass): below 900px, the header shows only wordmark +
+   GitHub + the primary CTA (nav/version hidden by `.nav`/`.meta` above). At the 320px floor with
+   px-5's 20px side padding (280px available), wordmark (~99px) + the header's one remaining
+   32px gap + GitHub (~65px) + its own 12px gap + the CTA button (~121px) comes to ~329px —
+   overflow. GitHub is the one link that can go without losing the page's primary action; hiding
+   it below 400px leaves ~252px of demand against 280px available at the 320px floor — closes the
+   gap, and it returns at 400px with ~31px of slack (329px demand vs. 360px available). */
+@media (min-width: 400px) {
+  .ghostButton {
+    display: inline-flex;
+  }
+}

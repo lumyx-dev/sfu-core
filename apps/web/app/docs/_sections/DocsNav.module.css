@@ -1,0 +1,30 @@
+/* overflow/padding live on the JSX as Tailwind utilities — they never change across
+   breakpoints. Only the colors and the 959px hide (a different property) stay here. */
+.nav {
+  border-right: 1px solid var(--border);
+  background: var(--surface-card);
+}
+
+/* Responsive collapse — this task's own choice (source has no responsive behaviour). Below the
+   desktop breakpoint the shell drops to a single scrolling column (page.module.css) and this
+   nav disappears rather than moving above the content (task-10-brief.md correction 6 allows
+   either). Unverified without a browser. */
+@media (max-width: 959px) {
+  .nav {
+    display: none;
+  }
+}
+
+.item {
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+.item[data-active='1'] {
+  color: var(--text-strong);
+  background: var(--surface-active);
+  box-shadow: inset 2px 0 0 var(--accent);
+}

@@ -1,0 +1,27 @@
+import { SiteFooter } from '@/components/chrome/SiteFooter';
+import { ChangelogHero } from './_sections/ChangelogHero';
+import { ReleaseNotes } from './_sections/ReleaseNotes';
+
+// Source: Changelog.dc.html. Entirely static, no client boundary anywhere on this route
+// (task-11-brief.md: "'use client' on nothing in this task"). Two `.theme-dark` wrappers, as in
+// the source: ChangelogHero owns the first one (header + hero, line 32); the second one here
+// (line 123) wraps only the footer — this page has no final-CTA section between the release
+// list and the footer, unlike Home/Pricing/Compare.
+//
+// `SiteFooter`'s footer (Changelog.dc.html:125) is 1080px like everything else on this page,
+// not the 1280px every other page using SiteFooter renders at — hence `maxWidth={1080}` here.
+// Home, Pricing and Compare all call `<SiteFooter />` with no prop and keep the 1280px default.
+export default function ChangelogPage() {
+  return (
+    <>
+      <ChangelogHero />
+      <ReleaseNotes />
+      <div
+        className="theme-dark"
+        style={{ background: 'var(--surface-page)', color: 'var(--text-body)', borderTop: '1px solid var(--border)' }}
+      >
+        <SiteFooter maxWidth={1080} />
+      </div>
+    </>
+  );
+}

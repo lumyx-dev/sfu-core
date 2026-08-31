@@ -1,0 +1,75 @@
+.section {
+  border-top: 1px solid var(--border);
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+.field {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-body);
+  text-wrap: pretty;
+}
+
+/* grid-template-columns is the one exotic, responsive-varying property here — display/gap/
+   overflow are static Tailwind utilities on the JSX (`grid gap-px overflow-hidden`). */
+.grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--border-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Three fixed columns cannot survive 375px readably — this task's own responsive choice, the
+   source has no responsive behaviour at all. Unverified without a browser. */
+@media (max-width: 639px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cell {
+  background: var(--surface-card);
+}
+
+.cellValue {
+  font-size: 13px;
+  color: var(--text-strong);
+}
+
+.breaks {
+  font-size: 12.5px;
+  color: var(--text-body);
+  text-wrap: pretty;
+}
+
+.sample {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.sampleLine {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-body);
+}
+
+.action {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}

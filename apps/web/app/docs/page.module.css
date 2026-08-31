@@ -1,0 +1,125 @@
+/* Source: Docs.dc.html:30. An app shell, not a scrolling marketing page (task-10-brief.md
+   correction 1) — the page itself never scrolls, only its three panes do, each via the design
+   system's `sl-scroll` class. `display:grid` lives on the JSX (it never changes); the exotic
+   `grid-template-rows` and the height (which the 959px override below does change) stay
+   bundled here. */
+.shell {
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+  background: var(--surface-page);
+  color: var(--text-body);
+}
+
+/* Source: Docs.dc.html:50 — `grid-template-columns:264px minmax(0,1fr) 224px`. Three columns,
+   not two (correction 2): DocsNav | main | DocsRail. `min-height:0` lives on the JSX (static);
+   `display` is what the 959px override changes (grid → block), so it stays here with the
+   exotic column template. */
+.columns {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr) 224px;
+}
+
+/* `overflow` is the property the 959px override below changes, so base + override stay
+   bundled here together, like the header's gap/padding, `.nav`'s display, `.mainInner`'s
+   max-width/padding and `.rail`'s display — mixing Tailwind's `overflow-auto` with a module
+   override on the same property would make the two systems race on stylesheet injection order
+   (finding B, task-10 review round 3). `min-width` never changes, so it stays on the JSX. */
+.main {
+  overflow: auto;
+}
+
+/* max-width/padding both change at 959px, so base + override stay bundled here; display/flex-
+   direction/gap are static and live on the JSX as Tailwind utilities. */
+.mainInner {
+  max-width: 820px;
+  padding: 36px 44px 80px;
+}
+
+/* Same visual spec as @sightline/ui's Breadcrumb (Breadcrumb.module.css), rebuilt as plain
+   markup: that component always wires an onClick handler onto its non-last crumbs, which makes
+   it unusable from a Server Component tree here (Next.js: "Event handlers cannot be passed to
+   Client Component props") — and this page's only client boundary is DocsRail.tsx
+   (task-10-brief.md correction 6). The source's own breadcrumb has no click behaviour either.
+   display/align-items/gap/flex-wrap/min-width live on the JSX; only the font size stays here. */
+.breadcrumb {
+  font-size: 13px;
+}
+
+.crumbChevron {
+  color: var(--text-faint);
+}
+
+.crumb {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.crumbLast {
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.title {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text-strong);
+  text-wrap: pretty;
+}
+
+.lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-body);
+  text-wrap: pretty;
+}
+
+/* display/align-items/gap/flex-wrap/padding-top live on the JSX; only the border color stays
+   here. */
+.pagination {
+  border-top: 1px solid var(--border);
+}
+
+/* display/flex-direction/gap/flex/min-width/padding/text-decoration all live on the JSX
+   (`text-right` handles the source's `text-align:right` on the "Next" link); the border and
+   its token-based radius stay here. */
+.pagerLink {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.pagerLabel {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+/* Responsive collapse — this task's own choice; unverified without a browser (the source is a
+   fixed 1440x900 mockup with no responsive behaviour at all). A `264px | 1fr | 224px`
+   fixed-height shell cannot survive a phone, so below the desktop breakpoint it becomes a
+   normal, single scrolling column: the right aside and the left nav both disappear
+   (DocsRail.module.css, DocsNav.module.css) and `main` stops owning its own scroll pane, so the
+   body scrolls instead. The body must never gain horizontal scroll at any width. */
+@media (max-width: 959px) {
+  .shell {
+    height: auto;
+    min-height: 100vh;
+  }
+  .columns {
+    display: block;
+  }
+  .main {
+    overflow: visible;
+  }
+  .mainInner {
+    max-width: none;
+    padding: 24px 20px 56px;
+  }
+  .title {
+    font-size: 30px;
+  }
+}

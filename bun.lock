@@ -51,6 +51,27 @@
         "typescript": "^5",
       },
     },
+    "apps/web": {
+      "name": "@sightline/web",
+      "version": "0.1.0",
+      "dependencies": {
+        "@sightline/ui": "workspace:*",
+        "next": "16.3.2",
+        "react": "19.2.8",
+        "react-dom": "19.2.8",
+      },
+      "devDependencies": {
+        "@tailwindcss/postcss": "^4",
+        "@types/bun": "latest",
+        "@types/node": "^20",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "eslint": "^9",
+        "eslint-config-next": "16.3.2",
+        "tailwindcss": "^4",
+        "typescript": "^5",
+      },
+    },
     "packages/auth": {
       "name": "@sightline/auth",
       "devDependencies": {
@@ -293,6 +314,8 @@
     "@sightline/env": ["@sightline/env@workspace:packages/env"],
 
     "@sightline/ui": ["@sightline/ui@workspace:packages/ui"],
+
+    "@sightline/web": ["@sightline/web@workspace:apps/web"],
 
     "@swc/helpers": ["@swc/helpers@0.5.23", "", { "dependencies": { "tslib": "^2.8.0" } }, "sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw=="],
 

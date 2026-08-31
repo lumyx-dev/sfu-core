@@ -1,0 +1,37 @@
+/* overflow/padding/flex-direction/gap live on the JSX as Tailwind utilities — they never
+   change across breakpoints. `display` does (the 959px override below), so base + override
+   stay together here, alongside the border color. */
+.rail {
+  display: flex;
+  border-left: 1px solid var(--border);
+}
+
+/* Responsive collapse — this task's own choice (source has no responsive behaviour). The right
+   aside is the first thing to go below the desktop breakpoint (task-10-brief.md correction 6:
+   "hide the right aside"). Unverified without a browser. */
+@media (max-width: 959px) {
+  .rail {
+    display: none;
+  }
+}
+
+.item {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  border-left-color: var(--border);
+}
+
+.item[data-active='1'] {
+  color: var(--text-strong);
+  border-left-color: var(--accent);
+}
+
+.contribute {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.contributeLink {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}

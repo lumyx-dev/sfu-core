@@ -1,0 +1,332 @@
+/* Sign up.dc.html:64 — `width:100%;max-width:460px;margin:0 auto;gap:22px`. */
+.wizard {
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Sign up.dc.html:66 — `gap:12px`. */
+.stepperRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Sign up.dc.html:68 — `gap:8px`. */
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Sign up.dc.html:69 — 22x22, radius 8px, 11.5px/500. Colour/background/border-colour are set
+   inline per step (active vs. not) — only the static geometry lives here. */
+.stepNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-xs);
+  font-size: 11.5px;
+  font-weight: 500;
+  border-width: 1px;
+  border-style: solid;
+}
+
+/* Sign up.dc.html:70 — 12.5px/500. */
+.stepLabel {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+/* Sign up.dc.html:73 — the rule filling the space before the step meta. */
+.stepperRule {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Sign up.dc.html:74 — 12px, text-faint. */
+.stepperMeta {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* Shared step wrapper — 78:20, 113:20, 156:20 all use `gap:20px`. */
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Sign up.dc.html:79/114/157 — `gap:8px`. */
+.stepHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Sign up.dc.html:80/115/160 — 24px/600/-0.02em. */
+.stepTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+/* Sign up.dc.html:81/116/162 — 13px, text-muted, used for the account step's "sign in" line,
+   the project step's helper line and the keys step's region/production meta line. */
+.stepSub {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+/* Sign up.dc.html:84 — `gap:10px`. */
+.oauthGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Sign up.dc.html:89 — `gap:12px`. */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dividerRule {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Sign up.dc.html:95 — `gap:14px`. */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Sign up.dc.html:108 — 12px/1.6, text-faint. */
+.legal {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-faint);
+  text-wrap: pretty;
+}
+
+/* Sign up.dc.html:119/125 — `gap:7px`/`gap:9px`, close enough to share one class: the Project
+   name field uses the Input component's own built-in label/hint instead (Input.module.css
+   `.wrapper` gap), so this class is only reached by the SFU region group. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Sign up.dc.html:122/135 — 12px, text-muted, standalone helper text below the region grid. */
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Sign up.dc.html:127 — `repeat(2,minmax(0,1fr));gap:10px`. */
+.regionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Sign up.dc.html:129 — `gap:5px;padding:12px 14px;border-radius:12px`. Border/background
+   colour are inline per selection state; only the static geometry lives here. */
+.regionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.regionId {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.regionLatency {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Sign up.dc.html:138 — `gap:16px;padding:14px 16px;border-radius:14px`. */
+.stagingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.stagingCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stagingTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.stagingDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+/* Sign up.dc.html:143 — 40x23 pill switch. Background is inline (on/off state); the source's
+   literal white knob colour is var(--surface-card) here (task-12-brief.md correction 7's rule
+   applied to the toggle, not just the stepper number). */
+.toggle {
+  width: 40px;
+  height: 23px;
+  border-radius: var(--radius-pill);
+  border: none;
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  transition: background var(--dur-2) var(--ease-out);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  transition: left var(--dur-2) var(--ease-out);
+}
+
+/* Sign up.dc.html:148 — `gap:12px`. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Sign up.dc.html:158 — `gap:10px`. */
+.liveRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Sign up.dc.html:169 — `gap:10px`. */
+.credList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Sign up.dc.html:171 — `gap:6px`. */
+.credRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Sign up.dc.html:173 — `gap:10px;padding:11px 14px;border-radius:12px`. */
+.credValue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+/* Sign up.dc.html:174 — 12.5px, ellipsis overflow. */
+.credText {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sign up.dc.html:169/183 — `gap:10px`. */
+.sdkBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Sign up.dc.html:184 — `gap:10px`. */
+.sdkHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sdkSpacer {
+  flex: 1;
+}
+
+/* Sign up.dc.html:189 — `padding:14px 16px;border-radius:14px;gap:5px;min-height:104px`. */
+.sdkBox {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 104px;
+}
+
+/* Sign up.dc.html:191 — 12.5px/1.6, plain Geist like the rest of the page: the global
+   constraints rule out a fixed-width font here even though it is a code snippet. */
+.sdkLine {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-body);
+  white-space: pre-wrap;
+}
+
+/* Sign up.dc.html:196 — `gap:12px;flex-wrap:wrap`. */
+.finalRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.finalSpacer {
+  flex: 1;
+}
+
+.finalNote {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-wrap: pretty;
+}

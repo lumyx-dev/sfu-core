@@ -1,0 +1,41 @@
+/* Source: Compare LiveKit.dc.html:192-199 — inside the closing `theme-dark` wrapper that also
+   holds SiteFooter (task-9-brief.md correction 5). Same pattern as Pricing's
+   `_sections/FinalCta.module.css`, sized to this page's own 44px/-0.035em/lh1.06, max-width 760px
+   headline (correction 5's exact figures). */
+.layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: flex-start;
+}
+@media (min-width: 640px) {
+  .layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+@media (min-width: 768px) {
+  .layout {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+}
+
+.headline {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+  color: var(--text-strong);
+  max-width: 760px;
+  text-wrap: pretty;
+}
+@media (min-width: 640px) {
+  .headline {
+    font-size: 44px;
+  }
+}

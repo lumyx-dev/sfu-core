@@ -1,0 +1,88 @@
+/* Source: Compare LiveKit.dc.html:116-135 — the second `180px minmax(0,1fr)` sticky-rail
+   section (task-9-brief.md correction 4): rail index "02" / label "What you stop building", no
+   rail note this time, an h2, and a 2-column hairline grid of REPLACES cells. */
+.section {
+  border-top: 1px solid var(--border);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 20px;
+}
+@media (min-width: 640px) {
+  .layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 40px;
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .rail {
+    position: sticky;
+    top: 32px;
+  }
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.headline {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text-strong);
+  max-width: 700px;
+  text-wrap: pretty;
+}
+@media (min-width: 640px) {
+  .headline {
+    font-size: 38px;
+  }
+}
+
+.cell {
+  background: var(--surface-card);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.after {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-wrap: pretty;
+}
+
+.cellBody {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}

@@ -1,0 +1,194 @@
+/* Source: Changelog.dc.html:62-121. The `150px minmax(0,1fr)` rail (task-11-brief.md
+   correction 4) is narrower than the 180px used everywhere else on the site (Pains.module.css,
+   ComparisonTable.module.css, etc.) — kept exact rather than rounded up to match. No responsive
+   behaviour exists in the source (a fixed-width mockup), so the breakpoint below follows the
+   same custom-pixel-breakpoint convention as those other rails, at the same 900px threshold,
+   collapsing to a single column with the nav no longer sticky. */
+
+.section {
+  border-top: 1px solid var(--border);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 36px;
+  align-items: start;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+}
+@media (min-width: 640px) {
+  .layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+}
+
+/* Nav rail — Changelog.dc.html:65-73. Sticky only once it sits beside the content, same as
+   Pains.module.css's `.rail`. */
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+@media (min-width: 900px) {
+  .nav {
+    position: sticky;
+    top: 32px;
+  }
+}
+
+.navLabel {
+  padding-bottom: 8px;
+}
+
+.navLink {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.navVersion {
+  font-weight: 500;
+}
+
+.navDate {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* Right column — Changelog.dc.html:75-119. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  min-width: 0;
+}
+
+.article {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 36px;
+  border-bottom: 1px solid var(--border);
+  scroll-margin-top: 32px;
+}
+
+.articleHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.version {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+.meta {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.commit {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-decoration: none;
+}
+
+.summary {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-body);
+  max-width: 660px;
+  text-wrap: pretty;
+}
+
+/* Breaking-change callout — Changelog.dc.html:90-95. The source references
+   `var(--danger-border)`, which the design system never defines (`packages/ui/src/tokens/*.css`
+   has --danger / --danger-tint / --danger-solid, and a parallel --accent-border, but no
+   --danger-border) — an undefined custom property would make the whole `border` shorthand
+   invalid. `var(--danger)` is the 600-ink step meant for small text; used as a 1px border on a
+   tinted panel it reads heavier than intended, so this derives the soft weight the missing
+   token would have carried instead, the same color-mix technique already used for
+   `--spotlight-tint` in app/globals.css. Token-derived, so it still follows `.theme-dark`. */
+.breaking {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--danger-tint);
+}
+
+.breakingText {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-body);
+  text-wrap: pretty;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.group {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.groupBadge {
+  display: flex;
+  padding-top: 2px;
+}
+
+.groupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.groupItem {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-body);
+  text-wrap: pretty;
+}
+
+/* "Older releases" card — Changelog.dc.html:114-118. */
+.olderCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+.olderText {
+  font-size: 13px;
+  color: var(--text-body);
+  text-wrap: pretty;
+}
