@@ -9,7 +9,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Sightline",
+  title: "Lumyx",
   description: "Sightline design system",
 };
 

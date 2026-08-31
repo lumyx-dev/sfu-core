@@ -1,5 +1,5 @@
 {
-  "name": "@sightline/env",
+  "name": "@lumyx/env",
   "module": "index.ts",
   "type": "module",
   "private": true,

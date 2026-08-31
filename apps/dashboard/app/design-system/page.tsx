@@ -33,10 +33,10 @@ import {
   Toast,
   Toolbar,
   VideoTile,
-} from "@sightline/ui";
+} from "@lumyx/ui";
 
 /**
- * A specimen of every component in `@sightline/ui`, the local counterpart to
+ * A specimen of every component in `@lumyx/ui`, the local counterpart to
  * the Design System pane in the Claude Design project.
  *
  * Values here are invented; the metric names and thresholds are the real ones

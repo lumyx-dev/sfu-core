@@ -4,7 +4,7 @@
 // Breadcrumb/Sidebar/Tabs each wrap onSelect in an onClick closure on a native <button>
 // internally (matching the design-system source), and that closure can't cross the RSC
 // boundary from a page with no client directive — see task-6-report.md.
-import { Breadcrumb, Button, Icon, Sidebar, Tabs, Toolbar, type SidebarItem } from '@sightline/ui';
+import { Breadcrumb, Button, Icon, Sidebar, Tabs, Toolbar, type SidebarItem } from '@lumyx/ui';
 
 // Donnees reelles de la maquette — Dashboard UI.dc.html:395-405.
 const NAV_ITEMS: SidebarItem[] = [

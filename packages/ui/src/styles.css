@@ -1,12 +1,12 @@
-@import "@sightline/ui/tokens/fonts.css";
-@import "@sightline/ui/tokens/palette.css";
-@import "@sightline/ui/tokens/semantic.css";
-@import "@sightline/ui/tokens/typography.css";
-@import "@sightline/ui/tokens/spacing.css";
-@import "@sightline/ui/tokens/radius.css";
-@import "@sightline/ui/tokens/elevation.css";
-@import "@sightline/ui/tokens/motion.css";
-@import "@sightline/ui/tokens/base.css";
+@import "@lumyx/ui/tokens/fonts.css";
+@import "@lumyx/ui/tokens/palette.css";
+@import "@lumyx/ui/tokens/semantic.css";
+@import "@lumyx/ui/tokens/typography.css";
+@import "@lumyx/ui/tokens/spacing.css";
+@import "@lumyx/ui/tokens/radius.css";
+@import "@lumyx/ui/tokens/elevation.css";
+@import "@lumyx/ui/tokens/motion.css";
+@import "@lumyx/ui/tokens/base.css";
 
 /* Pont Tailwind v4 : référence les tokens, ne les redéfinit pas. Si les deux divergent,
    tokens/ gagne. Sert la mise en page au niveau des apps, pas les composants.

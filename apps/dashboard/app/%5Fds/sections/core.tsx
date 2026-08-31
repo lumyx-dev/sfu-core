@@ -1,4 +1,4 @@
-import { Badge, Button, Card, IconButton, Input, Pill, Select, StatusDot, Icon } from '@sightline/ui';
+import { Badge, Button, Card, IconButton, Input, Pill, Select, StatusDot, Icon } from '@lumyx/ui';
 
 const VARIANTS = ['primary', 'secondary', 'quiet', 'danger', 'accentQuiet'] as const;
 const SIZES = ['sm', 'md', 'lg'] as const;

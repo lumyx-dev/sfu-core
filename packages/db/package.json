@@ -1,5 +1,5 @@
 {
-  "name": "@sightline/db",
+  "name": "@lumyx/db",
   "module": "index.ts",
   "type": "module",
   "private": true,

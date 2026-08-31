@@ -14,8 +14,8 @@ import {
   RoomCard,
   type RoomCardHealth,
   VideoTile,
-} from '@sightline/ui';
-import type { StatusDotStatus } from '@sightline/ui';
+} from '@lumyx/ui';
+import type { StatusDotStatus } from '@lumyx/ui';
 import { PEERS, ROOMS } from '../mock';
 
 // LatencyChip source (:2245-2308) : THRESHOLDS n'a que 5 cles — rtt/jitter/loss/nack/freeze,
@@ -68,7 +68,7 @@ export function WebrtcSection() {
               region={p.region}
               samples={p.series}
               selected={i === 3}
-              onClick={() => {}}
+              onClick={() => { }}
             />
           ))}
         </div>
@@ -99,7 +99,7 @@ export function WebrtcSection() {
               health={r.health as RoomCardHealth}
               samples={r.series}
               region={r.region}
-              onClick={() => {}}
+              onClick={() => { }}
             />
           ))}
         </div>

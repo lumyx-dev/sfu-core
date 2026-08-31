@@ -1,5 +1,5 @@
 {
-  "name": "@sightline/auth",
+  "name": "@lumyx/auth",
   "module": "index.ts",
   "type": "module",
   "private": true,

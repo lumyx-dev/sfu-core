@@ -1,4 +1,4 @@
-import { Icon, ICONS, type IconName } from '@sightline/ui';
+import { Icon, ICONS, type IconName } from '@lumyx/ui';
 import { CoreSection } from './sections/core';
 import { DataSection } from './sections/data';
 import { FeedbackSection } from './sections/feedback';

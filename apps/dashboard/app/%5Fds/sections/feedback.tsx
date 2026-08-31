@@ -12,7 +12,7 @@ import {
   SeverityBadge,
   Toast,
   ToastStack,
-} from '@sightline/ui';
+} from '@lumyx/ui';
 
 // AlertBanner.severity / SeverityBadge.severity / Toast.severity share one SEVERITY map in the
 // source (:1170-1217, :1596-1619, :1656-1679): 'critical' | 'warning' | 'info' | 'success'. There
@@ -44,7 +44,7 @@ export function FeedbackSection() {
               <Button variant="danger" size="sm">Force audio-only</Button>
             </>
           }
-          onDismiss={() => {}}
+          onDismiss={() => { }}
         />
       </div>
 
@@ -178,14 +178,14 @@ export function FeedbackSection() {
                   severity="critical"
                   title="Packet loss above threshold"
                   time="14:06:41"
-                  onDismiss={() => {}}
+                  onDismiss={() => { }}
                 />
                 <Toast
                   severity="success"
                   title="Session reconnected"
                   message="webinar-us resumed after 2 retries."
                   time="14:06:58"
-                  onDismiss={() => {}}
+                  onDismiss={() => { }}
                 />
               </ToastStack>
             </div>
@@ -199,7 +199,7 @@ export function FeedbackSection() {
         </span>
         <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
           <Toast severity="info" title="No dismiss button" message="onDismiss is not provided." time="14:07:02" />
-          <Toast severity="warning" title="No timestamp" message="time is not provided." onDismiss={() => {}} />
+          <Toast severity="warning" title="No timestamp" message="time is not provided." onDismiss={() => { }} />
         </div>
       </div>
     </div>

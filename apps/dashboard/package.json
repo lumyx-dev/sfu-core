@@ -1,5 +1,5 @@
 {
-  "name": "@sightline/dashboard",
+  "name": "@lumyx/dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@sightline/ui": "workspace:*",
+    "@lumyx/ui": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:",
     "next": "16.3.2",

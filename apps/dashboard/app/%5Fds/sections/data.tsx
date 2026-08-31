@@ -18,7 +18,7 @@ import {
   type SparklineTone,
   StatusDot,
   TimeSeriesChart,
-} from '@sightline/ui';
+} from '@lumyx/ui';
 import { PEERS, type Peer } from '../mock';
 
 // Ordre exact de Sparkline.TONES (source :930) : accent/secondary/warn/neutral/ok -> --series-1..5,
@@ -85,14 +85,14 @@ export function DataSection() {
           source :605)
         </span>
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-          <DataTable columns={PEER_COLUMNS} rows={PEER_ROWS} selectedIndex={2} onRowClick={() => {}} />
+          <DataTable columns={PEER_COLUMNS} rows={PEER_ROWS} selectedIndex={2} onRowClick={() => { }} />
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">DataTable — dense=true, memes colonnes et selectedIndex=2</span>
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-          <DataTable columns={PEER_COLUMNS} rows={PEER_ROWS} selectedIndex={2} dense onRowClick={() => {}} />
+          <DataTable columns={PEER_COLUMNS} rows={PEER_ROWS} selectedIndex={2} dense onRowClick={() => { }} />
         </div>
       </div>
 

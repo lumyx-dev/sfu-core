@@ -1,4 +1,4 @@
-import { AppShell, Card, DashboardGrid, GridItem, SplitPane, StatusStrip } from '@sightline/ui';
+import { AppShell, Card, DashboardGrid, GridItem, SplitPane, StatusStrip } from '@lumyx/ui';
 
 function Cell({ span }: { span: number }) {
   return (
