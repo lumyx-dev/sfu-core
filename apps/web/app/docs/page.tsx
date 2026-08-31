@@ -28,7 +28,7 @@ export default function DocsPage() {
   return (
     <div className={`grid ${s.shell}`}>
       <DocsHeader />
-      <div className={`min-h-0 ${s.columns}`}>
+      <div className={`min-h-0 min-w-0 ${s.columns}`}>
         <DocsNav />
 
         <main className={`sl-scroll min-w-0 ${s.main}`}>
