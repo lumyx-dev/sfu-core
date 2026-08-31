@@ -1,4 +1,4 @@
-<h1 align="center">lumyx 🔭</h1>
+<h1 align="center">Lumyx 🔭</h1>
 
 <p align="center">
   <strong>A WebRTC SFU written in Rust — with observability built into the media path, not bolted on.</strong>
