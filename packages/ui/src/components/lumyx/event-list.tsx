@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils';
 import { StatusDot, type Status } from "./status-dot";
 
 export type LumyxEvent = { time: string; message: string; detail?: string; status?: Status };

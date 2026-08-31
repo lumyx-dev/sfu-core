@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils';
 import { StatusDot, type Status } from "./status-dot";
 import { QualityIndicator, LatencyChip, type Quality } from "./quality";
 

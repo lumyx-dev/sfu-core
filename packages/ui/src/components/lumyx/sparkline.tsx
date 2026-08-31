@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils';
 
 /** The only permitted gradient: a 14%→0 fade under a line, in that line's own colour. */
 export function Sparkline({

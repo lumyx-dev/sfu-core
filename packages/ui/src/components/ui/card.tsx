@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils';
 
 /** White card on an --n-50 page: 1px hairline, 18px radius, soft sm shadow. */
 function Card({ className, ...props }: React.ComponentProps<"div">) {

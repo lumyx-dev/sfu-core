@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils';
 
 /** One slow neutral shimmer — 1.6s. Never a coloured one. */
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {

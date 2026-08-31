@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils';
 import { StatusDot, type Status } from "./status-dot";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '../ui/badge';
 
 export type Room = {
   id: string;

@@ -1,5 +1,5 @@
 import { VideoOff } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils';
 import { StatusDot, type Status } from "./status-dot";
 import { QualityIndicator, type Quality } from "./quality";
 
