@@ -5,7 +5,8 @@ import { join, extname, basename } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const SRC = join(ROOT, 'src');
 const COMPONENTS = join(SRC, 'components');
-const TOKENS = join(SRC, 'tokens');
+const TOKENS = join(SRC, 'styles');
+const TOKENS_FILE = join(TOKENS, 'tokens.css');
 const DS = process.env.DS;
 
 const failures = [];
@@ -21,16 +22,13 @@ function walk(dir) {
 
 const files = walk(SRC);
 const rel = (p) => p.slice(ROOT.length);
-const isTokenFile = (p) => p.startsWith(TOKENS + '/') || p === TOKENS;
-// tokens/ is exempt from BOTH content rules below (no-hardcoded-color, no-monospace) — not
-// narrowed out of the walk, exempted on purpose. Reason: tokens/*.css is already pinned
-// byte-for-byte against the handoff by rule 5 (tokens-verbatim), which is strictly stronger
-// than any content regex here — a token file cannot acquire a stray hardcoded colour or a
-// monospace declaration without tokens-verbatim failing first. Running these two rules over
-// files that are already guarded by an external source of truth adds no coverage and only
-// produces false positives (e.g. a comment that *denies* monospace, like "no monospace",
-// tripping a naive substring match). Do not "fix" this back to scanning tokens/ — add the
-// stronger check to tokens-verbatim instead if real coverage is missing there.
+const isTokenFile = (p) => p === TOKENS_FILE;
+// Only styles/tokens.css is exempt from the two content rules below (no-hardcoded-color,
+// no-monospace) — not the whole styles/ directory. It is already pinned byte-for-byte
+// against the handoff by rule 5 (tokens-verbatim) when $DS is set, which is strictly
+// stronger than any content regex here — that file cannot acquire a stray hardcoded colour
+// or a monospace declaration without tokens-verbatim failing first. theme.css/base.css/
+// index.css carry no literal colors today and stay covered by the regular rules.
 
 // 1. Aucune couleur en dur hors tokens/
 // Strategie inversee : tout #hex ou rgb()/rgba() est presume etre une
@@ -57,12 +55,15 @@ for (const f of files) {
 }
 
 // 2. 'use client' sur EventList uniquement
+// EventList polls/filters client-side; Sparkline and TimeSeriesChart call `useId()` to keep
+// their SVG gradient ids collision-free when several charts render on one page — hooks require
+// a client boundary, RSC does not run them. Every other component stays a Server Component.
+const CLIENT_ALLOWED = new Set(['EventList.tsx', 'Sparkline.tsx', 'TimeSeriesChart.tsx']);
 for (const f of files.filter((f) => extname(f) === '.tsx')) {
   const body = readFileSync(f, 'utf8');
   const isClient = /^\s*['"]use client['"]/m.test(body);
-  const isEventList = basename(f) === 'EventList.tsx';
-  if (isClient && !isEventList) {
-    fail('use-client', `${rel(f)} porte 'use client' — seul EventList y a droit`);
+  if (isClient && !CLIENT_ALLOWED.has(basename(f))) {
+    fail('use-client', `${rel(f)} porte 'use client' — ilot non autorise`);
   }
 }
 
@@ -75,9 +76,11 @@ for (const f of files) {
   }
 }
 
-// 4. Pas de dangerouslySetInnerHTML
+// 4. Pas de dangerouslySetInnerHTML — usage reel (attribut JSX ou cle d'objet), pas une
+// simple mention en commentaire (ex: Icon.tsx explique pourquoi le composant NE l'utilise PAS).
+const DANGEROUS_HTML_USAGE = /dangerouslySetInnerHTML\s*[=:]/;
 for (const f of files) {
-  if (readFileSync(f, 'utf8').includes('dangerouslySetInnerHTML')) {
+  if (DANGEROUS_HTML_USAGE.test(readFileSync(f, 'utf8'))) {
     fail('no-dangerous-html', rel(f));
   }
 }

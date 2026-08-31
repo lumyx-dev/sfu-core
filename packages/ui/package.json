@@ -9,11 +9,13 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css",
-    "./tokens/*": "./src/tokens/*"
+    "./styles.css": "./src/styles/index.css",
+    "./styles/*": "./src/styles/*"
   },
   "dependencies": {
-    "lucide-react": "^0.469.0"
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.469.0",
+    "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
     "react": "^19",
