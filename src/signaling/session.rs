@@ -1,10 +1,12 @@
-//! Cycle de vie d'une session WebSocket.
+//! Lifecycle of a WebSocket session.
 
 use super::dispatch::handle_message;
 use super::messages::{ClientMessage, ServerMessage};
+use super::negotiation::{NegotiationEvent, Negotiator};
 use crate::app::AppState;
-use crate::media::{ForwardingEngine, RtpPacketData, RtpSink};
-use crate::transport::{PeerConnection, PeerSink, event_loop};
+use crate::media::{ForwardingEngine, RtpSink};
+use crate::metrics::Metrics;
+use crate::transport::{PeerConnection, PeerSink, TransportEvent, event_loop};
 use axum::extract::ws::{Message, WebSocket};
 use futures::sink::SinkExt;
 use futures::stream::{SplitSink, StreamExt};
@@ -12,26 +14,26 @@ use std::sync::Arc;
 use tokio::sync::mpsc::{self, Receiver};
 use tokio::sync::{Mutex, oneshot};
 
-/// Profondeur du canal de signaling sortant.
+/// Depth of the outbound signaling channel.
 const SIGNALING_CHANNEL_CAPACITY: usize = 100;
 
-/// Profondeur du canal des paquets entrants, du transport vers le moteur.
+/// Depth of the inbound event channel, from the transport to the session.
 ///
-/// Ce canal ne porte que le flux d'un seul publisher — celui de ce peer. À
-/// ~150 paquets/s pour de la vidéo 1080p, 128 paquets valent **~850 ms de
-/// média**. Comme la file du `PeerSink` en sortie, il est borné et jette au
-/// lieu d'accumuler : un paquet vieux de près d'une seconde n'a plus de valeur
-/// pour un participant, et le laisser s'empiler ferait monter mémoire et
-/// latence sans jamais rattraper le retard.
+/// This channel carries the stream of a single publisher — this peer's. At
+/// ~150 packets/s for 1080p video, 128 packets are worth **~850 ms of media**.
+/// Like the `PeerSink` outbound queue, it is bounded and drops rather than
+/// accumulates: a packet almost a second old is worthless to a participant,
+/// and letting them pile up would drive memory and latency up without ever
+/// catching back up.
 const RTP_INGRESS_CAPACITY: usize = 128;
 
-/// Pilote une session de bout en bout : établit la connexion WebRTC, câble le
-/// forwarding, boucle sur les messages entrants, puis nettoie à la fermeture.
+/// Drives a session end to end: establishes the WebRTC connection, wires up
+/// forwarding, loops over inbound messages, then cleans up on close.
 pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState) {
     let (ws_sender, mut ws_receiver) = socket.split();
-    // Canal borné multi-producteurs / mono-consommateur : tous les émetteurs de
-    // signaling écrivent ici, seule la task de la WebSocket lit. Borné pour
-    // qu'un client bloqué ne fasse pas enfler la mémoire.
+    // Bounded multi-producer / single-consumer channel: every signaling sender
+    // writes here, only the WebSocket task reads. Bounded so that a stuck
+    // client cannot inflate memory.
     let (tx, rx) = mpsc::channel::<ServerMessage>(SIGNALING_CHANNEL_CAPACITY);
 
     let conn = Arc::new(Mutex::new(
@@ -43,25 +45,39 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
         .await,
     ));
 
-    // Boucle WebRTC : sort les paquets média reçus sur `rtp_rx`.
+    // WebRTC loop: emits what it observes on `transport_rx` — the tracks the
+    // peer publishes, the media packets it sends, the keyframes it asks for.
     //
-    // La boucle attend indéfiniment sur la socket et sur les échéances de
-    // str0m ; rien dans son cycle de vie ne la relie à la WebSocket. Sans
-    // signal explicite elle survivrait à la session, gardant vivants la `Rtc`
-    // et le descripteur UDP. `shutdown_tx` est armé pour toute la durée de la
-    // session et déclenché à sa sortie.
-    let (rtp_tx, rtp_rx) =
-        tokio::sync::mpsc::channel::<(Arc<str>, RtpPacketData)>(RTP_INGRESS_CAPACITY);
+    // The loop waits indefinitely on the socket and on str0m's deadlines;
+    // nothing in its lifecycle ties it to the WebSocket. Without an explicit
+    // signal it would outlive the session, keeping the `Rtc` and the UDP file
+    // descriptor alive. `shutdown_tx` stays armed for the whole session and is
+    // fired on the way out.
+    let (transport_tx, transport_rx) =
+        tokio::sync::mpsc::channel::<TransportEvent>(RTP_INGRESS_CAPACITY);
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-    tokio::spawn(event_loop::run(conn.clone(), rtp_tx, shutdown_rx));
+    tokio::spawn(event_loop::run(conn.clone(), transport_tx, shutdown_rx));
 
-    // Le sink existe dès la connexion — la task d'écriture doit tourner avant
-    // le premier paquet — mais le moteur ne le connaîtra qu'au `Join` : un peer
-    // qui n'a rejoint aucune room ne reçoit rien et ne diffuse rien. Le garder
-    // ici le maintient vivant pour toute la durée de la session.
+    // The sink exists from the moment of connection — its writer task must be
+    // running before the first packet — but the engine only learns about it on
+    // `Join`: a peer that has joined no room receives nothing and broadcasts
+    // nothing. Holding it here keeps it alive for the whole session.
     let sink: Arc<dyn RtpSink> = PeerSink::new(Arc::clone(&peer_id), conn.clone());
 
-    spawn_forwarding_pump(state.engine.clone(), Arc::clone(&peer_id), rtp_rx);
+    // The negotiator has to be able to re-offer to this peer from the moment
+    // it exists: a track published elsewhere can reach it before it has said a
+    // word.
+    state
+        .negotiator
+        .register(Arc::clone(&peer_id), conn.clone(), tx.clone());
+
+    spawn_transport_pump(
+        state.engine.clone(),
+        state.negotiator.clone(),
+        state.metrics.clone(),
+        Arc::clone(&peer_id),
+        transport_rx,
+    );
     spawn_signaling_pump(Arc::clone(&peer_id), rx, ws_sender);
 
     let _ = tx
@@ -90,43 +106,69 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
         }
     }
 
-    // Ordre du démontage : la boucle d'événements d'abord — elle relâche la
-    // socket et sa référence sur la `PeerConnection` —, puis les registres, qui
-    // relâchent le `PeerSink` et les down_tracks que les autres publishers
-    // tenaient sur lui. Le dernier `Arc` sur le sink tombe au retour de cette
-    // fonction : sa file se ferme, sa task d'écriture sort, et la
-    // `PeerConnection` — donc la socket UDP — est enfin détruite.
+    // Teardown order: the event loop first — it releases the socket and its
+    // reference to the `PeerConnection` — then the registries, which release
+    // the `PeerSink` and the down_tracks the other publishers held on it. The
+    // last `Arc` on the sink falls when this function returns: its queue
+    // closes, its writer task exits, and the `PeerConnection` — hence the UDP
+    // socket — is finally destroyed.
     let _ = shutdown_tx.send(());
 
     state.rooms.leave_room(&peer_id);
     state.engine.remove_peer(&peer_id);
+    state.negotiator.notify(NegotiationEvent::PeerLeft {
+        peer: Arc::clone(&peer_id),
+    });
+    state.negotiator.unregister(&peer_id);
     state.metrics.record_disconnect();
     tracing::info!("Peer {} déconnecté", peer_id);
 }
 
-/// Draine les paquets média du peer vers le moteur de forwarding.
-fn spawn_forwarding_pump(
+/// Drains what the peer's WebRTC loop observes: media into the forwarding
+/// engine, everything else into the negotiator.
+fn spawn_transport_pump(
     engine: Arc<ForwardingEngine>,
+    negotiator: Arc<Negotiator>,
+    metrics: Arc<Metrics>,
     peer_id: Arc<str>,
-    mut rtp_rx: Receiver<(Arc<str>, RtpPacketData)>,
+    mut events: Receiver<TransportEvent>,
 ) {
     tokio::spawn(async move {
-        while let Some((from_peer_id, packet)) = rtp_rx.recv().await {
-            engine.forward_rtp(&from_peer_id, packet);
+        while let Some(event) = events.recv().await {
+            match event {
+                TransportEvent::Media { peer, packet } => {
+                    let bytes = packet.payload.len() as u64;
+                    // The media layer has no access to `Metrics` — it reports
+                    // how many writes the fanout cost and the session records
+                    // it. Without this, `/metrics` stayed at zero however much
+                    // traffic went through.
+                    let written = engine.forward_rtp(&peer, packet);
+                    for _ in 0..written {
+                        metrics.record_rtp(bytes);
+                    }
+                }
+                TransportEvent::TrackAdded { peer, mid, kind } => {
+                    negotiator.notify(NegotiationEvent::TrackPublished { peer, mid, kind });
+                }
+                TransportEvent::KeyframeRequested { peer, mid } => {
+                    metrics.record_keyframe();
+                    negotiator.notify(NegotiationEvent::KeyframeRequested { peer, mid });
+                }
+            }
         }
-        tracing::debug!("Peer {} — task de forwarding terminée", peer_id);
+        tracing::debug!("Peer {} — task de transport terminée", peer_id);
     });
 }
 
-/// Sérialise et pousse les messages de signaling sur la WebSocket.
+/// Serializes and pushes signaling messages onto the WebSocket.
 fn spawn_signaling_pump(
     peer_id: Arc<str>,
     mut rx: mpsc::Receiver<ServerMessage>,
     mut ws_sender: SplitSink<WebSocket, Message>,
 ) {
     tokio::spawn(async move {
-        // `recv` ne rend `None` qu'une fois tous les émetteurs tombés : la task
-        // ne peut plus mourir sur un retard de consommation.
+        // `recv` only yields `None` once every sender has been dropped: the
+        // task can no longer die because it fell behind.
         while let Some(msg) = rx.recv().await {
             let json = match serde_json::to_string(&msg) {
                 Ok(j) => j,

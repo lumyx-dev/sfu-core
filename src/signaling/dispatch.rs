@@ -1,6 +1,7 @@
-//! Traitement d'un message client.
+//! Handling of a single client message.
 
 use super::messages::{ClientMessage, ServerMessage};
+use super::negotiation::NegotiationEvent;
 use crate::app::AppState;
 use crate::media::RtpSink;
 use crate::room::RoomPeer;
@@ -8,14 +9,14 @@ use crate::transport::PeerConnection;
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 
-/// Applique un message reçu du client.
+/// Applies a message received from the client.
 ///
-/// `tx` est le canal de signaling du peer émetteur ; `conn` sa connexion WebRTC ;
-/// `sink` la destination de ses paquets RTP, remise au moteur de forwarding
-/// au moment du `Join`.
+/// `tx` is the sending peer's signaling channel; `conn` its WebRTC connection;
+/// `sink` the destination of its RTP packets, handed to the forwarding engine
+/// on `Join`.
 pub async fn handle_message(
     msg: ClientMessage,
-    peer_id: &str,
+    peer_id: &Arc<str>,
     tx: &mpsc::Sender<ServerMessage>,
     state: &AppState,
     conn: &Arc<Mutex<PeerConnection>>,
@@ -31,29 +32,38 @@ pub async fn handle_message(
                 },
             );
 
-            // Le forwarding est scopé à la room : le peer n'y devient joignable
-            // qu'ici, et seulement pour les membres de cette room.
+            // Forwarding is scoped to the room: the peer only becomes
+            // reachable here, and only to the members of that room.
             state
                 .engine
-                .add_peer(room_id.clone(), peer_id.to_string(), sink.clone());
+                .add_peer(room_id.clone(), Arc::clone(peer_id), sink.clone());
 
             let _ = tx
                 .send(ServerMessage::JoinedRoom {
-                    room_id,
+                    room_id: room_id.clone(),
                     peers: existing_peers,
                 })
                 .await;
+
+            // Both directions of the wiring — what the room already publishes,
+            // and what this peer may already be publishing — are the
+            // negotiator's job.
+            state.negotiator.notify(NegotiationEvent::PeerJoined {
+                peer: Arc::clone(peer_id),
+                room_id,
+            });
+
             tracing::info!("Peer {} a rejoint la room", peer_id);
         }
 
         ClientMessage::SfuOffer { sdp } => {
             tracing::info!("Peer {} — SFU offer reçue", peer_id);
 
-            // Lié dans un `let` avant le `match` : le `MutexGuard` temporaire
-            // d'un scrutateur vit jusqu'à la fin de l'expression `match`, ce qui
-            // garderait la `PeerConnection` verrouillée pendant la
-            // journalisation et l'envoi de la réponse. Ici il tombe dès la fin
-            // de cette ligne. (Clippy : `significant_drop_in_scrutinee`.)
+            // Bound in a `let` before the `match`: a scrutinee's temporary
+            // `MutexGuard` lives until the end of the `match` expression, which
+            // would keep the `PeerConnection` locked during logging and while
+            // sending the reply. Here it drops at the end of this line.
+            // (Clippy: `significant_drop_in_scrutinee`.)
             let outcome = conn.lock().await.handle_offer(&sdp);
 
             match outcome {
@@ -69,6 +79,16 @@ pub async fn handle_message(
             }
         }
 
+        ClientMessage::SfuAnswer { sdp } => {
+            // Applied by the negotiator rather than here: it is the step that
+            // turns queued subscriptions into live down_tracks, and it has to
+            // stay ordered with respect to every other negotiation event.
+            state.negotiator.notify(NegotiationEvent::AnswerReceived {
+                peer: Arc::clone(peer_id),
+                sdp,
+            });
+        }
+
         ClientMessage::SfuIceCandidate { candidate } => {
             tracing::debug!("Peer {} — ICE candidate reçu", peer_id);
             conn.lock().await.add_remote_candidate(&candidate);
@@ -77,11 +97,14 @@ pub async fn handle_message(
         ClientMessage::Leave => {
             state.rooms.leave_room(peer_id);
             state.engine.remove_peer(peer_id);
+            state.negotiator.notify(NegotiationEvent::PeerLeft {
+                peer: Arc::clone(peer_id),
+            });
             tracing::info!("Peer {} a quitté la room", peer_id);
         }
 
-        // --- Relais P2P, hérité du mode maillé ---
-        // Conservé pour compatibilité du client ; le SFU n'en dépend pas.
+        // --- P2P relay, inherited from the mesh mode ---
+        // Kept for client compatibility; the SFU does not depend on it.
         ClientMessage::Answer {
             sdp,
             target_peer_id,
