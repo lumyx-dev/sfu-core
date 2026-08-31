@@ -59,7 +59,7 @@ export default function DesignSystemPage() {
     <main>
       <div style={{ padding: 'var(--space-9)', paddingBottom: 0, background: 'var(--surface-page)' }}>
         <h1 style={{ fontSize: 'var(--fs-26)', letterSpacing: 'var(--ls-display)' }}>
-          Sightline design system
+          Lumyx design system
         </h1>
       </div>
       <div style={{ background: 'var(--surface-page)' }}>

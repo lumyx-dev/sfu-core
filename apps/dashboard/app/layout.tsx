@@ -10,7 +10,7 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: "Lumyx",
-  description: "Sightline design system",
+  description: "Lumyx design system",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

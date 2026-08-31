@@ -114,7 +114,7 @@ if (DS) {
 }
 
 // 6. Le bloc de tokens inline dans apps/sfu/assets/test.html (delimite par les commentaires
-// SIGHTLINE DESIGN TOKENS) doit etre identique a la concatenation des 9 fichiers tokens/ du
+// LUMYX DESIGN TOKENS) doit etre identique a la concatenation des 9 fichiers tokens/ du
 // handoff, jointe par '\n' — meme logique de jointure que celle utilisee pour construire le
 // bloc dans test.html (cf. rapport). Le SFU sert cette page comme une seule chaine HTML sans
 // route d'assets statiques ; les tokens y sont donc copies en dur et doivent rester verbatim.
@@ -137,8 +137,8 @@ if (DS) {
     fail('sfu-tokens-verbatim', `${rel(SFU_TEST_HTML)} n'existe pas`);
   } else {
     const html = readFileSync(SFU_TEST_HTML, 'utf8');
-    const OPEN = '/* ===== SIGHTLINE DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */';
-    const CLOSE = '/* ===== END SIGHTLINE DESIGN TOKENS ===== */';
+    const OPEN = '/* ===== LUMYX DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */';
+    const CLOSE = '/* ===== END LUMYX DESIGN TOKENS ===== */';
     const openIdx = html.indexOf(OPEN);
     const closeIdx = html.indexOf(CLOSE);
     if (openIdx === -1 || closeIdx === -1 || closeIdx < openIdx) {

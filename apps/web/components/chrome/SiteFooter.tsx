@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { StatusDot } from '@sightline/ui';
+import { StatusDot } from '@lumyx/ui';
 import { FOOTER_COLUMNS } from '@/content/nav';
 import s from './SiteFooter.module.css';
 

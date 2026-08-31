@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Construire `apps/web`, une application Next.js qui reproduit fidèlement les six maquettes marketing du handoff (Home, Pricing, Compare LiveKit, Docs, Changelog, Sign up) en consommant `@sightline/ui`.
+**Goal:** Construire `apps/web`, une application Next.js qui reproduit fidèlement les six maquettes marketing du handoff (Home, Pricing, Compare LiveKit, Docs, Changelog, Sign up) en consommant `@lumyx/ui`.
 
 **Architecture:** Les sections de page restent des Server Components et ne portent que des attributs `data-anim` ; un unique composant client monté dans le layout fait l'`IntersectionObserver`, le découpage mot-par-mot et la barre de progression. Le layout et les breakpoints s'écrivent en utilitaires Tailwind, la typographie display et les animations en CSS Modules, et toute couleur passe par un token `var(--*)`. Le contenu éditorial vit dans `content/*.ts` typé, jamais dans le JSX.
 
-**Tech Stack:** TypeScript 5, React 19.2.8, Next 16.3.2 (App Router), Tailwind CSS v4, `@sightline/ui` (workspace), `bun test`, bun 1.3.11, Turborepo 2.
+**Tech Stack:** TypeScript 5, React 19.2.8, Next 16.3.2 (App Router), Tailwind CSS v4, `@lumyx/ui` (workspace), `bun test`, bun 1.3.11, Turborepo 2.
 
 **Spec:** `docs/superpowers/specs/2026-08-30-sightline-marketing-site-design.md`
 
@@ -27,7 +27,7 @@ Ces règles s'appliquent à **toutes** les tâches.
 - **Aucune couleur en dur.** Pas de `#rrggbb`, pas de `rgb(`, pas de `rgba(` dans `apps/web/app/**` ni `apps/web/components/**`. Tout passe par `var(--*)`. Seule exception déclarée : `apps/web/app/globals.css`, exempté par le vérificateur de la Task 2, où vivent les rares valeurs marketing-locales.
 - **Frontière Tailwind / CSS Modules.** Layout, flux, espacement et breakpoints en utilitaires Tailwind (`flex`, `grid`, `gap-6`, `px-10`, `max-w-*`, `md:`, `lg:`). Typographie display, grilles à ratios exacts, dégradés, ombres composées et keyframes en `Nom.module.css`. Critère : une valeur qui existe dans l'échelle du système passe en utilitaire, une valeur hors échelle passe en CSS.
 - **`'use client'` uniquement sur les îlots interactifs déclarés** : `MarketingMotion`, `ScrollProgress`, `Spotlight`, `SnippetTabs` (Home), `CostEstimator` (Pricing), `DocsRail` (Docs), `SignupWizard` (Sign up). Tout autre `'use client'` doit être justifié en commentaire dans le code.
-- **Ordre d'import de `globals.css` :** `@sightline/ui/styles.css` **avant** `tailwindcss`. C'est l'ordre de `apps/dashboard` et celui que le pont `@theme` du design system suppose.
+- **Ordre d'import de `globals.css` :** `@lumyx/ui/styles.css` **avant** `tailwindcss`. C'est l'ordre de `apps/dashboard` et celui que le pont `@theme` du design system suppose.
 - **Casing sentence case** pour tout ce qu'un humain lit. Les identifiants machine ne sont jamais embellis : `a3f91c02`, `test-room`, `eu-west-3`, `vp8` s'affichent tels quels.
 - **Tous les nombres portent leur unité** (`38ms`, `0.20%`, `1.29 GB`, `€49/mo`), les petits pourcentages gardent 2 décimales, les comptes sont groupés (`1,284,920`), et **tout nombre live porte la classe `.sl-num`**.
 - **Zéro emoji** dans les pages. **Zéro monospace** — Geist uniquement, les chiffres utilisent les tabular figures via `.sl-num`.
@@ -42,10 +42,12 @@ Ces règles s'appliquent à **toutes** les tâches.
 ### Task 1: Scaffold de `apps/web`
 
 **Files:**
+
 - Create: `apps/web/` (via CLI), puis modifier `apps/web/package.json`, `apps/web/next.config.ts`, `apps/web/app/globals.css`, `apps/web/app/layout.tsx`, `apps/web/app/page.tsx`
 
 **Interfaces:**
-- Consumes: `@sightline/ui` (workspace), `@sightline/ui/styles.css`
+
+- Consumes: `@lumyx/ui` (workspace), `@lumyx/ui/styles.css`
 - Produces: une app Next lançable sur le port 3002, les keyframes `sl-*` disponibles globalement, et le token `--spotlight-tint`
 
 - [ ] **Step 1: Créer l'app avec le CLI de bun**
@@ -82,7 +84,7 @@ Remplacer intégralement le fichier par :
     "verify:ds": "node scripts/verify-ds.mjs"
   },
   "dependencies": {
-    "@sightline/ui": "workspace:*",
+    "@lumyx/ui": "workspace:*",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -113,7 +115,7 @@ Puis installer depuis la racine : `bun install`
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@sightline/ui'],
+  transpilePackages: ['@lumyx/ui'],
 };
 
 export default nextConfig;
@@ -124,7 +126,7 @@ export default nextConfig;
 Remplacer intégralement le fichier généré par :
 
 ```css
-@import '@sightline/ui/styles.css';
+@import '@lumyx/ui/styles.css';
 @import 'tailwindcss';
 
 /* Valeurs marketing-locales. Ce fichier est le seul de apps/web autorisé à porter une
@@ -212,7 +214,7 @@ export default function Home() {
 cd apps/web && bun run build && bun run check-types
 ```
 
-Attendu : build vert, aucune erreur de types. Puis `bun run dev` et vérifier dans un navigateur sur `http://localhost:3002` que le fond est `--surface-page` (un gris très légèrement froid, pas du blanc pur) et que le texte est en Geist — c'est la preuve que `@sightline/ui/styles.css` est bien chargé avant Tailwind.
+Attendu : build vert, aucune erreur de types. Puis `bun run dev` et vérifier dans un navigateur sur `http://localhost:3002` que le fond est `--surface-page` (un gris très légèrement froid, pas du blanc pur) et que le texte est en Geist — c'est la preuve que `@lumyx/ui/styles.css` est bien chargé avant Tailwind.
 
 - [ ] **Step 8: Commit**
 
@@ -228,9 +230,11 @@ git commit -m "feat(web): scaffold de l'app marketing sur le port 3002"
 `packages/ui/scripts/verify-ds.mjs` est scopé à `packages/ui/src` et vérifie en plus des règles qui n'ont de sens que pour le design system (tokens verbatim, `'use client'` sur `EventList` seul). On ne l'étend pas à travers la frontière du package : `apps/web` reçoit son propre vérificateur, plus court, que `turbo run verify:ds` ramasse automatiquement puisque le script porte le même nom.
 
 **Files:**
+
 - Create: `apps/web/scripts/verify-ds.mjs`
 
 **Interfaces:**
+
 - Consumes: rien
 - Produces: `bun run verify:ds` dans `apps/web`, qui sort en code 1 sur violation
 
@@ -357,6 +361,7 @@ git commit -m "chore(web): verificateur de contraintes du design system"
 ### Task 3: Navigation, en-tête et pied de page
 
 **Files:**
+
 - Create: `apps/web/content/nav.ts`
 - Create: `apps/web/components/chrome/Wordmark.tsx`
 - Create: `apps/web/components/chrome/SiteHeader.tsx`, `SiteHeader.module.css`
@@ -364,7 +369,8 @@ git commit -m "chore(web): verificateur de contraintes du design system"
 - Modify: `apps/web/app/page.tsx`
 
 **Interfaces:**
-- Consumes: `Button`, `IconButton`, `Icon` de `@sightline/ui`
+
+- Consumes: `Button`, `IconButton`, `Icon` de `@lumyx/ui`
 - Produces:
   - `content/nav.ts` : `export const HEADER_NAV: NavLink[]`, `export const FOOTER_COLUMNS: FooterColumn[]`, `export const SITE_VERSION: string`, avec `interface NavLink { label: string; href: string }` et `interface FooterColumn { title: string; links: NavLink[] }`
   - `<Wordmark />` — accepte `{ size?: number }`, défaut 20
@@ -486,7 +492,7 @@ L'en-tête fait 64px avec `border-bottom: 1px solid var(--border-subtle)`. À ga
 
 ```tsx
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
+import { Button } from '@lumyx/ui';
 import { HEADER_NAV, SITE_VERSION, GITHUB_URL } from '@/content/nav';
 import { Wordmark } from './Wordmark';
 import s from './SiteHeader.module.css';
@@ -618,12 +624,14 @@ git commit -m "feat(web): en-tete, pied de page et navigation"
 C'est le cœur technique du port. Les sections ne portent que des attributs ; ce composant fait tout le travail, et il est le seul endroit du site où `prefers-reduced-motion` est testé.
 
 **Files:**
+
 - Create: `apps/web/components/motion/MarketingMotion.tsx`
 - Create: `apps/web/components/motion/ScrollProgress.tsx`
 - Create: `apps/web/components/motion/Spotlight.tsx`
 - Modify: `apps/web/app/layout.tsx`
 
 **Interfaces:**
+
 - Consumes: les keyframes `sl-*` de `globals.css` et le token `--spotlight-tint` (Task 1)
 - Produces:
   - `<MarketingMotion />` — sans props, à monter une fois dans le layout
@@ -868,10 +876,12 @@ git commit -m "feat(web): runtime d'animation marketing (reveal, progression, sp
 C'est la seule vraie logique du sous-projet, et c'est de l'arithmétique de facturation. Les tests viennent avant l'implémentation.
 
 **Files:**
+
 - Create: `apps/web/content/pricing.test.ts`
 - Create: `apps/web/content/pricing.ts`
 
 **Interfaces:**
+
 - Consumes: rien
 - Produces:
   - `export type Period = 'monthly' | 'annual'`
@@ -1108,6 +1118,7 @@ git commit -m "feat(web): estimateur de cout et donnees de pricing"
 ### Task 6: Home — en-tête sombre, hero et carte live
 
 **Files:**
+
 - Create: `apps/web/app/_sections/Hero.tsx`, `Hero.module.css`
 - Create: `apps/web/app/_sections/SnippetTabs.tsx`
 - Create: `apps/web/app/_sections/LiveCard.tsx`, `LiveCard.module.css`
@@ -1115,9 +1126,11 @@ git commit -m "feat(web): estimateur de cout et donnees de pricing"
 - Modify: `apps/web/app/page.tsx`
 
 **Interfaces:**
-- Consumes: `SiteHeader` (Task 3), `Spotlight` (Task 4), `Tabs`, `Button`, `StatusDot`, `MetricCard`, `DataTable` de `@sightline/ui`
+
+- Consumes: `SiteHeader` (Task 3), `Spotlight` (Task 4), `Tabs`, `Button`, `StatusDot`, `MetricCard`, `DataTable` de `@lumyx/ui`
 - Produces:
   - `content/home.ts` :
+
     ```ts
     export interface SnippetSet {
       tabs: { id: string; label: string }[];
@@ -1139,6 +1152,7 @@ git commit -m "feat(web): estimateur de cout et donnees de pricing"
     export const COMPARE_ROWS: CompareRow[]; // consommée par la Task 7
     export function series(n: number, seed: number, base: number, amp: number): number[];
     ```
+
     `START.tabs` alimente le `Tabs` et `START.snippets[id]` donne le corps du snippet — c'est la forme que `SnippetTabs` consomme au Step 2, ne pas en dévier.
   - `<Hero />`, `<LiveCard />`
 
@@ -1154,7 +1168,7 @@ Copier depuis la classe de logique de `Home.dc.html` : `HERO_PEERS` (les peers a
 'use client';
 
 import { useState } from 'react';
-import { Tabs } from '@sightline/ui';
+import { Tabs } from '@lumyx/ui';
 import { START } from '@/content/home';
 
 export function SnippetTabs() {
@@ -1292,6 +1306,7 @@ git commit -m "feat(web): Home — hero sombre, snippets et carte live"
 ### Task 7: Home — sections pains, comparatif, pricing inline et CTA
 
 **Files:**
+
 - Create: `apps/web/app/_sections/Pains.tsx`, `Pains.module.css`
 - Create: `apps/web/app/_sections/CompareStrip.tsx`, `CompareStrip.module.css`
 - Create: `apps/web/app/_sections/PricingStrip.tsx`
@@ -1302,7 +1317,8 @@ git commit -m "feat(web): Home — hero sombre, snippets et carte live"
 - Modify: `apps/web/app/page.tsx`
 
 **Interfaces:**
-- Consumes: `COMPARE_ROWS` de `content/home.ts` (Task 6), `PLANS` et `PLAN_COLUMNS` de `content/pricing.ts` (Task 5), `Button` et `Badge` de `@sightline/ui`
+
+- Consumes: `COMPARE_ROWS` de `content/home.ts` (Task 6), `PLANS` et `PLAN_COLUMNS` de `content/pricing.ts` (Task 5), `Button` et `Badge` de `@lumyx/ui`
 - Produces:
   - `<HairlineGrid columns={number}>` — grille en `gap: 1px` sur fond `--border-subtle`, les enfants peignant les filets ; réutilisée par la Task 8
   - `content/benchmarks.ts` : `export const BENCHMARKS: Benchmark[]` avec `interface Benchmark { label: string; value: string; note: string }`
@@ -1438,6 +1454,7 @@ git commit -m "feat(web): Home — pains, comparatif, pricing inline et CTA fina
 ### Task 8: Page Pricing
 
 **Files:**
+
 - Create: `apps/web/app/pricing/page.tsx`
 - Create: `apps/web/app/pricing/_sections/PlanCards.tsx`, `PlanCards.module.css`
 - Create: `apps/web/app/pricing/_sections/CostEstimator.tsx`, `CostEstimator.module.css`
@@ -1445,6 +1462,7 @@ git commit -m "feat(web): Home — pains, comparatif, pricing inline et CTA fina
 - Create: `apps/web/app/pricing/_sections/PricingFaq.tsx`
 
 **Interfaces:**
+
 - Consumes: `estimate`, `PLANS`, `PLAN_COLUMNS`, `HIGHLIGHT`, `PRICING_GROUPS`, `FAQ` de `content/pricing.ts` (Task 5) ; `SiteHeader`, `SiteFooter`, `Tabs`, `Button`, `Badge`
 - Produces: la route `/pricing`
 
@@ -1523,7 +1541,7 @@ Le toggle mensuel/annuel pilote **à la fois** les cartes de plans et l'estimate
 'use client';
 
 import { useState } from 'react';
-import { Tabs } from '@sightline/ui';
+import { Tabs } from '@lumyx/ui';
 import { PLANS, type Period, type Plan } from '@/content/pricing';
 import { PlanCards } from './PlanCards';
 import { CostEstimator } from './CostEstimator';
@@ -1574,6 +1592,7 @@ git commit -m "feat(web): page Pricing avec estimateur de cout"
 ### Task 9: Page Compare LiveKit
 
 **Files:**
+
 - Create: `apps/web/app/compare/livekit/page.tsx`
 - Create: `apps/web/app/compare/livekit/_sections/Summary.tsx`
 - Create: `apps/web/app/compare/livekit/_sections/CompareGroups.tsx`
@@ -1583,6 +1602,7 @@ git commit -m "feat(web): page Pricing avec estimateur de cout"
 - Create: `apps/web/content/compare.ts`
 
 **Interfaces:**
+
 - Consumes: `SiteHeader`, `SiteFooter`, `Badge`, `Pill`, `HairlineGrid` (Task 7)
 - Produces:
   - `content/compare.ts` : `SUMMARY`, `GROUPS`, `REPLACES`, `STEPS`, `NOT_FOR_YOU`, avec leurs interfaces
@@ -1642,6 +1662,7 @@ git commit -m "feat(web): page comparative LiveKit"
 ### Task 10: Page Docs
 
 **Files:**
+
 - Create: `apps/web/content/metrics.ts`
 - Create: `apps/web/app/docs/page.tsx`
 - Create: `apps/web/app/docs/_sections/MetricSection.tsx`
@@ -1649,10 +1670,12 @@ git commit -m "feat(web): page comparative LiveKit"
 - Create: `apps/web/app/docs/_sections/Overrides.tsx`
 
 **Interfaces:**
-- Consumes: `DataTable`, `Badge`, `Icon` de `@sightline/ui`
+
+- Consumes: `DataTable`, `Badge`, `Icon` de `@lumyx/ui`
 - Produces:
   - `content/metrics.ts` : `export const METRICS: Metric[]` avec
     `interface Metric { name: string; field: string; unit: string; threshold: string; scope: string; body: string; breaks: string; payload: string }`
+
   - ```ts
     export interface DocNavItem {
       id: string;   // = Metric['field'] pour les six métriques, plus 'overrides'
@@ -1751,10 +1774,12 @@ git commit -m "feat(web): page Docs — reference des six metriques"
 ### Task 11: Page Changelog
 
 **Files:**
+
 - Create: `apps/web/content/releases.ts`
 - Create: `apps/web/app/changelog/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `SiteHeader`, `SiteFooter`, `Badge`, `StatusDot`
 - Produces: `content/releases.ts` : `export const RELEASES: Release[]` avec
   `interface Release { version: string; date: string; commit: string; latest: boolean; entries: ReleaseEntry[] }`
@@ -1788,13 +1813,15 @@ git commit -m "feat(web): page Changelog"
 ### Task 12: Page Sign up
 
 **Files:**
+
 - Create: `apps/web/content/signup.ts`
 - Create: `apps/web/app/signup/page.tsx`
 - Create: `apps/web/app/signup/_sections/SignupWizard.tsx`, `SignupWizard.module.css`
 - Create: `apps/web/app/signup/_sections/SellingPoints.tsx`
 
 **Interfaces:**
-- Consumes: `Button`, `Input`, `Select`, `Badge`, `AlertBanner` de `@sightline/ui`
+
+- Consumes: `Button`, `Input`, `Select`, `Badge`, `AlertBanner` de `@lumyx/ui`
 - Produces: `content/signup.ts` : `export const REGIONS: Region[]`, `export const SDK: Record<string, string>`, `export const POINTS: SellingPoint[]`
 
 **Source :** `$HANDOFF/designs/Sign up.dc.html`.
@@ -1811,7 +1838,7 @@ Copier `REGIONS`, `SDK` et `POINTS` (quatre arguments : « One project, ready in
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Select } from '@sightline/ui';
+import { Button, Input, Select } from '@lumyx/ui';
 import { REGIONS } from '@/content/signup';
 
 type Step = 'account' | 'project' | 'keys';
@@ -1880,10 +1907,12 @@ git commit -m "feat(web): page Sign up (UI seule, non branchee)"
 ### Task 13: Passe finale — responsive, accessibilité du mouvement, vérification complète
 
 **Files:**
+
 - Modify: tous les `_sections/*.module.css` qui en ont besoin
 - Modify: `apps/web/app/layout.tsx` (métadonnées par route si manquantes)
 
 **Interfaces:**
+
 - Consumes: tout ce qui précède
 - Produces: un site vérifié aux trois paliers
 

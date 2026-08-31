@@ -10,7 +10,7 @@ export interface HairlineGridProps {
 // The pricing grid on Home (Home.dc.html:263) is exactly this pattern: `gap:1px` on a
 // `--border-subtle` ground, with each cell painting its own `--surface-card` background so the
 // gaps read as continuous 1px hairlines. `columns` is a runtime value, so `gridTemplateColumns`
-// stays inline (same treatment as MetricGrid/DashboardGrid in @sightline/ui).
+// stays inline (same treatment as MetricGrid/DashboardGrid in @lumyx/ui).
 export function HairlineGrid({ columns, children, className }: HairlineGridProps) {
   const colsClass = s[`cols-${columns}`];
   return (

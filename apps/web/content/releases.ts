@@ -5,7 +5,7 @@
 // Source : $HANDOFF/designs/Changelog.dc.html, constante RELEASES. Copié mot pour mot —
 // versions, dates et hashes sont des identifiants machine, jamais reformatés.
 
-/** Matches @sightline/ui's BadgeTone, kept as a literal union here rather than an import —
+/** Matches @lumyx/ui's BadgeTone, kept as a literal union here rather than an import —
  * same convention as content/pricing.ts's `variant: 'primary' | 'secondary'`. */
 export type ReleaseChangeTone = 'neutral' | 'accent' | 'secondary' | 'ok' | 'warn' | 'danger' | 'info';
 

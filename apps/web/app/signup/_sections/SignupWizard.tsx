@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertBanner, Button, Icon, IconButton, Input, StatusDot, Tabs } from '@sightline/ui';
+import { AlertBanner, Button, Icon, IconButton, Input, StatusDot, Tabs } from '@lumyx/ui';
 import { REGIONS, SDK } from '@/content/signup';
 import s from './SignupWizard.module.css';
 
@@ -228,7 +228,7 @@ function ProjectStep({
         <Button variant="primary" onClick={onSubmit}>
           Create project
         </Button>
-        {/* The source has this as `variant="ghost"`; @sightline/ui only exposes 'primary' |
+        {/* The source has this as `variant="ghost"`; @lumyx/ui only exposes 'primary' |
             'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no 'ghost') — same gap the three
             FinalCta.tsx files document — `quiet` is the closest match. */}
         <Button variant="quiet" onClick={onBack}>
@@ -274,7 +274,7 @@ function KeysStep({
   // `navigator.clipboard` is undefined) and failing silently — no toast, no "copied" state.
   const copy = (value: string) => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
-    navigator.clipboard.writeText(value).catch(() => {});
+    navigator.clipboard.writeText(value).catch(() => { });
   };
 
   return (

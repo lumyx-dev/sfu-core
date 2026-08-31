@@ -1,4 +1,4 @@
-import { Badge, DataTable, type DataTableColumn } from '@sightline/ui';
+import { Badge, DataTable, type DataTableColumn } from '@lumyx/ui';
 import { METRICS, type Metric } from '@/content/metrics';
 import s from './ThresholdsTable.module.css';
 

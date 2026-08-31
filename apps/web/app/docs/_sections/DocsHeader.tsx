@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Badge, Input, Select } from '@sightline/ui';
+import { Badge, Input, Select } from '@lumyx/ui';
 import { GITHUB_URL } from '@/content/nav';
 import { Wordmark } from '@/components/chrome/Wordmark';
 import s from './DocsHeader.module.css';

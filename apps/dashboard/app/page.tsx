@@ -7,10 +7,10 @@ export default function Home() {
         className="text-4xl"
         style={{ color: "var(--text-strong)", fontWeight: "var(--fw-semibold)", letterSpacing: "var(--ls-tight)" }}
       >
-        Sightline
+        Lumyx
       </h1>
       <p className="max-w-md" style={{ color: "var(--text-muted)", lineHeight: "var(--lh-body)" }}>
-        This app hosts the Sightline design system. Browse the full component gallery to see
+        This app hosts the Lumyx design system. Browse the full component gallery to see
         every token, primitive, and pattern rendered together.
       </p>
       <Link

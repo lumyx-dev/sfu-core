@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Icon, IconButton, Tabs } from '@sightline/ui';
+import { Icon, IconButton, Tabs } from '@lumyx/ui';
 import { START } from '@/content/home';
 import s from './SnippetTabs.module.css';
 
@@ -16,7 +16,7 @@ export function SnippetTabs() {
 
   const handleCopy = () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
-    navigator.clipboard.writeText(snippet.body).catch(() => {});
+    navigator.clipboard.writeText(snippet.body).catch(() => { });
   };
 
   return (

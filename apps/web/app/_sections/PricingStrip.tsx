@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Badge, Button, Tabs } from '@sightline/ui';
+import { Badge, Button, Tabs } from '@lumyx/ui';
 import { HairlineGrid } from '@/components/marketing/HairlineGrid';
 import { PLANS, type Period } from '@/content/pricing';
 import { PRICING_FAQ } from '@/content/home';

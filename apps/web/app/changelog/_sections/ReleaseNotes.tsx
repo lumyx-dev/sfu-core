@@ -1,4 +1,4 @@
-import { Badge, Button, SeverityBadge } from '@sightline/ui';
+import { Badge, Button, SeverityBadge } from '@lumyx/ui';
 import { GITHUB_URL } from '@/content/nav';
 import { RELEASES } from '@/content/releases';
 import s from './ReleaseNotes.module.css';

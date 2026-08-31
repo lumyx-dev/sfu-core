@@ -30,7 +30,7 @@ export function Sidebar({
   items = [],
   activeId,
   onSelect,
-  brand = 'Sightline',
+  brand = 'Lumyx',
   brandMeta,
   footer,
   width = 248,

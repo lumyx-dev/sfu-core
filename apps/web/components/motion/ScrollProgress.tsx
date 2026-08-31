@@ -25,7 +25,7 @@ export function ScrollProgress() {
     <div
       aria-hidden
       data-progress
-      className={`fixed left-0 top-0 z-[60] h-0.5 ${s.bar}`}
+      className={`fixed left-0 top-0 z-60 h-0.5 ${s.bar}`}
       style={{ width: `${ratio * 100}%` }}
     />
   );

@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
+import { Button } from '@lumyx/ui';
 import s from './FinalCta.module.css';
 
 // Source: Compare LiveKit.dc.html:192-199. The second button is `variant="ghost"` in the
-// source; @sightline/ui only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet'
+// source; @lumyx/ui only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet'
 // (no 'ghost') — same gap Pricing's FinalCta.tsx already documents — `quiet` is the closest match.
 //
 // This section's own border-top was removed (task-13): it's the first child of the wrapper in

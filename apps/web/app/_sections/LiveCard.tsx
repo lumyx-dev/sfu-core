@@ -7,8 +7,8 @@ import {
   QualityIndicator,
   StatusDot,
   TimeSeriesChart,
-} from '@sightline/ui';
-import type { DataTableColumn } from '@sightline/ui';
+} from '@lumyx/ui';
+import type { DataTableColumn } from '@lumyx/ui';
 import { HERO_PEERS, TOPO_LEGEND, series, type HeroPeer } from '@/content/home';
 import s from './LiveCard.module.css';
 

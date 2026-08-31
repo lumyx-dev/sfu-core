@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Badge, Button } from '@sightline/ui';
+import { Badge, Button } from '@lumyx/ui';
 import { HairlineGrid } from '@/components/marketing/HairlineGrid';
 import type { Plan } from '@/content/pricing';
 import { GITHUB_URL } from '@/content/nav';

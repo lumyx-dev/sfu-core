@@ -11,7 +11,7 @@ async fn main() {
         .with_env_filter(config.log_filter.clone())
         .init();
 
-    tracing::info!("🚀 Sightline SFU démarrage...");
+    tracing::info!("🚀 Lumyx SFU démarrage...");
 
     let tls =
         axum_server::tls_rustls::RustlsConfig::from_pem_file(&config.cert_path, &config.key_path)

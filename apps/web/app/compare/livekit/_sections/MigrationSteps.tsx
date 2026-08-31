@@ -1,4 +1,4 @@
-import { Badge } from '@sightline/ui';
+import { Badge } from '@lumyx/ui';
 import { STEPS } from '@/content/compare';
 import s from './MigrationSteps.module.css';
 

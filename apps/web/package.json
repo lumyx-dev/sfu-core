@@ -1,5 +1,5 @@
 {
-  "name": "@sightline/web",
+  "name": "@lumyx/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,7 +12,7 @@
     "verify:ds": "node scripts/verify-ds.mjs"
   },
   "dependencies": {
-    "@sightline/ui": "workspace:*",
+    "@lumyx/ui": "workspace:*",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -29,6 +29,12 @@
     "typescript": "^5"
   },
   "packageManager": "bun@1.2.21",
-  "ignoreScripts": ["sharp", "unrs-resolver"],
-  "trustedDependencies": ["sharp", "unrs-resolver"]
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver"
+  ]
 }

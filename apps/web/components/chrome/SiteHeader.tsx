@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
+import { Button } from '@lumyx/ui';
 import { HEADER_NAV, SITE_VERSION, GITHUB_URL } from '@/content/nav';
 import { Wordmark } from './Wordmark';
 import s from './SiteHeader.module.css';
@@ -10,7 +10,7 @@ export function SiteHeader({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
       className={theme === 'dark' ? 'theme-dark' : undefined}
       style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
-      <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-8 px-5 md:px-6 lg:px-10">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-8 px-5 md:px-6 lg:px-10">
         <Link href="/" aria-label="Sightline — home">
           <Wordmark />
         </Link>

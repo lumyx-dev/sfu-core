@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Fragment } from 'react';
-import { AlertBanner, Badge } from '@sightline/ui';
+import { AlertBanner, Badge } from '@lumyx/ui';
 import { METRICS } from '@/content/metrics';
 import { DocsHeader } from './_sections/DocsHeader';
 import { DocsNav } from './_sections/DocsNav';

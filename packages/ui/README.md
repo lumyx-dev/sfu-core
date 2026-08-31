@@ -1,12 +1,12 @@
-# `@sightline/ui`
+# `@lumyx/ui`
 
 Shared React components and design primitives.
 
 > **Scaffold.** This package is empty — it exists to reserve the boundary. Nothing imports it
 > yet.
 
-Part of the [Sightline](../../README.md) monorepo. Add it to a consuming app with:
+Part of the [Lumyx](../../README.md) monorepo. Add it to a consuming app with:
 
 ```json
-"dependencies": { "@sightline/ui": "workspace:*" }
+"dependencies": { "@lumyx/ui": "workspace:*" }
 ```
