@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import s from './Spotlight.module.css';
 
 export interface SpotlightProps {
   /** Circle diameter in px. Defaults to the 460px every hero but Signup uses. */
@@ -48,7 +47,7 @@ export function Spotlight({ size = 460, tint = 'var(--spotlight-tint)' }: Spotli
       ref={ref}
       aria-hidden
       data-spotlight
-      className={`absolute inset-0 pointer-events-none ${s.spotlight}`}
+      className="absolute inset-0 pointer-events-none transition-opacity duration-300 ease-out"
       style={{ opacity: 0 }}
     />
   );

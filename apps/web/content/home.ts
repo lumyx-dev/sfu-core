@@ -24,7 +24,7 @@ export interface SnippetSet {
 }
 
 // Source HERO_PEERS only ever uses 'degraded' and 'live' — never 'warn' or 'error' — and those
-// are the only two values StatusDot (@sightline/ui) needs to render this table.
+// are the only two values StatusDot (@lumyx/ui) needs to render this table.
 export interface HeroPeer {
   peerId: string;
   score: number;

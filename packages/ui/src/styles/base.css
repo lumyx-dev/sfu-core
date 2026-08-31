@@ -4,6 +4,63 @@
    canvas drops in without renaming.
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* Legacy plain-named aliases. apps/web predates the `--sl-` prefix and still reads these
+   directly in inline `style={{ background: 'var(--surface-page)' }}`. A custom property's
+   var() references resolve against the cascade AT ITS OWN DECLARATION SITE, then that
+   resolved value is what inherits down — declaring this alias only on :root would bake in
+   the light value there and hand every descendant that frozen value, .theme-dark scopes
+   included. Matching the selector list of tokens.css's own `--sl-*` semantic aliases (:root,
+   .theme-dark) makes each alias resolve fresh on whichever element actually carries
+   .theme-dark, the same way the token it points to does.
+   Temporary: retire an alias here as soon as the apps/web call site using it moves to a
+   Tailwind utility class instead (`bg-page` for `var(--surface-page)`, etc.) — don't add new
+   uses of these names, and don't add new aliases for names nothing references anymore. */
+:root,
+.theme-dark {
+  --accent: var(--sl-accent);
+  --accent-border: var(--sl-accent-border);
+  --accent-text: var(--sl-accent-text);
+  --accent-tint: var(--sl-accent-tint);
+  --border: var(--sl-border);
+  --border-strong: var(--sl-border-strong);
+  --border-subtle: var(--sl-border-subtle);
+  --danger: var(--sl-danger);
+  --danger-solid: var(--sl-danger-solid);
+  --danger-tint: var(--sl-danger-tint);
+  --dur-1: var(--sl-dur-1);
+  --dur-2: var(--sl-dur-2);
+  --ease-out: var(--sl-ease-out);
+  --fs-12: var(--sl-fs-12);
+  --fs-13: var(--sl-fs-13);
+  --fw-semibold: 600;
+  --lh-body: var(--sl-lh-body);
+  --ls-tight: var(--sl-ls-tight);
+  --radius-lg: var(--sl-radius-lg);
+  --radius-md: var(--sl-radius-md);
+  --radius-pill: var(--sl-radius-pill);
+  --radius-sm: var(--sl-radius-sm);
+  --radius-xs: var(--sl-radius-xs);
+  --series-1: var(--sl-series-1);
+  --shadow-lg: var(--sl-shadow-lg);
+  --shadow-sm: var(--sl-shadow-sm);
+  --surface-active: var(--sl-surface-active);
+  --surface-card: var(--sl-surface-card);
+  --surface-page: var(--sl-surface-page);
+  --surface-sunken: var(--sl-surface-sunken);
+  --text-body: var(--sl-text-body);
+  --text-faint: var(--sl-text-faint);
+  --text-muted: var(--sl-text-muted);
+  --text-on-accent: var(--sl-text-on-accent);
+  --text-strong: var(--sl-text-strong);
+  --tracking-normal: var(--sl-ls-normal);
+  --warn-solid: var(--sl-warn-solid);
+  --warn-tint: var(--sl-warn-tint);
+  --n-300: var(--sl-n-300);
+  --n-700: var(--sl-n-700);
+  --n-900: var(--sl-n-900);
+  --n-950: var(--sl-n-950);
+}
+
 @layer base {
   /* Tailwind v4 leaves `border` at currentColor. In this system a stroke is
      almost always the quiet hairline, so that is the default. */

@@ -1,19 +1,22 @@
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
-import s from './FinalCta.module.css';
+import { Button } from '@lumyx/ui';
 
 // Source: Pricing.dc.html:177-184. The second button is `variant="ghost"` in the source;
-// @sightline/ui only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no
+// @lumyx/ui only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no
 // 'ghost') — same gap already flagged in Home's app/_sections/FinalCta.tsx, `quiet` is the
 // closest match. Not fixed here; packages/ui is out of scope for this task.
 // This section's own border-top was removed (task-13): it's the first child of the wrapper
 // in app/pricing/page.tsx, which already carries `border-top: var(--border)` — the two hairlines
 // doubled up and didn't quite match.
+//
+// Source: Pricing.dc.html:177-184 — inside the closing `.theme-dark` wrapper (task-8-brief.md
+// correction 8). Distinct copy and size from Home's app/_sections/FinalCta.tsx (40px here vs
+// 34/52px there), so this is its own file rather than a shared one.
 export function FinalCta() {
   return (
     <section>
-      <div className={s.layout}>
-        <h2 className={s.headline}>
+      <div className="max-w-[1280px] mx-auto px-5 py-14 flex flex-col gap-5 items-start sm:px-10 md:py-[72px]">
+        <h2 className="m-0 text-[30px] font-semibold tracking-[-0.035em] leading-[1.06] text-strong max-w-[700px] [text-wrap:pretty] sm:text-[40px]">
           Start on the free tier. Move to self-hosted whenever you want.
         </h2>
         <div className="flex flex-wrap items-center gap-3">

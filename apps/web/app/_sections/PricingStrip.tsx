@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Badge, Button, Tabs } from '@sightline/ui';
+import { Badge, Button, Tabs } from '@lumyx/ui';
 import { HairlineGrid } from '@/components/marketing/HairlineGrid';
 import { PLANS, type Period } from '@/content/pricing';
 import { PRICING_FAQ } from '@/content/home';
 import { GITHUB_URL } from '@/content/nav';
-import s from './PricingStrip.module.css';
 
 const PERIOD_TABS = [
   { id: 'monthly', label: 'Monthly' },
@@ -23,23 +22,26 @@ export function PricingStrip() {
   const plans = PLANS[period];
 
   return (
-    <section id="pricing" style={{ borderTop: '1px solid var(--border)' }}>
-      <div className={s.layout}>
-        <div className={`flex flex-col gap-2 ${s.rail}`}>
-          <span className="sl-num" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
-            03
-          </span>
+    <section id="pricing" className="border-t border-border">
+      <div className="grid grid-cols-1 gap-10 items-start max-w-[1280px] mx-auto px-5 py-14 sm:px-10 min-[900px]:grid-cols-[180px_minmax(0,1fr)] min-[900px]:py-20">
+        <div className="flex flex-col gap-2 min-[900px]:sticky min-[900px]:top-8">
+          <span className="sl-num text-12 text-faint">03</span>
           <span className="sl-label">Pricing</span>
-          <p className={s.railNote}>Free forever self-hosted. Per participant-minute on Cloud.</p>
+          <p className="mt-1.5 text-[12.5px] leading-[1.6] text-muted [text-wrap:pretty]">
+            Free forever self-hosted. Per participant-minute on Cloud.
+          </p>
         </div>
 
         <div className="flex flex-col gap-6 min-w-0">
           <div className="flex items-end gap-6 flex-wrap">
-            <div className={s.headerText}>
-              <h2 data-anim="rise" className={s.headline}>
+            <div className="flex flex-col gap-3 max-w-[620px]">
+              <h2
+                data-anim="rise"
+                className="m-0 text-[40px] font-semibold tracking-[-0.03em] leading-[1.1] text-strong [text-wrap:pretty]"
+              >
                 You only pay for minutes you didn&rsquo;t want to operate yourself.
               </h2>
-              <p className={s.lead}>
+              <p className="m-0 text-[14px] leading-[1.6] text-muted [text-wrap:pretty]">
                 Egress is included up to each plan&rsquo;s cap. Every plan has a spend cap you
                 set — past it, new rooms are refused and running sessions are preserved.
               </p>
@@ -58,7 +60,7 @@ export function PricingStrip() {
               {plans.map((plan) => (
                 <div
                   key={plan.name}
-                  className={s.planCell}
+                  className="relative bg-card px-[18px] py-6 flex flex-col gap-3.5"
                   style={{ boxShadow: plan.featured ? 'inset 0 2px 0 var(--accent)' : 'none' }}
                 >
                   <div className="flex items-center gap-2 min-h-5">
@@ -66,14 +68,20 @@ export function PricingStrip() {
                     {plan.featured && <Badge tone="accent">Most chosen</Badge>}
                   </div>
                   <div className="flex items-baseline gap-1.25">
-                    <span className={`sl-num ${s.price}`}>{plan.price}</span>
-                    <span className={s.per}>{plan.per}</span>
+                    <span className="sl-num text-[28px] font-semibold tracking-[-0.03em] text-strong">
+                      {plan.price}
+                    </span>
+                    <span className="text-12 text-muted">{plan.per}</span>
                   </div>
-                  <span className={`sl-num ${s.planHeadline}`}>{plan.headline}</span>
-                  <span className={s.who}>{plan.who}</span>
+                  <span className="sl-num text-[12.5px] text-muted [text-wrap:pretty]">
+                    {plan.headline}
+                  </span>
+                  <span className="text-[12.5px] leading-[1.6] text-muted border-t border-border-subtle pt-3.5 [text-wrap:pretty]">
+                    {plan.who}
+                  </span>
                   <div className="flex flex-col gap-2.25">
                     {plan.features.map((f) => (
-                      <span key={f} className={`sl-num ${s.feature}`}>
+                      <span key={f} className="sl-num text-[12.5px] text-body">
                         {f}
                       </span>
                     ))}
@@ -106,13 +114,13 @@ export function PricingStrip() {
             </HairlineGrid>
           </div>
 
-          <div className={`flex items-center gap-3.5 flex-wrap ${s.overageBar}`}>
+          <div className="flex items-center gap-3.5 flex-wrap px-5 py-4 border border-border rounded-card bg-card">
             <span className="sl-label">Overage</span>
-            <span className={`sl-num ${s.overageText}`}>
+            <span className="sl-num text-13 text-body">
               Starter €0.0012/min · Scale €0.0009/min · egress beyond the cap €0.09/GB
             </span>
             <span style={{ flex: 1 }} />
-            <span className={`sl-num ${s.overageNote}`}>
+            <span className="sl-num text-[12.5px] text-faint">
               A participant-minute = one minute of one peer in a room.
             </span>
           </div>
@@ -126,16 +134,18 @@ export function PricingStrip() {
                 it stays a non-navigating button rather than a fabricated destination. */}
             <Button variant="secondary">Talk to us about Business</Button>
             <span style={{ flex: 1 }} />
-            <Link href="/pricing" className={s.link}>
+            <Link href="/pricing" className="text-13 font-medium">
               Full plan comparison →
             </Link>
           </div>
 
-          <div className={s.faqGrid}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
             {PRICING_FAQ.map((q) => (
-              <div key={q.q} className={s.faqItem}>
-                <span className={s.faqQ}>{q.q}</span>
-                <span className={s.faqA}>{q.a}</span>
+              <div key={q.q} className="border-t border-border pt-4 flex flex-col gap-2">
+                <span className="text-13 font-semibold text-strong [text-wrap:pretty]">{q.q}</span>
+                <span className="text-[12.5px] leading-[1.6] text-muted [text-wrap:pretty]">
+                  {q.a}
+                </span>
               </div>
             ))}
           </div>

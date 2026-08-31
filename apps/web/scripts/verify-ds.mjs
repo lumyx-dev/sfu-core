@@ -79,6 +79,15 @@ for (const f of files) {
   }
 }
 
+// 5. Zero *.module.css — globals.css est le seul CSS de l'app ; tout style de section est de
+// l'utilitaire Tailwind inline (valeurs arbitraires pour le hors-echelle), jamais un fichier
+// appareille.
+for (const f of files) {
+  if (f.endsWith('.module.css')) {
+    fail('no-css-modules', rel(f));
+  }
+}
+
 if (failures.length) {
   console.error(`\n✗ ${failures.length} violation(s) des contraintes du design system\n`);
   failures.forEach((f) => console.error('  ' + f));

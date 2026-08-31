@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import { Badge, Input, Select } from '@sightline/ui';
+import { Badge, Input, Select } from '@lumyx/ui';
 import { GITHUB_URL } from '@/content/nav';
 import { Wordmark } from '@/components/chrome/Wordmark';
-import s from './DocsHeader.module.css';
 
 const VERSIONS = ['v0.4.1', 'v0.3.8', 'main'];
 
@@ -29,37 +28,41 @@ const NAV = [
 // overflowing rather than needing a fourth breakpoint guess.
 export function DocsHeader() {
   return (
-    <header className={`flex items-center h-[60px] flex-none ${s.header}`}>
+    <header className="flex items-center h-[60px] flex-none gap-[14px] px-4 min-[521px]:gap-[26px] min-[521px]:px-6 bg-card border-b border-border">
       <Link href="/" aria-label="Sightline — home" className="flex items-center flex-none">
         <Wordmark />
       </Link>
       <Badge tone="neutral">Docs</Badge>
-      <nav className={`items-center gap-[22px] ${s.nav}`}>
+      <nav className="hidden min-[1100px]:flex items-center gap-[22px]">
         {NAV.map((l) => (
-          <Link key={l.href} href={l.href} className={`no-underline ${s.link}`}>
+          <Link
+            key={l.href}
+            href={l.href}
+            className="no-underline text-[12.5px] text-muted hover:text-strong"
+          >
             {l.label}
           </Link>
         ))}
       </nav>
       <span className="flex-1" />
-      <span className={`flex-initial min-w-0 ${s.search}`}>
+      <span className="flex-initial min-w-0 hidden min-[1100px]:flex">
         <Input
           size="sm"
           placeholder="Search the docs"
-          wrapperStyle={{ width: '100%', maxWidth: 240 }}
+          wrapperClassName="w-full max-w-[240px]"
         />
       </span>
-      <span className={`flex-initial min-w-0 ${s.version}`}>
+      <span className="flex-initial min-w-0 hidden min-[521px]:flex">
         <Select
           size="sm"
           options={VERSIONS}
           defaultValue="v0.4.1"
-          wrapperStyle={{ width: '100%', maxWidth: 110 }}
+          wrapperClassName="w-full max-w-[110px]"
         />
       </span>
       <a
         href={GITHUB_URL}
-        className={`inline-flex items-center h-8 px-3 no-underline flex-none ${s.ghostButton}`}
+        className="inline-flex items-center h-8 px-3 no-underline flex-none border border-border rounded-control text-body text-[12.5px]"
         target="_blank"
         rel="noreferrer"
       >

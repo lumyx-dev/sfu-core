@@ -5,7 +5,11 @@ import { join, extname, basename } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const SRC = join(ROOT, 'src');
 const COMPONENTS = join(SRC, 'components');
+// tokens/ is the verbatim mirror of the $DS handoff (rule 5 diffs it byte-for-byte).
+// styles/tokens.css is the derived, `--sl-`-prefixed single file theme.css binds to Tailwind —
+// see that file's own header comment for the tokens/ -> styles/tokens.css sync recipe.
 const TOKENS = join(SRC, 'tokens');
+const DERIVED_TOKENS_FILE = join(SRC, 'styles', 'tokens.css');
 const DS = process.env.DS;
 
 const failures = [];
@@ -21,16 +25,13 @@ function walk(dir) {
 
 const files = walk(SRC);
 const rel = (p) => p.slice(ROOT.length);
-const isTokenFile = (p) => p.startsWith(TOKENS + '/') || p === TOKENS;
-// tokens/ is exempt from BOTH content rules below (no-hardcoded-color, no-monospace) — not
-// narrowed out of the walk, exempted on purpose. Reason: tokens/*.css is already pinned
-// byte-for-byte against the handoff by rule 5 (tokens-verbatim), which is strictly stronger
-// than any content regex here — a token file cannot acquire a stray hardcoded colour or a
-// monospace declaration without tokens-verbatim failing first. Running these two rules over
-// files that are already guarded by an external source of truth adds no coverage and only
-// produces false positives (e.g. a comment that *denies* monospace, like "no monospace",
-// tripping a naive substring match). Do not "fix" this back to scanning tokens/ — add the
-// stronger check to tokens-verbatim instead if real coverage is missing there.
+const isTokenFile = (p) => p.startsWith(TOKENS + '/') || p === DERIVED_TOKENS_FILE;
+// tokens/*.css and styles/tokens.css are exempt from the two content rules below
+// (no-hardcoded-color, no-monospace) — not the rest of styles/. tokens/ is pinned
+// byte-for-byte against the handoff by rule 5 (tokens-verbatim) when $DS is set, and
+// styles/tokens.css is mechanically derived from tokens/ (see its header comment) — both are
+// guarded by a stronger check than any content regex here. theme.css/base.css/index.css carry
+// no literal colors today and stay covered by the regular rules.
 
 // 1. Aucune couleur en dur hors tokens/
 // Strategie inversee : tout #hex ou rgb()/rgba() est presume etre une
@@ -56,13 +57,24 @@ for (const f of files) {
   });
 }
 
-// 2. 'use client' sur EventList uniquement
+// 2. 'use client' sur les seuls composants qui en ont reellement besoin
+// EventList polls/filters client-side; Sparkline and TimeSeriesChart call `useId()` to keep
+// their SVG gradient ids collision-free when several charts render on one page; Select, Tabs
+// and Toast are Radix primitives (listbox/roving-tabindex/live-region), which only run client
+// side. Every other component stays a Server Component.
+const CLIENT_ALLOWED = new Set([
+  'EventList.tsx',
+  'Sparkline.tsx',
+  'TimeSeriesChart.tsx',
+  'Select.tsx',
+  'Tabs.tsx',
+  'Toast.tsx',
+]);
 for (const f of files.filter((f) => extname(f) === '.tsx')) {
   const body = readFileSync(f, 'utf8');
   const isClient = /^\s*['"]use client['"]/m.test(body);
-  const isEventList = basename(f) === 'EventList.tsx';
-  if (isClient && !isEventList) {
-    fail('use-client', `${rel(f)} porte 'use client' — seul EventList y a droit`);
+  if (isClient && !CLIENT_ALLOWED.has(basename(f))) {
+    fail('use-client', `${rel(f)} porte 'use client' — ilot non autorise`);
   }
 }
 
@@ -75,14 +87,25 @@ for (const f of files) {
   }
 }
 
-// 4. Pas de dangerouslySetInnerHTML
+// 4. Zero *.module.css — styles/tokens.css + theme.css + base.css sont le seul CSS du package ;
+// tout style de composant est de l'utilitaire Tailwind inline (valeurs arbitraires pour le
+// hors-echelle), jamais un fichier appareille.
 for (const f of files) {
-  if (readFileSync(f, 'utf8').includes('dangerouslySetInnerHTML')) {
+  if (f.endsWith('.module.css')) {
+    fail('no-css-modules', rel(f));
+  }
+}
+
+// 5. Pas de dangerouslySetInnerHTML — usage reel (attribut JSX ou cle d'objet), pas une
+// simple mention en commentaire (ex: Icon.tsx explique pourquoi le composant NE l'utilise PAS).
+const DANGEROUS_HTML_USAGE = /dangerouslySetInnerHTML\s*[=:]/;
+for (const f of files) {
+  if (DANGEROUS_HTML_USAGE.test(readFileSync(f, 'utf8'))) {
     fail('no-dangerous-html', rel(f));
   }
 }
 
-// 5. Les tokens sont identiques au handoff (fonts.css excepté du contenu, cf.
+// 6. Les tokens sont identiques au handoff (fonts.css excepté du contenu, cf.
 // spec §4 — mais fonts.css doit quand meme EXISTER des deux cotes). Comparaison
 // dans les deux sens : un fichier manquant localement ou un fichier en trop
 // localement doivent tous deux echouer et se nommer.
@@ -113,7 +136,7 @@ if (DS) {
   console.log('· $DS non defini — verification tokens-verbatim sautee');
 }
 
-// 6. Le bloc de tokens inline dans apps/sfu/assets/test.html (delimite par les commentaires
+// 7. Le bloc de tokens inline dans apps/sfu/assets/test.html (delimite par les commentaires
 // SIGHTLINE DESIGN TOKENS) doit etre identique a la concatenation des 9 fichiers tokens/ du
 // handoff, jointe par '\n' — meme logique de jointure que celle utilisee pour construire le
 // bloc dans test.html (cf. rapport). Le SFU sert cette page comme une seule chaine HTML sans
