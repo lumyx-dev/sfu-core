@@ -57,11 +57,19 @@ for (const f of files) {
   });
 }
 
-// 2. 'use client' sur EventList uniquement
+// 2. 'use client' sur les seuls composants qui en ont reellement besoin
 // EventList polls/filters client-side; Sparkline and TimeSeriesChart call `useId()` to keep
-// their SVG gradient ids collision-free when several charts render on one page — hooks require
-// a client boundary, RSC does not run them. Every other component stays a Server Component.
-const CLIENT_ALLOWED = new Set(['EventList.tsx', 'Sparkline.tsx', 'TimeSeriesChart.tsx']);
+// their SVG gradient ids collision-free when several charts render on one page; Select, Tabs
+// and Toast are Radix primitives (listbox/roving-tabindex/live-region), which only run client
+// side. Every other component stays a Server Component.
+const CLIENT_ALLOWED = new Set([
+  'EventList.tsx',
+  'Sparkline.tsx',
+  'TimeSeriesChart.tsx',
+  'Select.tsx',
+  'Tabs.tsx',
+  'Toast.tsx',
+]);
 for (const f of files.filter((f) => extname(f) === '.tsx')) {
   const body = readFileSync(f, 'utf8');
   const isClient = /^\s*['"]use client['"]/m.test(body);
@@ -79,7 +87,16 @@ for (const f of files) {
   }
 }
 
-// 4. Pas de dangerouslySetInnerHTML — usage reel (attribut JSX ou cle d'objet), pas une
+// 4. Zero *.module.css — styles/tokens.css + theme.css + base.css sont le seul CSS du package ;
+// tout style de composant est de l'utilitaire Tailwind inline (valeurs arbitraires pour le
+// hors-echelle), jamais un fichier appareille.
+for (const f of files) {
+  if (f.endsWith('.module.css')) {
+    fail('no-css-modules', rel(f));
+  }
+}
+
+// 5. Pas de dangerouslySetInnerHTML — usage reel (attribut JSX ou cle d'objet), pas une
 // simple mention en commentaire (ex: Icon.tsx explique pourquoi le composant NE l'utilise PAS).
 const DANGEROUS_HTML_USAGE = /dangerouslySetInnerHTML\s*[=:]/;
 for (const f of files) {
@@ -88,7 +105,7 @@ for (const f of files) {
   }
 }
 
-// 5. Les tokens sont identiques au handoff (fonts.css excepté du contenu, cf.
+// 6. Les tokens sont identiques au handoff (fonts.css excepté du contenu, cf.
 // spec §4 — mais fonts.css doit quand meme EXISTER des deux cotes). Comparaison
 // dans les deux sens : un fichier manquant localement ou un fichier en trop
 // localement doivent tous deux echouer et se nommer.
@@ -119,7 +136,7 @@ if (DS) {
   console.log('· $DS non defini — verification tokens-verbatim sautee');
 }
 
-// 6. Le bloc de tokens inline dans apps/sfu/assets/test.html (delimite par les commentaires
+// 7. Le bloc de tokens inline dans apps/sfu/assets/test.html (delimite par les commentaires
 // SIGHTLINE DESIGN TOKENS) doit etre identique a la concatenation des 9 fichiers tokens/ du
 // handoff, jointe par '\n' — meme logique de jointure que celle utilisee pour construire le
 // bloc dans test.html (cf. rapport). Le SFU sert cette page comme une seule chaine HTML sans

@@ -1,5 +1,6 @@
-@import '@lumyx/ui/styles.css';
 @import 'tailwindcss';
+@import '@lumyx/ui/styles.css';
+@source '../../../packages/ui/src';
 
 /* Valeurs marketing-locales. Ce fichier est le seul de apps/web autorisé à porter une
    valeur de couleur littérale — cf. scripts/verify-ds.mjs. En pratique il n'y en a

@@ -124,6 +124,33 @@
   --radius-card: var(--sl-radius-lg);
   --radius-sheet: var(--sl-radius-xl);
 
+  /* ── shadcn compatibility bridge. Not a second design system: every value on
+        the right is one of the DS aliases already bound above (or, for surface-
+        hover, the raw --sl- token). This exists so `shadcn add <component>`
+        generates code that resolves correctly against this file's tokens on the
+        first try — a shadcn component only ever reads `bg-background`,
+        `text-primary`, `border-input`, etc., never `--sl-*` directly. Extend this
+        list before adding a new shadcn component, don't invent parallel colours. */
+  --color-background: var(--sl-surface-page);
+  --color-foreground: var(--sl-text-body);
+  --color-card: var(--sl-surface-card);
+  --color-card-foreground: var(--sl-text-strong);
+  --color-popover: var(--sl-surface-card);
+  --color-popover-foreground: var(--sl-text-strong);
+  --color-primary: var(--sl-accent);
+  --color-primary-foreground: var(--sl-text-on-accent);
+  --color-secondary: var(--sl-accent-2);
+  --color-secondary-foreground: var(--sl-text-on-accent);
+  --color-muted: var(--sl-surface-sunken);
+  --color-muted-foreground: var(--sl-text-muted);
+  --color-accent: var(--sl-surface-hover);
+  --color-accent-foreground: var(--sl-text-strong);
+  --color-destructive: var(--sl-danger);
+  --color-destructive-foreground: var(--sl-text-on-accent);
+  --color-input: var(--sl-border);
+  --color-ring: var(--sl-accent);
+  --radius: var(--sl-radius-sm);
+
   /* ── Elevation. Shadows Tailwind's shadow-xs…lg: four neutral shadows from
         one high light source is the whole system, so the bare names are ours.
         There is no coloured glow anywhere. ── */
