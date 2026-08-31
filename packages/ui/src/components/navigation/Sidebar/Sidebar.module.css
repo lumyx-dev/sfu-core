@@ -1,0 +1,96 @@
+/* Source :2004-2070. width est calcule au runtime (prop numerique) et reste
+   inline sur le <nav> — regle 5. */
+.sidebar {
+  flex: 0 0 auto;
+  background: var(--surface-card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.brandBlock {
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Pas de carre/logo dans la source (:2013-2027) — seul le mot "Sightline" est
+   rendu. Divergence avec le handoff, voir task-6-report.md. */
+.brandName {
+  font-size: var(--fs-16);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-display);
+  color: var(--text-strong);
+}
+
+.brandMeta {
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--space-4) var(--space-6);
+}
+
+.sectionLabel {
+  padding: var(--space-6) var(--space-4) var(--space-3);
+}
+
+.footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-5) var(--space-6);
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+/* Row (:2071-2129). Le hover useState disparait -> :hover. L'icone (currentColor,
+   voir Icon.tsx) herite de la couleur du bouton lui-meme (text-faint / accent) ;
+   le label porte sa propre couleur (text-body / accent-text) car la source donne
+   des couleurs differentes a l'icone et au label. Pas de box-shadow inset dans la
+   source malgre la description du handoff ("tint + liseré 2px accent") — divergence,
+   voir task-6-report.md. */
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 9px var(--space-4);
+  margin-bottom: 1px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-regular);
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.row:hover { background: var(--surface-hover); }
+
+.label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-body);
+}
+
+.count {
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+}
+
+.row.active {
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-weight: var(--fw-medium);
+}
+.row.active:hover { background: var(--accent-tint); }
+.row.active .label { color: var(--accent-text); }

@@ -1,14 +1,14 @@
-//! Sightline SFU — serveur de conférence WebRTC.
+//! Sightline SFU — WebRTC conferencing server.
 //!
-//! Trois couches, empilées du bas vers le haut :
+//! Three layers, stacked from the bottom up:
 //!
-//! - [`transport`] — WebRTC et UDP (str0m). Une connexion par peer.
-//! - [`media`] — routage des paquets RTP. Ne connaît que le trait
-//!   [`media::RtpSink`], donc testable sans réseau.
-//! - [`signaling`] — protocole WebSocket JSON et cycle de vie des sessions.
+//! - [`transport`] — WebRTC and UDP (str0m). One connection per peer.
+//! - [`media`] — RTP packet routing. Knows only the [`media::RtpSink`] trait,
+//!   so it is testable without a network.
+//! - [`signaling`] — JSON WebSocket protocol and session lifecycle.
 //!
-//! [`room`] tient l'appartenance des peers, [`app`] l'état partagé et le
-//! routeur HTTP.
+//! [`room`] holds peer membership, [`app`] the shared state and the HTTP
+//! router.
 
 pub mod app;
 pub mod config;

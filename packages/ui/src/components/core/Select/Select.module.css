@@ -1,0 +1,35 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.box { position: relative; display: flex; align-items: center; }
+
+.field {
+  appearance: none;
+  width: 100%;
+  cursor: pointer;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding-right: var(--space-9);
+  font-family: var(--font-sans);
+  font-size: var(--fs-13);
+  color: var(--text-strong);
+  outline: none;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--dur-1) var(--ease-out);
+}
+
+.sm { padding: 7px 12px; padding-right: var(--space-9); }
+.md { padding: 10px 14px; padding-right: var(--space-9); }
+
+.field:focus-visible { border-color: var(--accent); box-shadow: var(--ring-accent); }
+
+.chevron {
+  position: absolute;
+  right: var(--space-5);
+  pointer-events: none;
+  color: var(--text-faint);
+}

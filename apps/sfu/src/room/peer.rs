@@ -1,13 +1,13 @@
-//! Un peer vu depuis une room.
+//! A peer as seen from a room.
 
 use crate::signaling::ServerMessage;
 use tokio::sync::mpsc;
 
-/// Un peer présent dans une room, avec son canal de signaling.
+/// A peer present in a room, along with its signaling channel.
 ///
-/// Le canal est un `mpsc` borné : plusieurs producteurs (la room, la connexion
-/// WebRTC, le dispatch) pour un unique consommateur, la task qui écrit sur la
-/// WebSocket du peer.
+/// The channel is a bounded `mpsc`: several producers (the room, the WebRTC
+/// connection, the dispatch) for a single consumer, the task writing to the
+/// peer's WebSocket.
 #[derive(Debug, Clone)]
 pub struct RoomPeer {
     pub peer_id: String,
@@ -15,12 +15,12 @@ pub struct RoomPeer {
 }
 
 impl RoomPeer {
-    /// Envoie un message au peer sans jamais bloquer.
+    /// Sends a message to the peer without ever blocking.
     ///
-    /// Appelé depuis les méthodes synchrones de `Room`, d'où `try_send`. Un
-    /// canal plein trahit un consommateur WebSocket en retard : on le
-    /// journalise, perdre un message de signaling n'est jamais anodin. Un canal
-    /// fermé est en revanche le cas ordinaire d'un peer qui se déconnecte.
+    /// Called from `Room`'s synchronous methods, hence `try_send`. A full
+    /// channel betrays a WebSocket consumer falling behind: we log it, since
+    /// losing a signaling message is never harmless. A closed channel, on the
+    /// other hand, is the ordinary case of a peer disconnecting.
     pub fn send(&self, msg: ServerMessage) {
         match self.sender.try_send(msg) {
             Ok(()) => {}
@@ -84,7 +84,7 @@ mod tests {
         peer.send(ServerMessage::PeerJoined {
             peer_id: "bob".into(),
         });
-        // Canal saturé : cet envoi doit rendre la main sans attendre ni paniquer.
+        // Saturated channel: this send must return without waiting or panicking.
         peer.send(ServerMessage::PeerJoined {
             peer_id: "carol".into(),
         });

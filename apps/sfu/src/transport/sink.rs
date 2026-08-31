@@ -1,52 +1,53 @@
-//! Pont entre la couche média et une connexion WebRTC.
+//! Bridge between the media layer and a WebRTC connection.
 
 use super::peer_connection::PeerConnection;
 use crate::media::{RtpPacketData, RtpSink};
+use str0m::media::Mid;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{self, error::TrySendError};
 
-/// Échelle de relances de PLI après l'abonnement d'un nouveau subscriber.
+/// PLI retry ladder used after a new subscriber subscribes.
 ///
-/// Le peer source doit produire une keyframe pour que le nouvel arrivant
-/// puisse décoder ; une seule demande se perd trop souvent pendant que la
-/// connexion se stabilise, d'où la répétition en escalier.
-const KEYFRAME_RETRY_DELAYS_MS: [u64; 4] = [200, 500, 1000, 2000];
+/// The source peer must produce a keyframe for the newcomer to be able to
+/// decode; a single request is lost too often while the connection settles,
+/// hence the staggered repetition. The first one goes out immediately — the
+/// subscriber is already negotiated by the time this is called, so there is
+/// nothing to wait for.
+const KEYFRAME_RETRY_DELAYS_MS: [u64; 4] = [0, 200, 600, 1500];
 
-/// Profondeur de la file d'écriture RTP d'un peer.
+/// Depth of a peer's RTP write queue.
 ///
-/// Rapportée au débit d'un publisher vidéo 1080p — ~150 paquets/s —, 128
-/// paquets valent **~850 ms de média pour une source unique**. Toutes les
-/// sources d'un même subscriber partagent cette file : le plafond réel tombe à
-/// ~425 ms à deux publishers, ~210 ms à quatre.
+/// Measured against the rate of a 1080p video publisher — ~150 packets/s — 128
+/// packets are worth **~850 ms of media for a single source**. Every source of
+/// a given subscriber shares this queue: the real ceiling drops to ~425 ms with
+/// two publishers, ~210 ms with four.
 ///
-/// C'est un garde-fou, pas un objectif : en régime normal la file reste quasi
-/// vide, la task d'écriture consommant aussi vite que le moteur produit. Le
-/// dimensionnement vise deux bornes à la fois — rester au-dessus d'une rafale
-/// de keyframe (une IDR 1080p se fragmente sur une centaine de paquets MTU),
-/// pour qu'un simple hoquet d'ordonnancement ne la tronque pas, et rester assez
-/// bas pour qu'une écriture WebRTC durablement calée ne fasse enfler ni la
-/// mémoire ni la latence.
+/// This is a safety rail, not a target: in normal conditions the queue stays
+/// almost empty, the writer task consuming as fast as the engine produces. The
+/// sizing aims at two bounds at once — staying above a keyframe burst (a 1080p
+/// IDR fragments over about a hundred MTU-sized packets), so that a mere
+/// scheduling hiccup does not truncate it, and staying low enough that a
+/// durably stalled WebRTC write inflates neither memory nor latency.
 const RTP_QUEUE_CAPACITY: usize = 128;
 
-/// File d'écriture d'un sink et sa politique de rejet.
+/// A sink's write queue and its drop policy.
 ///
-/// Sur du média temps réel accumuler n'a pas de sens : un paquet qui a attendu
-/// des centaines de millisecondes arrive trop tard pour être décodé utilement.
-/// Quand la file est pleine on le jette — mais jamais en silence, d'où le
-/// compteur.
+/// For real-time media, accumulating makes no sense: a packet that waited
+/// hundreds of milliseconds arrives too late to be usefully decoded. When the
+/// queue is full we drop it — but never silently, hence the counter.
 struct RtpQueue {
     tx: mpsc::Sender<RtpPacketData>,
-    /// Paquets jetés depuis la création du sink.
+    /// Packets dropped since the sink was created.
     dropped: AtomicU64,
-    /// Rafale de rejets en cours.
+    /// Whether a drop burst is under way.
     ///
-    /// Une file saturée jette autant de paquets que les publishers en émettent,
-    /// soit des centaines par seconde : journaliser chaque perte noierait les
-    /// logs. Seule la première d'une rafale est tracée, la rafale étant close
-    /// dès qu'un paquet repasse.
+    /// A saturated queue drops as many packets as the publishers emit, i.e.
+    /// hundreds per second: logging every loss would drown the logs. Only the
+    /// first of a burst is traced, and the burst ends as soon as a packet gets
+    /// through again.
     bursting: AtomicBool,
 }
 
@@ -59,16 +60,16 @@ impl RtpQueue {
         }
     }
 
-    /// Met un paquet en file, ou le jette si elle est pleine.
+    /// Queues a packet, or drops it if the queue is full.
     ///
-    /// Ne bloque jamais : appelée depuis le chemin chaud du forwarding, qui est
-    /// synchrone.
+    /// Never blocks: called from the forwarding hot path, which is
+    /// synchronous.
     fn push(&self, peer_id: &str, packet: RtpPacketData) {
         match self.tx.try_send(packet) {
             Ok(()) => {
-                // Lecture avant écriture : en régime normal le drapeau est déjà
-                // `false`, et l'on évite de salir sa ligne de cache à chaque
-                // paquet et chaque subscriber.
+                // Read before write: in normal conditions the flag is already
+                // `false`, and this avoids dirtying its cache line on every
+                // packet and every subscriber.
                 if self.bursting.load(Ordering::Relaxed) {
                     self.bursting.store(false, Ordering::Relaxed);
                 }
@@ -84,8 +85,8 @@ impl RtpQueue {
                     );
                 }
             }
-            // Sink fermé : « un sink fermé absorbe silencieusement » est le
-            // contrat du trait, ce n'est pas une perte à signaler.
+            // Closed sink: "a closed sink silently swallows it" is the trait's
+            // contract, not a loss worth reporting.
             Err(TrySendError::Closed(_)) => {}
         }
     }
@@ -95,15 +96,15 @@ impl RtpQueue {
     }
 }
 
-/// Implémentation de production de [`RtpSink`] : met les paquets en file et
-/// une task dédiée les écrit sur la [`PeerConnection`].
+/// Production implementation of [`RtpSink`]: queues the packets, and a
+/// dedicated task writes them to the [`PeerConnection`].
 ///
-/// La file découple le chemin chaud du forwarding (synchrone, sans attente) de
-/// l'écriture WebRTC (asynchrone, sous mutex). Un sink par peer : toutes les
-/// sources qui lui écrivent passent par la même file, donc un seul writer.
+/// The queue decouples the forwarding hot path (synchronous, non-waiting) from
+/// the WebRTC write (asynchronous, under a mutex). One sink per peer: every
+/// source writing to it goes through the same queue, hence a single writer.
 ///
-/// Elle est **bornée** : si l'écriture WebRTC cale, les paquets excédentaires
-/// sont jetés plutôt que mis en attente. Voir [`RTP_QUEUE_CAPACITY`] et
+/// It is **bounded**: if the WebRTC write stalls, the excess packets are
+/// dropped rather than queued. See [`RTP_QUEUE_CAPACITY`] and
 /// [`PeerSink::dropped_packets`].
 pub struct PeerSink {
     peer_id: Arc<str>,
@@ -112,7 +113,7 @@ pub struct PeerSink {
 }
 
 impl PeerSink {
-    /// Crée le sink et démarre sa task d'écriture.
+    /// Creates the sink and starts its writer task.
     pub fn new(peer_id: Arc<str>, conn: Arc<Mutex<PeerConnection>>) -> Arc<Self> {
         let (tx, mut rx) = mpsc::channel::<RtpPacketData>(RTP_QUEUE_CAPACITY);
 
@@ -140,15 +141,16 @@ impl PeerSink {
         &self.peer_id
     }
 
-    /// Paquets jetés depuis la création du sink, faute de place dans la file.
+    /// Packets dropped since the sink was created, for lack of room in the
+    /// queue.
     ///
-    /// Reste à zéro tant que l'écriture WebRTC suit le rythme du forwarding ;
-    /// une valeur qui monte désigne un peer dont la sortie décroche.
+    /// Stays at zero as long as the WebRTC write keeps up with forwarding; a
+    /// rising value points at a peer whose output is falling behind.
     ///
-    /// NOTE : ce compteur n'est pas encore relayé par `/metrics` — la couche
-    /// média n'a pas accès à [`crate::metrics::Metrics`], et l'y amener
-    /// dépasserait le cadre. Il n'est pour l'instant lisible que d'ici et par
-    /// la journalisation de [`RtpQueue::push`].
+    /// NOTE: this counter is not relayed through `/metrics` yet — the media
+    /// layer has no access to [`crate::metrics::Metrics`], and wiring it there
+    /// would be out of scope. For now it is only readable from here and through
+    /// [`RtpQueue::push`]'s logging.
     pub fn dropped_packets(&self) -> u64 {
         self.queue.dropped()
     }
@@ -159,16 +161,18 @@ impl RtpSink for PeerSink {
         self.queue.push(&self.peer_id, packet);
     }
 
-    fn request_keyframe(&self) {
+    fn request_keyframe(&self, mid: Mid) {
         let conn = self.conn.clone();
         let peer_id = Arc::clone(&self.peer_id);
 
         tokio::spawn(async move {
             for delay in KEYFRAME_RETRY_DELAYS_MS {
-                tokio::time::sleep(Duration::from_millis(delay)).await;
-                conn.lock().await.request_keyframe();
-                tracing::info!("Peer {} — PLI envoyée après {}ms", peer_id, delay);
+                if delay > 0 {
+                    tokio::time::sleep(Duration::from_millis(delay)).await;
+                }
+                conn.lock().await.request_keyframe(mid);
             }
+            tracing::debug!("Peer {} — escalier de PLI terminé sur mid={}", peer_id, mid);
         });
     }
 }
@@ -176,18 +180,24 @@ impl RtpSink for PeerSink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use str0m::media::Mid;
     use std::time::Instant;
+    use str0m::format::{Codec, CodecSpec, PayloadParams};
+    use str0m::media::{Frequency, Pt};
 
-    /// Paquet vidéo minimal, dont seul le payload distingue les instances.
+    /// Minimal video packet, whose instances differ only by their payload.
     fn packet(payload: &[u8]) -> RtpPacketData {
         RtpPacketData {
-            payload_type: 96,
-            sequence_number: 0,
-            timestamp: 1_000,
-            ssrc: 0,
+            params: PayloadParams::new(
+                Pt::from(96),
+                None,
+                CodecSpec {
+                    codec: Codec::Vp8,
+                    clock_rate: Frequency::NINETY_KHZ,
+                    channels: None,
+                    format: Default::default(),
+                },
+            ),
             payload: Arc::from(payload),
-            is_keyframe: false,
             mid: Mid::from("0"),
             network_time: Instant::now(),
             rtp_time: 90_000,
@@ -195,12 +205,12 @@ mod tests {
         }
     }
 
-    /// Une file saturée ne doit ni bloquer l'appelant ni faire enfler la
-    /// mémoire : le paquet excédentaire est abandonné.
+    /// A saturated queue must neither block the caller nor inflate memory: the
+    /// excess packet is dropped.
     #[test]
     fn a_full_queue_drops_the_extra_packets_instead_of_queueing_them() {
-        // Le récepteur est gardé sans jamais être lu : la file se remplit puis
-        // sature à sa capacité.
+        // The receiver is held but never read: the queue fills up, then
+        // saturates at its capacity.
         let (tx, _rx) = mpsc::channel::<RtpPacketData>(4);
         let queue = RtpQueue::new(tx);
 
@@ -215,8 +225,8 @@ mod tests {
         );
     }
 
-    /// Le rejet doit rester observable, sinon il serait pire que la file non
-    /// bornée qu'il remplace.
+    /// Dropping must stay observable, otherwise it would be worse than the
+    /// unbounded queue it replaces.
     #[test]
     fn the_drop_counter_stays_at_zero_while_the_queue_has_room() {
         let (tx, _rx) = mpsc::channel::<RtpPacketData>(4);
@@ -229,15 +239,15 @@ mod tests {
         assert_eq!(queue.dropped(), 0, "rien ne doit être jeté avant saturation");
     }
 
-    /// RTP est un protocole d'ordre : la file ne doit pas réordonner ce qu'on y
-    /// dépose, ni sous saturation.
+    /// RTP is an ordered protocol: the queue must not reorder what is put into
+    /// it, not even under saturation.
     #[tokio::test]
     async fn the_queue_preserves_the_order_of_the_packets_it_accepts() {
         let (tx, mut rx) = mpsc::channel::<RtpPacketData>(4);
         let queue = RtpQueue::new(tx);
 
-        // Six envois pour deux rejets : ce qui ressort doit être le préfixe des
-        // acceptés, dans l'ordre d'entrée.
+        // Six sends for two drops: what comes out must be the prefix of the
+        // accepted ones, in input order.
         for payload in [b"a", b"b", b"c", b"d", b"e", b"f"] {
             queue.push("alice", packet(payload));
         }
@@ -254,10 +264,10 @@ mod tests {
         );
     }
 
-    /// Le compteur exposé par le sink doit bien être celui de sa file.
+    /// The counter the sink exposes must be its queue's own.
     ///
-    /// Le runtime est mono-tâche et rien n'attend entre les écritures : la task
-    /// d'écriture ne peut pas s'intercaler pour vider la file.
+    /// The runtime is single-threaded and nothing awaits between the writes:
+    /// the writer task cannot slip in to drain the queue.
     #[tokio::test]
     async fn the_sink_reports_the_packets_its_queue_dropped() {
         let (sender, _rx) = mpsc::channel(4);
