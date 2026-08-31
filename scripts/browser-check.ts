@@ -33,7 +33,7 @@ const proc = Bun.spawn([
   "--autoplay-policy=no-user-gesture-required",
   "--no-sandbox",
   "--disable-gpu",
-  `--user-data-dir=/tmp/sightline-chrome-${Date.now()}`,
+  `--user-data-dir=/tmp/lumyx-chrome-${Date.now()}`,
   "about:blank",
 ], { stdout: "inherit", stderr: "inherit" });
 
@@ -135,7 +135,7 @@ for (const [i, s] of sessions.entries()) {
   const verdict = remotes.length === N - 1 && live.length === N - 1 && complete.length === N - 1 ? "OK " : "ÉCHEC";
   if (verdict === "ÉCHEC") ok = false;
   console.log(`${verdict} onglet ${i}: ${remotes.length}/${N - 1} vignettes, ${live.length} en vidéo`,
-              JSON.stringify(remotes.map((t: any) => `${t.id} ${t.w}x${t.h} [${t.tracks}]`)));
+    JSON.stringify(remotes.map((t: any) => `${t.id} ${t.w}x${t.h} [${t.tracks}]`)));
   if (verdict === "ÉCHEC") console.log("   log:", r.log.join(" | "));
 }
 
