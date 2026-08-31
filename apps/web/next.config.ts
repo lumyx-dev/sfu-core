@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@sightline/ui'],
+  transpilePackages: ['@lumyx/ui'],
 };
 
 export default nextConfig;

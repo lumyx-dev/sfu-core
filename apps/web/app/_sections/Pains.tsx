@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Badge, MetricCard, MetricGrid } from '@sightline/ui';
+import { Badge, MetricCard, MetricGrid } from '@lumyx/ui';
 import { PAINS } from '@/content/home';
 import { BENCHMARKS } from '@/content/benchmarks';
 import s from './Pains.module.css';

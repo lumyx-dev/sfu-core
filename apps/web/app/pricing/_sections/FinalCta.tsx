@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
+import { Button } from '@lumyx/ui';
 import s from './FinalCta.module.css';
 
 // Source: Pricing.dc.html:177-184. The second button is `variant="ghost"` in the source;
-// @sightline/ui only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no
+// @lumyx/ui only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no
 // 'ghost') — same gap already flagged in Home's app/_sections/FinalCta.tsx, `quiet` is the
 // closest match. Not fixed here; packages/ui is out of scope for this task.
 // This section's own border-top was removed (task-13): it's the first child of the wrapper

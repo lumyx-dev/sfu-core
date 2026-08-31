@@ -1,4 +1,4 @@
-@import '@sightline/ui/styles.css';
+@import '@lumyx/ui/styles.css';
 @import 'tailwindcss';
 
 /* Valeurs marketing-locales. Ce fichier est le seul de apps/web autorisé à porter une
@@ -40,7 +40,7 @@
 
 /* Filet de sécurité global pour prefers-reduced-motion. MarketingMotion.tsx ne gère que
    les éléments porteurs de data-anim, piloté en JS ; toute animation déclarée en CSS pur
-   (les beams/dash SVG de LiveCard, le marquee de Hero, sl-breathe dans @sightline/ui)
+   (les beams/dash SVG de LiveCard, le marquee de Hero, sl-breathe dans @lumyx/ui)
    passait au travers. Cette règle coupe tout, sans jamais pouvoir masquer de contenu :
    elle ne touche qu'à la durée/l'itération, jamais à l'opacité ou au display. */
 @media (prefers-reduced-motion: reduce) {

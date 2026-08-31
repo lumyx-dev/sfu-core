@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
+import { Button } from '@lumyx/ui';
 import { PLAN_COLUMNS, HIGHLIGHT, PRICING_GROUPS } from '@/content/pricing';
 import s from './ComparisonTable.module.css';
 

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Badge, Input, Select } from '@sightline/ui';
+import { Badge, Input, Select } from '@lumyx/ui';
 import { GITHUB_URL } from '@/content/nav';
 import { Wordmark } from '@/components/chrome/Wordmark';
 import s from './DocsHeader.module.css';
@@ -46,7 +46,7 @@ export function DocsHeader() {
         <Input
           size="sm"
           placeholder="Search the docs"
-          wrapperStyle={{ width: '100%', maxWidth: 240 }}
+          wrapperClassName="w-full max-w-[240px]"
         />
       </span>
       <span className={`flex-initial min-w-0 ${s.version}`}>
@@ -54,7 +54,7 @@ export function DocsHeader() {
           size="sm"
           options={VERSIONS}
           defaultValue="v0.4.1"
-          wrapperStyle={{ width: '100%', maxWidth: 110 }}
+          wrapperClassName="w-full max-w-[110px]"
         />
       </span>
       <a

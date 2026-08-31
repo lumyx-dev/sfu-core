@@ -1,8 +1,8 @@
-import { Badge, DataTable, type DataTableColumn } from '@sightline/ui';
+import { Badge, DataTable, type DataColumn } from '@lumyx/ui';
 import { METRICS, type Metric } from '@/content/metrics';
 import s from './ThresholdsTable.module.css';
 
-const COLUMNS: DataTableColumn<Metric>[] = [
+const COLUMNS: DataColumn<Metric>[] = [
   { key: 'name', header: 'Metric', strong: true },
   { key: 'field', header: 'Field', muted: true },
   {

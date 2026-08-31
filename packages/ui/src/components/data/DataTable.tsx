@@ -27,10 +27,7 @@ export interface DataTableProps<Row> {
   className?: string;
 }
 
-/** Row identity: `row.id` when present, otherwise the index. */
-type WithOptionalId = { id?: string | number };
-
-export function DataTable<Row extends WithOptionalId & Record<string, unknown>>({
+export function DataTable<Row>({
   columns = [],
   rows = [],
   onRowClick,
@@ -63,7 +60,7 @@ export function DataTable<Row extends WithOptionalId & Record<string, unknown>>(
             const active = selectedIndex === i;
             return (
               <tr
-                key={r.id ?? i}
+                key={(r as { id?: string | number }).id ?? i}
                 onClick={onRowClick ? () => onRowClick(r, i) : undefined}
                 aria-selected={active || undefined}
                 className={cn(
@@ -89,7 +86,7 @@ export function DataTable<Row extends WithOptionalId & Record<string, unknown>>(
                           : "font-normal text-body",
                     )}
                   >
-                    {c.render ? c.render(r, i) : (r[c.key] as ReactNode)}
+                    {c.render ? c.render(r, i) : ((r as Record<string, unknown>)[c.key] as ReactNode)}
                   </td>
                 ))}
               </tr>

@@ -1,4 +1,4 @@
-import { Badge } from '@sightline/ui';
+import { Badge } from '@lumyx/ui';
 import type { Metric } from '@/content/metrics';
 import s from './MetricSection.module.css';
 

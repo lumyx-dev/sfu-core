@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Icon, IconButton, Tabs } from '@sightline/ui';
+import { Icon, IconButton, Tabs } from '@lumyx/ui';
 import { START } from '@/content/home';
 import s from './SnippetTabs.module.css';
 

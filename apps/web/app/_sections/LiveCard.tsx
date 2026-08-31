@@ -7,8 +7,8 @@ import {
   QualityIndicator,
   StatusDot,
   TimeSeriesChart,
-} from '@sightline/ui';
-import type { DataTableColumn } from '@sightline/ui';
+} from '@lumyx/ui';
+import type { DataColumn } from '@lumyx/ui';
 import { HERO_PEERS, TOPO_LEGEND, series, type HeroPeer } from '@/content/home';
 import s from './LiveCard.module.css';
 
@@ -18,7 +18,7 @@ import s from './LiveCard.module.css';
 // down to just the header and the middle row).
 const CHART_LABELS = ['13:36', '13:43', '13:50', '13:57', '14:06'];
 
-const heroPeerCols: DataTableColumn<HeroPeer>[] = [
+const heroPeerCols: DataColumn<HeroPeer>[] = [
   {
     key: 'peerId',
     header: 'Peer',

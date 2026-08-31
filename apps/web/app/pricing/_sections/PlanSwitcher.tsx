@@ -1,6 +1,6 @@
 'use client';
 
-import { Tabs } from '@sightline/ui';
+import { Tabs } from '@lumyx/ui';
 import { PLANS, type Period } from '@/content/pricing';
 import { usePricingPeriod } from '@/components/marketing/PricingPeriodProvider';
 import { PlanCards } from './PlanCards';

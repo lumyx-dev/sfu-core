@@ -35,7 +35,7 @@
   padding: 36px 44px 80px;
 }
 
-/* Same visual spec as @sightline/ui's Breadcrumb (Breadcrumb.module.css), rebuilt as plain
+/* Same visual spec as @lumyx/ui's Breadcrumb (Breadcrumb.module.css), rebuilt as plain
    markup: that component always wires an onClick handler onto its non-last crumbs, which makes
    it unusable from a Server Component tree here (Next.js: "Event handlers cannot be passed to
    Client Component props") — and this page's only client boundary is DocsRail.tsx

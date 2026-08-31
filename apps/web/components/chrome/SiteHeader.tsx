@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
+import { Button } from '@lumyx/ui';
 import { HEADER_NAV, SITE_VERSION, GITHUB_URL } from '@/content/nav';
 import { Wordmark } from './Wordmark';
 import s from './SiteHeader.module.css';

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@sightline/ui';
+import { Button } from '@lumyx/ui';
 import { SiteHeader } from '@/components/chrome/SiteHeader';
 import { Spotlight } from '@/components/motion/Spotlight';
 import { GITHUB_URL } from '@/content/nav';
