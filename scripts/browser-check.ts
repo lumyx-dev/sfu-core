@@ -33,7 +33,7 @@ const proc = Bun.spawn([
   "--autoplay-policy=no-user-gesture-required",
   "--no-sandbox",
   "--disable-gpu",
-  `--user-data-dir=/tmp/sightline-chrome-${Date.now()}`,
+  `--user-data-dir=/tmp/lumyx-chrome-${Date.now()}`,
   "about:blank",
 ], { stdout: "inherit", stderr: "inherit" });
 
