@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { AlertBanner, Button, Icon, IconButton, Input, StatusDot, Tabs } from '@lumyx/ui';
 import { REGIONS, SDK } from '@/content/signup';
-import s from './SignupWizard.module.css';
 
 type Step = 'account' | 'project' | 'keys';
 
@@ -44,33 +43,38 @@ export function SignupWizard() {
   const submitProject = () => setStep('keys');
 
   return (
-    <div className={s.wizard}>
-      <div className={s.stepperRow}>
+    // Sign up.dc.html:64 — `width:100%;max-width:460px;margin:0 auto;gap:22px`.
+    <div className="w-full max-w-[460px] mx-auto flex flex-col gap-5.5">
+      {/* Sign up.dc.html:66 — `gap:12px`. */}
+      <div className="flex items-center gap-3">
         {STEPS.map((st, i) => {
           const active = i <= index;
           return (
-            <div key={st.n} className={s.stepItem}>
+            // Sign up.dc.html:68 — `gap:8px`.
+            <div key={st.n} className="flex items-center gap-2">
+              {/* Sign up.dc.html:69 — 22x22, radius 8px, 11.5px/500. */}
               <span
-                className={`sl-num ${s.stepNum}`}
-                style={{
-                  color: active ? 'var(--text-on-accent)' : 'var(--text-muted)',
-                  background: active ? 'var(--accent)' : 'transparent',
-                  borderColor: active ? 'var(--accent)' : 'var(--border)',
-                }}
+                className={`sl-num inline-flex items-center justify-center w-[22px] h-[22px] rounded-chip text-[11.5px] font-medium border ${
+                  active
+                    ? 'text-on-accent bg-accent border-accent'
+                    : 'text-muted bg-transparent border-border'
+                }`}
               >
                 {st.n}
               </span>
+              {/* Sign up.dc.html:70 — 12.5px/500. */}
               <span
-                className={s.stepLabel}
-                style={{ color: active ? 'var(--text-strong)' : 'var(--text-faint)' }}
+                className={`text-[12.5px] font-medium ${active ? 'text-strong' : 'text-faint'}`}
               >
                 {st.label}
               </span>
             </div>
           );
         })}
-        <span className={s.stepperRule} />
-        <span className={`sl-num ${s.stepperMeta}`}>{meta}</span>
+        {/* Sign up.dc.html:73 — the rule filling the space before the step meta. */}
+        <span className="flex-1 h-px bg-border" />
+        {/* Sign up.dc.html:74 — 12px, text-faint. */}
+        <span className="sl-num text-12 text-faint">{meta}</span>
       </div>
 
       {step === 'account' && <AccountStep onSubmit={submitAccount} />}
@@ -89,13 +93,23 @@ export function SignupWizard() {
   );
 }
 
+// Shared step wrapper — 78:20, 113:20, 156:20 all use `gap:20px`.
+const STEP_CLASS = 'flex flex-col gap-5';
+// Sign up.dc.html:79/114/157 — `gap:8px`.
+const STEP_HEAD_CLASS = 'flex flex-col gap-2';
+// Sign up.dc.html:80/115/160 — 24px/600/-0.02em.
+const STEP_TITLE_CLASS = 'm-0 text-[24px] font-semibold tracking-[-0.02em] text-strong';
+// Sign up.dc.html:81/116/162 — 13px, text-muted, used for the account step's "sign in" line,
+// the project step's helper line and the keys step's region/production meta line.
+const STEP_SUB_CLASS = 'text-13 text-muted [text-wrap:pretty]';
+
 // Sign up.dc.html:77-110 (`sc-if value="{{ isAccount }}"`).
 function AccountStep({ onSubmit }: { onSubmit: () => void }) {
   return (
-    <div className={s.step}>
-      <div className={s.stepHead}>
-        <h2 className={s.stepTitle}>Create your account</h2>
-        <span className={s.stepSub}>
+    <div className={STEP_CLASS}>
+      <div className={STEP_HEAD_CLASS}>
+        <h2 className={STEP_TITLE_CLASS}>Create your account</h2>
+        <span className={STEP_SUB_CLASS}>
           Already have one?{' '}
           <a href="#" onClick={(e) => e.preventDefault()}>
             Sign in
@@ -104,7 +118,8 @@ function AccountStep({ onSubmit }: { onSubmit: () => void }) {
         </span>
       </div>
 
-      <div className={s.oauthGroup}>
+      {/* Sign up.dc.html:84 — `gap:10px`. */}
+      <div className="flex flex-col gap-2.5">
         <Button block onClick={onSubmit}>
           Continue with GitHub
         </Button>
@@ -113,13 +128,15 @@ function AccountStep({ onSubmit }: { onSubmit: () => void }) {
         </Button>
       </div>
 
-      <div className={s.divider}>
-        <span className={s.dividerRule} />
+      {/* Sign up.dc.html:89 — `gap:12px`. */}
+      <div className="flex items-center gap-3">
+        <span className="flex-1 h-px bg-border" />
         <span className="sl-label">or</span>
-        <span className={s.dividerRule} />
+        <span className="flex-1 h-px bg-border" />
       </div>
 
-      <div className={s.formGroup}>
+      {/* Sign up.dc.html:95 — `gap:14px`. */}
+      <div className="flex flex-col gap-3.5">
         <Input
           label="Work email"
           type="email"
@@ -138,7 +155,8 @@ function AccountStep({ onSubmit }: { onSubmit: () => void }) {
         </Button>
       </div>
 
-      <span className={s.legal}>
+      {/* Sign up.dc.html:108 — 12px/1.6, text-faint. */}
+      <span className="text-12 leading-body text-faint [text-wrap:pretty]">
         No credit card for the free tier. By continuing you accept the terms of service and the
         privacy policy.
       </span>
@@ -163,10 +181,12 @@ function ProjectStep({
   onBack: () => void;
 }) {
   return (
-    <div className={s.step}>
-      <div className={s.stepHead}>
-        <h2 className={s.stepTitle}>Create your first project</h2>
-        <span className={s.stepSub}>You can change everything later except the name and the region.</span>
+    <div className={STEP_CLASS}>
+      <div className={STEP_HEAD_CLASS}>
+        <h2 className={STEP_TITLE_CLASS}>Create your first project</h2>
+        <span className={STEP_SUB_CLASS}>
+          You can change everything later except the name and the region.
+        </span>
       </div>
 
       <Input
@@ -176,53 +196,69 @@ function ProjectStep({
         wrapperClassName={FULL_WIDTH_WRAPPER}
       />
 
-      <div className={s.field}>
+      {/* Sign up.dc.html:119/125 — `gap:7px`/`gap:9px`, close enough to share one class: the
+          Project name field uses the Input component's own built-in label/hint instead, so this
+          is only reached by the SFU region group. */}
+      <div className="flex flex-col gap-2.25">
         <span className="sl-label">SFU region</span>
-        <div className={s.regionGrid}>
+        {/* Sign up.dc.html:127 — `repeat(2,minmax(0,1fr));gap:10px`. */}
+        <div className="grid grid-cols-2 gap-2.5">
           {REGIONS.map((r) => {
             const active = r.id === region;
             return (
+              // Sign up.dc.html:129 — `gap:5px;padding:12px 14px;border-radius:12px`.
               <button
                 key={r.id}
                 type="button"
                 onClick={() => onRegion(r.id)}
-                className={s.regionCard}
-                style={{
-                  borderColor: active ? 'var(--accent-border)' : 'var(--border)',
-                  background: active ? 'var(--accent-tint)' : 'var(--surface-page)',
-                }}
+                className={`flex flex-col gap-1.25 items-start px-3.5 py-3 border rounded-control cursor-pointer font-[inherit] text-left ${
+                  active ? 'border-accent-border bg-accent-tint' : 'border-border bg-page'
+                }`}
               >
-                <span className={`sl-num ${s.regionId}`}>{r.id}</span>
-                <span className={`sl-num ${s.regionLatency}`}>{r.latency} from you</span>
+                <span className="sl-num text-13 font-medium text-strong">{r.id}</span>
+                <span className="sl-num text-12 text-muted">{r.latency} from you</span>
               </button>
             );
           })}
         </div>
-        <span className={s.hint}>
+        {/* Sign up.dc.html:122/135 — 12px, text-muted, standalone helper text below the region
+            grid. */}
+        <span className="text-12 text-muted">
           Cannot be changed after creation — a second region means a second project.
         </span>
       </div>
 
-      <div className={s.stagingRow}>
-        <span className={s.stagingCopy}>
-          <span id="staging-toggle-title" className={s.stagingTitle}>
+      {/* Sign up.dc.html:138 — `gap:16px;padding:14px 16px;border-radius:14px`. */}
+      <div className="flex items-center justify-between gap-4 px-4 py-3.5 border border-border rounded-tile bg-sunken">
+        <span className="flex flex-col gap-1">
+          <span id="staging-toggle-title" className="text-13 font-medium text-strong">
             Also create a staging environment
           </span>
-          <span className={s.stagingDesc}>Separate keys and quota. Data kept 24h.</span>
+          <span className="text-12 text-muted [text-wrap:pretty]">
+            Separate keys and quota. Data kept 24h.
+          </span>
         </span>
+        {/* Sign up.dc.html:143 — 40x23 pill switch. The source's literal white knob colour is
+            var(--surface-card) here (task-12-brief.md correction 7's rule applied to the
+            toggle, not just the stepper number). */}
         <button
           type="button"
           onClick={() => onStaging(!staging)}
           aria-pressed={staging}
           aria-labelledby="staging-toggle-title"
-          className={s.toggle}
-          style={{ background: staging ? 'var(--accent)' : 'var(--n-300)' }}
+          className={`w-10 h-[23px] rounded-full border-none relative cursor-pointer flex-none transition-colors duration-[180ms] ease-out ${
+            staging ? 'bg-accent' : 'bg-[var(--sl-n-300)]'
+          }`}
         >
-          <span className={s.toggleKnob} style={{ left: staging ? 20 : 3 }} />
+          <span
+            className="absolute top-[3px] w-[17px] h-[17px] rounded-full bg-card transition-[left] duration-[180ms] ease-out"
+            style={{ left: staging ? 20 : 3 }}
+          />
         </button>
       </div>
 
-      <div className={s.actions}>
+      {/* Sign up.dc.html:148 — `gap:12px`. */}
+      <div className="flex items-center gap-3">
         <Button variant="primary" onClick={onSubmit}>
           Create project
         </Button>
@@ -276,13 +312,14 @@ function KeysStep({
   };
 
   return (
-    <div className={s.step}>
-      <div className={s.stepHead}>
-        <div className={s.liveRow}>
+    <div className={STEP_CLASS}>
+      <div className={STEP_HEAD_CLASS}>
+        {/* Sign up.dc.html:158 — `gap:10px`. */}
+        <div className="flex items-center gap-2.5">
           <StatusDot status="live" size={10} />
-          <h2 className={s.stepTitle}>live-classroom is live</h2>
+          <h2 className={STEP_TITLE_CLASS}>live-classroom is live</h2>
         </div>
-        <span className={`sl-num ${s.stepSub}`}>
+        <span className={`sl-num ${STEP_SUB_CLASS}`}>
           {region} · production{staging ? ' + staging' : ''}
         </span>
       </div>
@@ -293,12 +330,18 @@ function KeysStep({
         message="This is the only time it is displayed. If you lose it, revoke the key and generate a new one — there is no recovery."
       />
 
-      <div className={s.credList}>
+      {/* Sign up.dc.html:169 — `gap:10px`. */}
+      <div className="flex flex-col gap-2.5">
         {credentials.map((c) => (
-          <div key={c.label} className={s.credRow}>
+          // Sign up.dc.html:171 — `gap:6px`.
+          <div key={c.label} className="flex flex-col gap-1.5">
             <span className="sl-label">{c.label}</span>
-            <div className={s.credValue}>
-              <span className={`sl-num ${s.credText}`}>{c.value}</span>
+            {/* Sign up.dc.html:173 — `gap:10px;padding:11px 14px;border-radius:12px`. */}
+            <div className="flex items-center gap-2.5 px-3.5 py-2.75 border border-border rounded-control bg-sunken">
+              {/* Sign up.dc.html:174 — 12.5px, ellipsis overflow. */}
+              <span className="sl-num flex-1 min-w-0 text-[12.5px] text-strong overflow-hidden text-ellipsis whitespace-nowrap">
+                {c.value}
+              </span>
               <IconButton label="Copy" size={28} onClick={() => copy(c.value)}>
                 <Icon name="copy" size={14} />
               </IconButton>
@@ -307,29 +350,38 @@ function KeysStep({
         ))}
       </div>
 
-      <div className={s.sdkBlock}>
-        <div className={s.sdkHead}>
+      {/* Sign up.dc.html:169/183 — `gap:10px`. */}
+      <div className="flex flex-col gap-2.5">
+        {/* Sign up.dc.html:184 — `gap:10px`. */}
+        <div className="flex items-center gap-2.5">
           <span className="sl-label">Connect your client</span>
-          <span className={s.sdkSpacer} />
+          <span className="flex-1" />
           <Tabs variant="segmented" tabs={SDK_TABS} activeId={sdk} onSelect={onSdk} />
         </div>
-        <div className={s.sdkBox}>
+        {/* Sign up.dc.html:189 — `padding:14px 16px;border-radius:14px;gap:5px;min-height:104px`. */}
+        <div className="border border-border rounded-tile bg-sunken px-4 py-3.5 flex flex-col gap-1.25 min-h-[104px]">
+          {/* Sign up.dc.html:191 — 12.5px/1.6, plain Geist like the rest of the page: the
+              global constraints rule out a fixed-width font here even though it is a code
+              snippet. */}
           {lines.map((line, i) => (
-            <span key={i} className={s.sdkLine}>
+            <span key={i} className="text-[12.5px] leading-body text-body whitespace-pre-wrap">
               {line}
             </span>
           ))}
         </div>
       </div>
 
-      <div className={s.finalRow}>
+      {/* Sign up.dc.html:196 — `gap:12px;flex-wrap:wrap`. */}
+      <div className="flex items-center gap-3 flex-wrap">
         {/* TODO(sous-projet C): point this at the Cloud dashboard once it exists. Left inert —
             apps/sightline-cloud is an empty shell today, and wiring a destination that doesn't
             exist would be worse than a control that visibly does nothing. */}
         <Button variant="primary">Open the dashboard</Button>
         <Button>Read the docs</Button>
-        <span className={s.finalSpacer} />
-        <span className={s.finalNote}>No peers yet — the overview fills on the first join.</span>
+        <span className="flex-1" />
+        <span className="text-12 text-faint [text-wrap:pretty]">
+          No peers yet — the overview fills on the first join.
+        </span>
       </div>
     </div>
   );
