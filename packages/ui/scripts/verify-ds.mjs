@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import { extendTailwindMerge } from 'tailwind-merge';
 import { join, extname } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -63,6 +64,38 @@ for (const f of files) {
 for (const f of files) {
   if (extname(f) === '.css' && f !== TOKENS_FILE) {
     fail('no-css-modules', rel(f));
+  }
+}
+
+// 5. cn() ne doit jamais avaler une couleur de texte a cause de l'echelle typographique
+// numerique (text-11 … text-44). tailwind-merge classe `text-13` dans `text-color` tant qu'on
+// ne lui apprend pas l'echelle — il supprimait alors text-on-accent / text-white des boutons
+// pleins (bg-accent / bg-danger), qui retombaient sur la couleur de texte heritee du body.
+const UTILS_FILE = join(SRC, 'lib', 'utils.ts');
+const declared = readFileSync(UTILS_FILE, 'utf8').match(/const FONT_SIZES\s*=\s*\[([^\]]*)\]/);
+const registered = declared ? [...declared[1].matchAll(/["'](\d+)["']/g)].map((m) => m[1]) : [];
+// L'echelle de reference, c'est styles.css : --text-11 … --text-44.
+const scale = [...readFileSync(TOKENS_FILE, 'utf8').matchAll(/--text-(\d+):/g)].map((m) => m[1]);
+const uniqueScale = [...new Set(scale)];
+
+if (!declared) {
+  fail('cn-font-scale', `${rel(UTILS_FILE)} — FONT_SIZES introuvable : cn() ne connait plus l'echelle typographique`);
+}
+for (const size of uniqueScale) {
+  if (!registered.includes(size)) {
+    fail('cn-font-scale', `text-${size} existe dans styles.css mais manque a FONT_SIZES dans ${rel(UTILS_FILE)}`);
+  }
+}
+
+// Et on verifie le comportement reel, pas seulement la declaration.
+const twMerge = extendTailwindMerge({ extend: { classGroups: { 'font-size': [{ text: registered }] } } });
+const COLORS = ['text-on-accent', 'text-white', 'text-strong', 'text-body', 'text-muted', 'text-faint', 'text-danger'];
+for (const size of uniqueScale) {
+  for (const color of COLORS) {
+    const merged = twMerge(`${color} text-${size}`).split(' ');
+    if (!merged.includes(color) || !merged.includes(`text-${size}`)) {
+      fail('cn-keeps-size-and-color', `"${color} text-${size}" fusionne en "${merged.join(' ')}"`);
+    }
   }
 }
 
