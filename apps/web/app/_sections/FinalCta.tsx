@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Button } from '@lumyx/ui';
-import s from './FinalCta.module.css';
 
 // Source: Home.dc.html:335-343. The second button is `variant="ghost"` in the source; @lumyx/ui
 // only exposes 'primary' | 'secondary' | 'quiet' | 'danger' | 'accentQuiet' (no 'ghost'). `quiet`
@@ -9,9 +8,12 @@ import s from './FinalCta.module.css';
 // packages/ui is out of scope for this task.
 export function FinalCta() {
   return (
-    <section style={{ borderTop: '1px solid var(--border-subtle)' }}>
-      <div className={s.layout}>
-        <h2 data-anim="rise" className={s.headline}>
+    <section className="border-t border-border-subtle">
+      <div className="max-w-[1280px] mx-auto px-5 py-14 flex flex-col gap-[22px] items-start sm:px-10 md:py-[88px]">
+        <h2
+          data-anim="rise"
+          className="m-0 text-[34px] font-semibold tracking-[-0.035em] leading-[1.05] text-strong max-w-[820px] [text-wrap:pretty] md:text-[52px]"
+        >
           Next time video gets bad, you&rsquo;ll know which peer, which metric, and for how long.
         </h2>
         <div className="flex flex-wrap items-center gap-3">

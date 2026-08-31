@@ -15,7 +15,7 @@ export function SiteFooter({ maxWidth = 1280 }: { maxWidth?: number }) {
             <span aria-hidden className="block w-[18px] h-[18px] rounded-[6px] bg-accent flex-none" />
             <span className="text-13 font-semibold tracking-tight text-strong">Sightline</span>
           </span>
-          <p className="text-12 leading-body text-muted max-w-[260px] [text-wrap:pretty]">
+          <p className="text-[12px] leading-body text-muted max-w-[260px] [text-wrap:pretty]">
             Open-source WebRTC SFU with observability in the media path. Self-host it, or use Sightline Cloud.
           </p>
         </div>

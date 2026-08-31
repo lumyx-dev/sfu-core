@@ -10,7 +10,6 @@ import {
 } from '@lumyx/ui';
 import type { DataColumn } from '@lumyx/ui';
 import { HERO_PEERS, TOPO_LEGEND, series, type HeroPeer } from '@/content/home';
-import s from './LiveCard.module.css';
 
 // Source: Home.dc.html:113-181 — the full `#observability` card (header, metric row, bitrate
 // chart + peers table, room topology + legend). This is the one card the source has; it belongs
@@ -53,19 +52,47 @@ const heroPeerCols: DataColumn<HeroPeer>[] = [
 
 export function LiveCard() {
   return (
-    <section id="observability" className="relative" style={{ background: 'var(--surface-page)' }}>
-      <span aria-hidden className={s.band} />
+    <section id="observability" className="relative bg-page">
+      {/* Dark band behind the card, continuing the hero's dark surface one section further down —
+          Home.dc.html:114. A literal token on purpose: it must read as dark regardless of the
+          (light) theme of the section it sits in, so it doesn't follow bg-page here. */}
+      <span aria-hidden className="absolute inset-x-0 top-0 h-[120px] bg-[var(--sl-n-900)] pointer-events-none" />
       <div className="relative mx-auto max-w-[1280px] px-5 pb-18 md:px-6 lg:px-10">
-        <div data-anim="rise" data-anim-now data-anim-delay="420" className={`${s.card} -mt-2`}>
-          <div className={s.header}>
+        <div
+          data-anim="rise"
+          data-anim-now
+          data-anim-delay="420"
+          className="relative border border-border rounded-card bg-card shadow-lg overflow-hidden -mt-2"
+        >
+          <div className="flex items-center gap-2.5 px-[18px] py-3 border-b border-border-subtle bg-sunken">
             <StatusDot status="live" />
-            <span className={s.roomName}>live-classroom</span>
-            <span className={`sl-num ${s.roomMeta}`}>eu-west-3 · 6 peers · 2.4 Mbps · up 2h 14m</span>
+            <span className="text-[12.5px] text-strong font-medium">live-classroom</span>
+            <span className="sl-num text-12 text-muted">eu-west-3 · 6 peers · 2.4 Mbps · up 2h 14m</span>
             <span className="flex-1" />
             <Pill status="connected">Live</Pill>
           </div>
 
-          <div className={s.metricGrid}>
+          {/* MetricGrid (packages/ui) hard-codes an inline `grid-template-columns:
+              repeat(N, minmax(0,1fr))` with no responsive behaviour, and packages/ui is out of
+              scope for this fix. At 5 columns, MetricCard's 40px of horizontal padding leaves
+              too little room for its 34px numeral once the card gets narrow. `[&>div]:` targets
+              MetricGrid's own rendered wrapper directly with Tailwind's arbitrary-child variant
+              (only a `!`-important utility can beat that inline style).
+
+              The widest value on this card is "6.20%": 4 tabular characters at --fs-34
+              (~19.7px/char, Geist ≈0.58em) ≈ 79px, plus the 3px value/unit gap, plus "%" at
+              --fs-14 (~8px) ≈ 90px total. Treat 90px as the floor for a cell's inner content
+              width — i.e. (card width / columns) - 40px of MetricCard padding. The card sits
+              inside `mx-auto max-w-[1280px] px-5 md:px-6 lg:px-10`, so card width = viewport
+              width minus 40px below 768px, minus 48px from 768-1023px, and
+              min(viewport - 80px, 1280px) from 1024px up.
+                - >= 690px viewport: 5 columns. At vw=690, card width = 690-40 = 650px;
+                  650/5 - 40 = 90px — exactly the floor, growing wider above that.
+                - 430-689px viewport: 3 columns. At vw=430, card width = 430-40 = 390px;
+                  390/3 - 40 = 90px — again the floor at this band's narrow edge.
+                - < 430px viewport: 2 columns. At the spec's 360px floor, card width = 360-40 =
+                  320px; 320/2 - 40 = 120px — comfortably above the floor. */}
+          <div className="[&>div]:!grid-cols-2 min-[430px]:[&>div]:!grid-cols-3 min-[690px]:[&>div]:!grid-cols-5">
             <MetricGrid columns={5}>
               <MetricCard
                 label="Round-trip time"
@@ -92,8 +119,8 @@ export function LiveCard() {
             </MetricGrid>
           </div>
 
-          <div className={s.body}>
-            <div className={s.chartCol}>
+          <div className="grid grid-cols-1 border-t border-border-subtle min-[860px]:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <div className="px-5 py-[18px] border-b border-border-subtle flex flex-col gap-3 min-w-0 min-[860px]:border-b-0 min-[860px]:border-r min-[860px]:border-border-subtle">
               <span className="sl-label">Bitrate per peer — last 30 minutes</span>
               <TimeSeriesChart
                 height={190}
@@ -105,7 +132,7 @@ export function LiveCard() {
                 ]}
               />
             </div>
-            <div className={s.tableCol}>
+            <div className="min-w-0 flex flex-col">
               <div className="px-5 pt-4.5 pb-2.5">
                 <span className="sl-label">Peers — worst first</span>
               </div>
@@ -113,8 +140,8 @@ export function LiveCard() {
             </div>
           </div>
 
-          <div className={s.topoRow}>
-            <div className={s.topoCell}>
+          <div className="grid grid-cols-1 border-t border-border-subtle min-[860px]:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="px-[18px] py-3.5 bg-sunken border-b border-border-subtle min-[860px]:border-b-0 min-[860px]:border-r min-[860px]:border-border-subtle">
               <svg viewBox="0 0 620 280" style={{ width: '100%', height: 230, display: 'block' }}>
                 <g fill="none">
                   <line x1={310} y1={140} x2={120} y2={58} stroke="var(--series-1)" strokeWidth={3} opacity={0.55} />
@@ -204,18 +231,18 @@ export function LiveCard() {
                 </g>
               </svg>
             </div>
-            <div className={s.legendCol}>
+            <div className="flex flex-col">
               {TOPO_LEGEND.map((t) => (
-                <div key={t.title} className={s.legendItem}>
-                  <span className={s.legendTitle}>{t.title}</span>
-                  <span className={s.legendBody}>{t.body}</span>
+                <div key={t.title} className="px-5 py-[13px] border-b border-border-subtle flex flex-col gap-1">
+                  <span className="text-[12.5px] font-medium text-strong">{t.title}</span>
+                  <span className="text-12 leading-[1.5] text-muted [text-wrap:pretty]">{t.body}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <p className={s.disclaimer}>
+        <p className="mt-3.5 text-[12.5px] text-faint [text-wrap:pretty]">
           Real fields, real thresholds, mock traffic. This is the dashboard that ships with the
           SFU — not a picture of one.
         </p>
