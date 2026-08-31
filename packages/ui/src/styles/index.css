@@ -1,0 +1,13 @@
+/* The one stylesheet a consuming app imports.
+   Mirrors the upstream project's styles.css entry point.
+
+   In an app that already pulls in Tailwind, import this *after* `tailwindcss`:
+
+     @import "tailwindcss";
+     @import "@sightline/ui/styles.css";
+     @source "../../../packages/ui/src";
+*/
+
+@import "./tokens.css";
+@import "./theme.css";
+@import "./base.css";

@@ -1,0 +1,245 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sightline design tokens.
+
+   Synced from the "Sightline Design System" Claude Design project (tokens/*.css).
+   The only transform applied on the way in is a `--sl-` prefix on every custom
+   property, so nothing here collides with Tailwind's own theme namespaces
+   (--radius-lg, --shadow-sm, --font-sans, --ease-out all exist upstream).
+
+   To re-sync: pull tokens/*.css and run
+     sed -E 's/--(n|indigo|coral|green|amber|red|blue|series|surface|border|text|accent|ok|warn|danger|info|idle|font|fs|lh|fw|ls|space|pad|gap|content|sidebar|rail|grid|radius|shadow|ring|blur|dur|ease)-?/--sl-&/g'
+   then diff against this file. Tailwind bindings live in theme.css.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Neutrals: near-neutral with a faint cool cast. The system is 90% these. ── */
+  --sl-n-0: #ffffff;
+  --sl-n-25: #fbfbfc;
+  --sl-n-50: #f5f6f8;
+  --sl-n-100: #ebedf1;
+  --sl-n-150: #e4e7ec;
+  --sl-n-200: #dee1e7;
+  --sl-n-300: #c6cad4;
+  --sl-n-400: #9298a6;
+  --sl-n-500: #6b7180;
+  --sl-n-600: #4d5361;
+  --sl-n-700: #383d49;
+  --sl-n-800: #23262e;
+  --sl-n-900: #15171c;
+  --sl-n-950: #0b0c10;
+
+  /* ── Accent: indigo. The primary action, the selected row, focus rings,
+        and the primary data series. ── */
+  --sl-indigo-50: #eeecfe;
+  --sl-indigo-100: #ded8fd;
+  --sl-indigo-400: #7c68f8;
+  --sl-indigo-500: #4f39f6;
+  --sl-indigo-600: #3d24d9;
+  --sl-indigo-700: #2f1aa8;
+  --sl-indigo-900: #1e1170;
+
+  /* ── Secondary: coral. The room / session axis, against indigo's peer axis. ── */
+  --sl-coral-50: #fff0ea;
+  --sl-coral-400: #ff8a5c;
+  --sl-coral-500: #f0521f;
+  --sl-coral-600: #c93c0f;
+
+  /* ── Semantics. The 500s are fills, dots, chart strokes and dark-mode ink; the
+        600s are the light-theme ink steps (4.5:1 on white and on their own tint). ── */
+  --sl-green-50: #e6f9ef;
+  --sl-green-400: #34c77b;
+  --sl-green-500: #0fa15c;
+  --sl-green-600: #0a7a45;
+  --sl-amber-50: #fff4de;
+  --sl-amber-400: #f9b23c;
+  --sl-amber-500: #dd8a00;
+  --sl-amber-600: #9a5f00;
+  --sl-red-50: #ffecea;
+  --sl-red-400: #ff6b5a;
+  --sl-red-500: #e5342a;
+  --sl-red-600: #b8201c;
+  --sl-blue-50: #e9f1ff;
+  --sl-blue-400: #5b9bff;
+  --sl-blue-500: #2f6df0;
+  --sl-blue-600: #1f4fc0;
+
+  /* ── Chart series: five values that stay legible next to each other. ── */
+  --sl-series-1: #4f39f6;
+  --sl-series-2: #f0521f;
+  --sl-series-3: #0fa15c;
+  --sl-series-4: #dd8a00;
+  --sl-series-5: #6b7180;
+}
+
+/* ─── Semantic aliases ────────────────────────────────────────────────────────
+   Light is the default. `.theme-dark` re-points the same aliases, so no
+   component carries a dark-mode branch — the Tailwind utilities in theme.css
+   are bound to these with `@theme inline`, which means they resolve at the use
+   site and flip with the scope.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --sl-surface-page: var(--sl-n-50);
+  --sl-surface-card: var(--sl-n-0);
+  --sl-surface-sunken: var(--sl-n-25);
+  --sl-surface-inset: var(--sl-n-50);
+  --sl-surface-hover: var(--sl-n-50);
+  --sl-surface-active: var(--sl-n-100);
+  --sl-surface-overlay: rgba(11, 12, 16, 0.55);
+
+  /* Hairlines, deliberately quiet: shadow and surface carry the separation. */
+  --sl-border: var(--sl-n-100);
+  --sl-border-strong: var(--sl-n-150);
+  --sl-border-subtle: #f1f2f6;
+
+  --sl-text-strong: var(--sl-n-900);
+  --sl-text-body: var(--sl-n-700);
+  --sl-text-muted: var(--sl-n-500);
+  --sl-text-faint: var(--sl-n-400);
+  --sl-text-on-accent: var(--sl-n-0);
+  --sl-text-on-overlay: var(--sl-n-0);
+
+  --sl-accent: var(--sl-indigo-500);
+  --sl-accent-hover: var(--sl-indigo-600);
+  --sl-accent-tint: var(--sl-indigo-50);
+  --sl-accent-border: var(--sl-indigo-100);
+  --sl-accent-text: var(--sl-indigo-600);
+
+  --sl-accent-2: var(--sl-coral-500);
+  --sl-accent-2-tint: var(--sl-coral-50);
+
+  /* Ink steps: these carry 11–13px text, so they are the 600s, not the fills. */
+  --sl-ok: var(--sl-green-600);
+  --sl-ok-tint: var(--sl-green-50);
+  --sl-ok-solid: var(--sl-green-500);
+  --sl-warn: var(--sl-amber-600);
+  --sl-warn-tint: var(--sl-amber-50);
+  --sl-warn-solid: var(--sl-amber-500);
+  --sl-danger: var(--sl-red-600);
+  --sl-danger-tint: var(--sl-red-50);
+  --sl-danger-solid: var(--sl-red-500);
+  --sl-info: var(--sl-blue-600);
+  --sl-info-tint: var(--sl-blue-50);
+  --sl-info-solid: var(--sl-blue-500);
+  --sl-idle: var(--sl-n-400);
+  --sl-idle-tint: var(--sl-n-100);
+}
+
+.theme-dark {
+  --sl-surface-page: var(--sl-n-950);
+  --sl-surface-card: var(--sl-n-900);
+  --sl-surface-sunken: #101216;
+  --sl-surface-inset: #101216;
+  --sl-surface-hover: var(--sl-n-800);
+  --sl-surface-active: var(--sl-n-700);
+  --sl-surface-overlay: rgba(6, 7, 10, 0.66);
+
+  --sl-border: #22262e;
+  --sl-border-strong: #2f343d;
+  --sl-border-subtle: #191c22;
+
+  --sl-text-strong: var(--sl-n-50);
+  --sl-text-body: var(--sl-n-200);
+  --sl-text-muted: var(--sl-n-400);
+  --sl-text-faint: var(--sl-n-500);
+  --sl-text-on-accent: var(--sl-n-0);
+
+  --sl-accent: var(--sl-indigo-400);
+  --sl-accent-hover: #9484fa;
+  --sl-accent-tint: rgba(124, 104, 248, 0.16);
+  --sl-accent-border: rgba(124, 104, 248, 0.34);
+  --sl-accent-text: #a596fb;
+
+  --sl-accent-2: var(--sl-coral-400);
+  --sl-accent-2-tint: rgba(255, 138, 92, 0.16);
+
+  --sl-ok: var(--sl-green-400);
+  --sl-ok-tint: rgba(52, 199, 123, 0.16);
+  --sl-ok-solid: var(--sl-green-400);
+  --sl-warn: var(--sl-amber-400);
+  --sl-warn-tint: rgba(249, 178, 60, 0.16);
+  --sl-warn-solid: var(--sl-amber-400);
+  --sl-danger: var(--sl-red-400);
+  --sl-danger-tint: rgba(255, 107, 90, 0.16);
+  --sl-danger-solid: var(--sl-red-400);
+  --sl-info: var(--sl-blue-400);
+  --sl-info-tint: rgba(91, 155, 255, 0.16);
+  --sl-info-solid: var(--sl-blue-400);
+  --sl-idle: var(--sl-n-500);
+  --sl-idle-tint: var(--sl-n-800);
+}
+
+/* ─── Typography ──────────────────────────────────────────────────────────── */
+:root {
+  /* Geist and only Geist — zero monospace. Numbers rely on tabular figures
+     (.sl-num) rather than a second family. Loaded by the app via next/font. */
+  --sl-font-sans: "Geist", "Geist Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --sl-fs-11: 11px;
+  --sl-fs-12: 12px;
+  --sl-fs-13: 13px;
+  --sl-fs-14: 14px;
+  --sl-fs-16: 16px;
+  --sl-fs-20: 20px;
+  --sl-fs-26: 26px;
+  --sl-fs-34: 34px;
+  --sl-fs-44: 44px;
+
+  --sl-lh-flat: 1;
+  --sl-lh-tight: 1.2;
+  --sl-lh-snug: 1.4;
+  --sl-lh-body: 1.6;
+
+  --sl-ls-display: -0.02em;
+  --sl-ls-tight: -0.01em;
+  --sl-ls-normal: 0;
+  --sl-ls-label: 0.06em;
+}
+
+/* ─── Layout ──────────────────────────────────────────────────────────────── */
+:root {
+  --sl-content-max: 1360px;
+  --sl-sidebar-w: 248px;
+  --sl-rail-w: 340px;
+}
+
+/* ─── Radius: soft. Nothing has a hard corner except the page itself. ─────── */
+:root {
+  --sl-radius-xs: 8px;
+  --sl-radius-sm: 12px;
+  --sl-radius-md: 14px;
+  --sl-radius-lg: 18px;
+  --sl-radius-xl: 24px;
+  --sl-radius-pill: 999px;
+}
+
+/* ─── Elevation: real, soft, neutral shadows from one high light source. ──── */
+:root {
+  --sl-shadow-xs: 0 1px 2px rgba(21, 23, 28, 0.05);
+  --sl-shadow-sm: 0 1px 3px rgba(21, 23, 28, 0.07), 0 1px 2px rgba(21, 23, 28, 0.04);
+  --sl-shadow-md: 0 6px 16px -4px rgba(21, 23, 28, 0.11), 0 2px 6px -2px rgba(21, 23, 28, 0.06);
+  --sl-shadow-lg: 0 16px 40px -12px rgba(21, 23, 28, 0.17), 0 4px 12px -6px rgba(21, 23, 28, 0.09);
+  --sl-blur-overlay: 6px;
+
+  /* Selection and focus. A ring replaces the resting shadow rather than
+     stacking on it, which is how the upstream components behave. */
+  --sl-ring-accent: 0 0 0 3px rgba(79, 57, 246, 0.2);
+  --sl-ring-danger: 0 0 0 3px rgba(184, 32, 28, 0.2);
+}
+
+.theme-dark {
+  --sl-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sl-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --sl-shadow-md: 0 8px 20px -6px rgba(0, 0, 0, 0.55);
+  --sl-shadow-lg: 0 20px 48px -16px rgba(0, 0, 0, 0.65);
+  --sl-ring-accent: 0 0 0 3px rgba(124, 104, 248, 0.28);
+  --sl-ring-danger: 0 0 0 3px rgba(255, 107, 90, 0.24);
+}
+
+/* ─── Motion: deliberately quiet. ─────────────────────────────────────────── */
+:root {
+  --sl-dur-1: 120ms; /* hover, tint changes */
+  --sl-dur-2: 180ms; /* the default */
+  --sl-dur-3: 260ms; /* size / position */
+  --sl-ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --sl-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}

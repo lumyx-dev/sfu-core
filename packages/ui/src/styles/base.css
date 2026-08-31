@@ -1,0 +1,89 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Base layer and the three house utilities, from tokens/base.css upstream.
+   The `.sl-*` class names are kept verbatim so markup copied off the design
+   canvas drops in without renaming.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  /* Tailwind v4 leaves `border` at currentColor. In this system a stroke is
+     almost always the quiet hairline, so that is the default. */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--sl-border);
+  }
+
+  body {
+    background: var(--sl-surface-page);
+    color: var(--sl-text-body);
+    font-family: var(--sl-font-sans);
+    font-size: var(--sl-fs-13);
+    line-height: var(--sl-lh-snug);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--sl-text-strong);
+    font-weight: 600;
+    letter-spacing: var(--sl-ls-tight);
+  }
+
+  a {
+    color: var(--sl-accent-text);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--sl-accent-hover);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--sl-accent-tint);
+    color: var(--sl-text-strong);
+  }
+}
+
+/* Every live number in the product is tabular, so digits don't jitter as they
+   tick. Apply to any element whose text changes with the data. */
+@utility sl-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* The 11px uppercase micro-label — the single typographic mannerism the system
+   allows. Metric labels, table headers, sidebar sections. Nothing else. */
+@utility sl-label {
+  font-size: var(--sl-fs-11);
+  font-weight: 500;
+  letter-spacing: var(--sl-ls-label);
+  text-transform: uppercase;
+  color: var(--sl-text-muted);
+}
+
+/* Thin neutral scrollbars for any pane that scrolls inside the chrome. */
+@utility sl-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sl-border-strong) transparent;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--sl-border-strong);
+    border-radius: var(--sl-radius-pill);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
