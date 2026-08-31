@@ -125,15 +125,27 @@
   --radius-sheet: var(--sl-radius-xl);
 
   /* ── shadcn compatibility bridge. Not a second design system: every value on
-        the right is one of the DS aliases already bound above (or, for surface-
-        hover, the raw --sl- token). This exists so `shadcn add <component>`
-        generates code that resolves correctly against this file's tokens on the
-        first try — a shadcn component only ever reads `bg-background`,
-        `text-primary`, `border-input`, etc., never `--sl-*` directly. Extend this
-        list before adding a new shadcn component, don't invent parallel colours. */
+        the right is one of the DS aliases already bound above. This exists so
+        `shadcn add <component>` generates code that resolves correctly against
+        this file's tokens on the first try — a shadcn component only ever reads
+        `bg-background`, `text-primary`, `border-input`, etc., never `--sl-*`
+        directly. Extend this list before adding a new shadcn component, don't
+        invent parallel colours.
+        `--color-muted` and `--color-accent` are deliberately NOT bridged here:
+        the DS already owns both names above with a different meaning
+        (`--color-muted` is `--sl-text-muted`, a text colour; `--color-accent` is
+        `--sl-accent`, the indigo brand colour) — shadcn's own convention wants
+        `--color-muted` as a subtle surface and `--color-accent` as a hover
+        surface, and letting the shadcn value win here silently broke every
+        `text-muted`/`bg-accent` use site on the live site (verified in the
+        browser: `text-muted` on the Home hero was rendering `--sl-surface-
+        sunken`, a near-black dark-mode surface colour, as text). If a future
+        `shadcn add` generates a component using `bg-muted` or `bg-accent`,
+        remap those two classes by hand to `bg-sunken`/`bg-hover` — the DS's
+        actual muted-surface and hover-surface equivalents — rather than
+        re-adding this override. */
   --color-background: var(--sl-surface-page);
   --color-foreground: var(--sl-text-body);
-  --color-card: var(--sl-surface-card);
   --color-card-foreground: var(--sl-text-strong);
   --color-popover: var(--sl-surface-card);
   --color-popover-foreground: var(--sl-text-strong);
@@ -141,9 +153,7 @@
   --color-primary-foreground: var(--sl-text-on-accent);
   --color-secondary: var(--sl-accent-2);
   --color-secondary-foreground: var(--sl-text-on-accent);
-  --color-muted: var(--sl-surface-sunken);
   --color-muted-foreground: var(--sl-text-muted);
-  --color-accent: var(--sl-surface-hover);
   --color-accent-foreground: var(--sl-text-strong);
   --color-destructive: var(--sl-danger);
   --color-destructive-foreground: var(--sl-text-on-accent);
