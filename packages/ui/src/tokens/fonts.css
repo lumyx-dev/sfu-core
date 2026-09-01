@@ -1,5 +1,0 @@
-/* One family, no monospace. Geist is provided by next/font in each app, which exposes it as
-   --font-geist; this file only wires that variable into the design system's own token. */
-:root{
-  --font-sans:var(--font-geist),'Geist','Geist Fallback',system-ui,-apple-system,'Segoe UI',sans-serif;
-}

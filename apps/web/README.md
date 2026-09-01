@@ -1,6 +1,10 @@
 # @lumyx/web
 
+<<<<<<< HEAD
 The Sightline marketing site — the public pages (home, pricing, the LiveKit comparison, docs,
+=======
+The Lumyx marketing site — the public pages (home, pricing, the LiveKit comparison, docs,
+>>>>>>> 15cfcbac43ea3d10794f309c8dc50fe75c5c4b4b
 changelog, sign up). A Next.js App Router app that consumes the shared `@lumyx/ui` component
 and token library for all of its UI.
 
