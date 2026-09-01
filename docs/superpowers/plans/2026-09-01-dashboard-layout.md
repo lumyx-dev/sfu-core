@@ -690,11 +690,20 @@ Retirer `max-w-[1360px]` du `className` de la `Card` si elle en porte un.
 
 - [ ] **Step 4 : vérifier**
 
+`apps/dashboard` **ne peut pas** sortir vert : `app/%5Fds/page.tsx` est cassé sur `main` avant ce
+chantier (il importe six modules `./sections/*` qui n'existent pas, et `Icon` / `ICONS` /
+`IconName` que `@lumyx/ui` n'a jamais exportés). Le gate est donc **différentiel** : aucune erreur
+en dehors de ce fichier.
+
 ```bash
-cd apps/dashboard && bun run verify:ds && bun run check-types && bun run build
+cd apps/dashboard && bun run verify:ds
+bun run check-types 2>&1 | grep "error TS" | grep -v "app/%5Fds/page.tsx"   # doit être VIDE
+bun run build 2>&1 | grep -iE "error|failed" | grep -v "%5Fds"             # doit être VIDE
 ```
 
-Attendu : les trois **PASS**.
+Attendu : `verify:ds` **PASS**, et les deux `grep` ne renvoient **rien**. Si une ligne apparaît,
+c'est une régression introduite par cette task — la corriger. Ne pas tenter de réparer `%5Fds`,
+c'est hors périmètre.
 
 - [ ] **Step 5 : passe visuelle**
 
@@ -718,7 +727,7 @@ rtk git commit -m "feat(dashboard): chrome sur la sidebar shadcn et header sur O
 
 ---
 
-## Task 5 : les 9 écrans restants du dashboard
+## Task 5 : les 8 écrans restants du dashboard
 
 **Files:**
 - Modify: `apps/dashboard/app/rooms/room/page.tsx`, `app/peers/page.tsx`, `app/alerts/page.tsx`, `app/metrics/page.tsx`, `app/replay/page.tsx`, `app/signaling/page.tsx`, `app/server/page.tsx`, `app/settings/page.tsx`, `app/%5Fds/page.tsx`
@@ -827,37 +836,43 @@ export default function RoomDetailPage() {
 }
 ```
 
-- [ ] **Step 3 : migrer `app/%5Fds/page.tsx`**
+- [ ] **Step 3 : ne pas toucher `app/%5Fds/page.tsx`**
 
-Cette page est la vitrine du design system. Elle a son propre `<h1>` stylé en inline (`fontSize: 'var(--fs-26)'`) — le remplacer par un `AppHeader` et envelopper le reste dans `PageBody` :
+Cette page est **exclue du chantier**. Elle est cassée sur `main` avant lui : le dossier
+`app/%5Fds/` ne contient que `page.tsx`, les six modules `./sections/*` qu'elle importe n'existent
+pas, et `Icon` / `ICONS` / `IconName` n'ont jamais été exportés par `@lumyx/ui`. Elle ne compile ni
+ne builde. Lui ajouter un `AppHeader` n'aurait aucun effet observable, et la réparer (recréer six
+modules de sections plus un composant `Icon`) est un chantier distinct que personne n'a demandé.
 
-```tsx
-      <AppHeader title="Design system" meta="Tokens, primitives et composants Lumyx" />
-      <PageBody>
-        {/* … sections existantes, sans l'ancien <h1> … */}
-      </PageBody>
-```
-
-Puis ajouter en fin de page une section présentant les nouvelles primitives de layout, dans le même style que les sections existantes : la liste des composants (`Sidebar`, `SidebarNav`, `AppHeader`, `PageBody`, `StatusStrip`) et, pour `AppHeader`, un exemple des trois formes — titre seul, titre + méta, breadcrumb + titre + actions. Ne pas y instancier de second `SidebarProvider` : réutiliser celui du chrome.
+Ne pas l'ouvrir, ne pas la modifier, ne pas la supprimer.
 
 - [ ] **Step 4 : vérifier**
 
+`apps/dashboard` **ne peut pas** sortir vert : `app/%5Fds/page.tsx` est cassé sur `main` avant ce
+chantier (il importe six modules `./sections/*` qui n'existent pas, et `Icon` / `ICONS` /
+`IconName` que `@lumyx/ui` n'a jamais exportés). Le gate est donc **différentiel** : aucune erreur
+en dehors de ce fichier.
+
 ```bash
-cd apps/dashboard && bun run verify:ds && bun run check-types && bun run build
+cd apps/dashboard && bun run verify:ds
+bun run check-types 2>&1 | grep "error TS" | grep -v "app/%5Fds/page.tsx"   # doit être VIDE
+bun run build 2>&1 | grep -iE "error|failed" | grep -v "%5Fds"             # doit être VIDE
 ```
 
-Attendu : les trois **PASS**.
+Attendu : `verify:ds` **PASS**, et les deux `grep` ne renvoient **rien**. Si une ligne apparaît,
+c'est une régression introduite par cette task — la corriger. Ne pas tenter de réparer `%5Fds`,
+c'est hors périmètre.
 
 - [ ] **Step 5 : passe visuelle**
 
-`bun run dev` puis parcourir les onze routes du dashboard. Vérifier sur chacune que le titre du header est présent et correct, qu'aucun titre n'apparaît en double (header **et** `CardHeader`), et que sur `/rooms/room?id=test-room` le breadcrumb `Rooms / test-room` s'affiche avec `Rooms` cliquable et le dernier segment non cliquable.
+`bun run dev` puis parcourir les dix routes migrées du dashboard (`/_ds` est exclue et reste cassée). Vérifier sur chacune que le titre du header est présent et correct, qu'aucun titre n'apparaît en double (header **et** `CardHeader`), et que sur `/rooms/room?id=test-room` le breadcrumb `Rooms / test-room` s'affiche avec `Rooms` cliquable et le dernier segment non cliquable.
 
 - [ ] **Step 6 : commit**
 
 ```bash
 cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx
 rtk git add apps/dashboard/app
-rtk git commit -m "feat(dashboard): AppHeader sur les neuf ecrans restants"
+rtk git commit -m "feat(dashboard): AppHeader sur les huit ecrans restants"
 ```
 
 ---
@@ -1242,12 +1257,22 @@ Puis retirer la ligne `export * from "./app-shell";` de `packages/ui/src/compone
 
 - [ ] **Step 3 : vérifier tout le monorepo**
 
+Gate **différentiel** : `apps/dashboard` reste rouge sur `app/%5Fds/page.tsx`, cassé sur `main`
+avant ce chantier et explicitement exclu (Task 5 step 3). Toute autre erreur est une régression.
+
 ```bash
 cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx
-bun run verify:ds && bun run check-types && bun run test && bun run build
+bun run verify:ds
+bun run test
+bun run check-types 2>&1 | grep "error TS" | grep -v "app/%5Fds/page.tsx"   # doit être VIDE
+bun run build     2>&1 | grep -iE "error|failed" | grep -v "%5Fds"          # doit être VIDE
 ```
 
-Attendu : les quatre **PASS** sur les trois packages et les trois apps. `apps/web` ne consomme pas `AppShell` mais dépend de `@lumyx/ui` : son build est la vérification que le barrel reste cohérent.
+`apps/cloud` est un dépôt distinct mais reste un workspace bun du monorepo : `turbo` le couvre.
+
+Attendu : `verify:ds` et `test` **PASS**, les deux `grep` **vides**. `apps/web` ne consomme pas
+`AppShell` mais dépend de `@lumyx/ui` : son build est la vérification que le barrel reste
+cohérent.
 
 - [ ] **Step 4 : passe responsive finale sur les deux apps**
 
@@ -1290,9 +1315,9 @@ rtk git commit -m "refactor(ui): supprimer AppShell, remplace par les primitives
 | §5 chrome dashboard | 4 |
 | §5 chrome cloud, `ProjectSwitcher`, `AccountMenu` | 6 |
 | §5 `onboarding` hors chrome | 6 (vérification explicite) |
-| §6 migration des 21 écrans | 4 (2), 5 (9), 6 (1), 7 (9) |
+| §6 migration des 20 écrans | 4 (2), 5 (8), 6 (1), 7 (9) |
 | §6 breadcrumb sur `/rooms/room` | 5 |
-| §6 `/_ds` présente les nouvelles primitives | 5 |
+| §6 `/_ds` présente les nouvelles primitives | **abandonné** — page cassée sur `main` avant le chantier (Task 5 step 3) |
 | §7 vérification | chaque task, et 8 pour l'ensemble |
 
 **Au-delà de la spec, assumé :** la règle `no-alias-imports` dans `verify-ds.mjs` (Task 1 step 1) et le mappage `--color-sidebar*` dans `@theme inline` (Task 1 step 9). Le premier est le filet qui empêche un futur `shadcn add` de recasser le build des apps ; le second est indispensable au rendu de la sidebar et ne figurait pas dans la spec parce que le trou dans `@theme inline` n'avait pas encore été constaté. `next` en `peerDependencies` (Task 2 step 1) corrige une dépendance non déclarée que ce chantier aggrave.
