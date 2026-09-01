@@ -54,15 +54,15 @@ const SECTIONS: NavSection[] = [
 
 export function DashboardChrome({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider open onOpenChange={() => {}}>
       <Sidebar collapsible="offcanvas" className="border-hairline">
         <SidebarHeader className="px-3 py-4">
           <Link href="/" className="px-2 no-underline hover:no-underline">
             <Wordmark />
           </Link>
         </SidebarHeader>
-        <SidebarContent className="sl-scroll gap-5 px-3">
-          <SidebarNav sections={SECTIONS} />
+        <SidebarContent className="sl-scroll px-3">
+          <SidebarNav sections={SECTIONS} ariaLabel="Main navigation" />
         </SidebarContent>
         <SidebarFooter className="px-5 py-4">
           <span className="sl-num text-11 text-faint">v0.4.1 · MIT licensed · sfu-eu-3</span>

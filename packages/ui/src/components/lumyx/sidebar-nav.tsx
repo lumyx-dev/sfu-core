@@ -18,12 +18,12 @@ export type NavSection = {
 };
 
 /** La nav de la sidebar : groupes, item actif, identite visuelle Lumyx. */
-export function SidebarNav({ sections }: { sections: NavSection[] }) {
+export function SidebarNav({ sections, ariaLabel }: { sections: NavSection[]; ariaLabel: string }) {
   const pathname = usePathname();
   return (
-    <>
+    <nav aria-label={ariaLabel} className="flex flex-col gap-5">
       {sections.map((section) => (
-        <SidebarGroup key={section.label} className="gap-1 py-0">
+        <SidebarGroup key={section.label} className="gap-1 px-0 py-0">
           <SidebarGroupLabel className="sl-label h-auto px-2 pb-1 text-11">
             {section.label}
           </SidebarGroupLabel>
@@ -59,6 +59,6 @@ export function SidebarNav({ sections }: { sections: NavSection[] }) {
           </SidebarGroupContent>
         </SidebarGroup>
       ))}
-    </>
+    </nav>
   );
 }
