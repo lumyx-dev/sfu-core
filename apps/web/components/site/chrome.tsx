@@ -13,6 +13,7 @@ const NAV = [
   { href: "/compare", label: "vs LiveKit" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
+  { href: "/blog", label: "Blog" },
 ];
 
 export function SiteHeader() {

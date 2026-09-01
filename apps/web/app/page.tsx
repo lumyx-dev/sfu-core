@@ -5,11 +5,13 @@ import { CodePanel } from "@/components/site/code-panel";
 import { PlatformBento } from "@/components/site/platform-bento";
 import { CONFIG_STEPS, FEATURE_GROUPS, NO_LIST, TIERS } from "@/lib/platform-data";
 import { REPO } from "@/lib/site-data";
+import { organizationJsonLd, softwareApplicationJsonLd } from "@/lib/schema";
 
 const NAV = [
   { href: "/", label: "Product" },
   { href: "/#platform", label: "Observability" },
   { href: "/docs", label: "Docs" },
+  { href: "/blog", label: "Blog" },
   { href: "/pricing", label: "Pricing" },
   { href: "/changelog", label: "Changelog" },
 ];
@@ -20,8 +22,11 @@ const NAV = [
  */
 export default function HomePage() {
   return (
-    <div className="min-h-dvh bg-page text-body">
-      <header className="flex h-15 items-center gap-6.5 border-b border-subtle px-8">
+    <DarkBand className="min-h-dvh">
+      <script type="application/ld+json">
+        {JSON.stringify([organizationJsonLd(), softwareApplicationJsonLd()]).replace(/</g, "\\u003c")}
+      </script>
+      <header className="flex h-[60px] items-center gap-[26px] border-b border-subtle px-8">
         <Link href="/" className="flex items-center gap-2.5 no-underline hover:no-underline">
           <LumyxMark size={18} className="text-accent" />
           <span className="text-[15px] font-semibold tracking-[-0.02em] text-strong">Lumyx</span>

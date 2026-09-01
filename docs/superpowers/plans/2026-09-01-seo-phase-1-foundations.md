@@ -90,6 +90,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
+> **Note on baseline:** this is the file as it exists on `main` right now — no `ThemeProvider`, no `suppressHydrationWarning`. If a `next-themes`/`ThemeProvider` change has landed on `main` by the time this task runs, wrap `{children}` in whatever provider is there instead of overwriting it — only the `Script` addition and the `PLAUSIBLE_DOMAIN` constant are this task's job.
+
 - [ ] **Step 3: Verify**
 
 ```bash
@@ -162,11 +164,24 @@ export function softwareApplicationJsonLd() {
 
 - [ ] **Step 2: Render it on the home page**
 
+In `apps/web/app/page.tsx`, add the import and the script as the first child of the returned tree. React does not HTML-escape text children of `<script>` (verified against this repo's React/ReactDOM version by rendering to static markup), so the `.replace(/</g, "\\u003c")` below is what makes this safe against a `</script>` breakout — see the note after the snippet for why it needs a double backslash:
 In `apps/web/app/page.tsx`, add the import and the script as the first child of the returned tree (React does not HTML-escape text children of `<script>`, so this is safe against injection as long as `<` is escaped to `<` — verified against this repo's React/ReactDOM version by rendering to static markup):
 
 ```tsx
 import { organizationJsonLd, softwareApplicationJsonLd } from "@/lib/schema";
 ```
+
+`HomePage`'s current top-level element is `<DarkBand className="min-h-dvh">` (not a plain `<div>` — this page renders as a forced-dark scope on `main` right now, before any theme-toggle work lands). Add the script as the first child right after that opening tag:
+
+```tsx
+    <DarkBand className="min-h-dvh">
+      <script type="application/ld+json">
+        {JSON.stringify([organizationJsonLd(), softwareApplicationJsonLd()]).replace(/</g, "\\u003c")}
+      </script>
+      <header ...
+```
+
+> **Note on baseline:** if `HomePage`'s top-level wrapper is no longer `<DarkBand>` by the time this task runs, place the `<script>` as the first child of whatever that wrapper actually is — the only requirement is it is the first thing inside the returned tree. The double backslash in `"\\u003c"` is intentional: it makes the *string value* contain the literal six characters `\u003c` rather than the character `<` — a single backslash would be parsed away by JS as a real unicode escape and produce a no-op.
 
 and inside `HomePage`, right after the opening `<div className="min-h-dvh bg-page text-body">`:
 
