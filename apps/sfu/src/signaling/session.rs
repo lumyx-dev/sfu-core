@@ -6,11 +6,13 @@ use super::negotiation::{NegotiationEvent, Negotiator};
 use crate::app::AppState;
 use crate::media::{ForwardingEngine, RtpSink};
 use crate::metrics::Metrics;
+use crate::telemetry::{Entry, EventKind, EventRecord, Telemetry, TrackKind};
 use crate::transport::{PeerConnection, PeerSink, TransportEvent, event_loop};
 use axum::extract::ws::{Message, WebSocket};
 use futures::sink::SinkExt;
 use futures::stream::{SplitSink, StreamExt};
 use std::sync::Arc;
+use str0m::media::MediaKind;
 use tokio::sync::mpsc::{self, Receiver};
 use tokio::sync::{Mutex, oneshot};
 
@@ -75,6 +77,7 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
         state.engine.clone(),
         state.negotiator.clone(),
         state.metrics.clone(),
+        state.telemetry.clone(),
         Arc::clone(&peer_id),
         transport_rx,
     );
@@ -114,7 +117,20 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     // socket — is finally destroyed.
     let _ = shutdown_tx.send(());
 
-    state.rooms.leave_room(&peer_id);
+    let departure = state.rooms.leave_room(&peer_id);
+
+    if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer_id) {
+        let _ = state.telemetry.clear_occupancy(peer_uuid);
+        if let Some(d) = &departure {
+            state.telemetry.record_departure(
+                d.peer_session,
+                d.room_session,
+                d.room_dropped,
+                chrono::Utc::now(),
+            );
+        }
+    }
+
     state.engine.remove_peer(&peer_id);
     state.negotiator.notify(NegotiationEvent::PeerLeft {
         peer: Arc::clone(&peer_id),
@@ -130,6 +146,7 @@ fn spawn_transport_pump(
     engine: Arc<ForwardingEngine>,
     negotiator: Arc<Negotiator>,
     metrics: Arc<Metrics>,
+    telemetry: Arc<Telemetry>,
     peer_id: Arc<str>,
     mut events: Receiver<TransportEvent>,
 ) {
@@ -148,6 +165,32 @@ fn spawn_transport_pump(
                     }
                 }
                 TransportEvent::TrackAdded { peer, mid, kind } => {
+                    // La télémétrie clé ses tracks par occupation, pas par
+                    // connexion (Task 6 review, finding 3) : sans occupation
+                    // mirée pour ce connecteur — pas encore dans une room, ou
+                    // qui vient de la quitter — il n'y a rien à publier.
+                    if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer)
+                        && let Some(occupancy) = telemetry.occupancy_of(peer_uuid)
+                    {
+                        let mid_str = mid.to_string();
+                        let track_id = telemetry.track_id(occupancy, &mid_str);
+                        let now = chrono::Utc::now();
+                        telemetry.record(Entry::TrackPublished {
+                            id: track_id,
+                            peer_id: occupancy,
+                            mid: mid_str,
+                            kind: match kind {
+                                MediaKind::Audio => TrackKind::Audio,
+                                MediaKind::Video => TrackKind::Video,
+                            },
+                            at: now,
+                        });
+                        telemetry.record(Entry::Event(
+                            EventRecord::new(EventKind::TrackPublished, now)
+                                .peer(occupancy)
+                                .track(track_id),
+                        ));
+                    }
                     negotiator.notify(NegotiationEvent::TrackPublished { peer, mid, kind });
                 }
                 TransportEvent::KeyframeRequested { peer, mid } => {
