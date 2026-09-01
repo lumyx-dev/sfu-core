@@ -3,6 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  AppHeader, PageBody,
   Card, CardHeader, CardTitle, CardContent, CardDescription, Badge, Button, Progress, Tabs,
   TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
   MetricCard, MetricGrid, TimeSeriesChart, EventList, StatusDot, QualityIndicator, LatencyChip,
@@ -17,150 +18,161 @@ function RoomDetail() {
   const peer = PEERS[sel];
 
   return (
-    <div className="flex max-w-[1360px] flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-3.5">
-        <StatusDot status="live" />
-        <h2 className="text-26 font-semibold tracking-[-0.02em] text-strong">{roomId}</h2>
-        <Badge tone="room">eu-west-3</Badge>
-        <span className="sl-num text-12 text-muted">Up 2h 14m · 6 peers · 2.4 Mbps</span>
-        <span className="flex-1" />
-        <Button size="sm">Session replay</Button>
-        <Button size="sm" variant="danger">Close room</Button>
-      </div>
+    <>
+      <AppHeader
+        breadcrumb={[{ href: "/rooms", label: "Rooms" }, { label: roomId }]}
+        title={
+          <span className="flex items-center gap-2.5">
+            <StatusDot status="live" />
+            {roomId}
+            <Badge tone="room">eu-west-3</Badge>
+          </span>
+        }
+        meta={<span className="sl-num">Up 2h 14m · 6 peers · 2.4 Mbps</span>}
+        actions={
+          <>
+            <Button size="sm">Session replay</Button>
+            <Button size="sm" variant="danger">Close room</Button>
+          </>
+        }
+      />
+      <PageBody>
+        <div className="flex flex-col gap-5">
+          <Tabs defaultValue="peers">
+            <TabsList>
+              <TabsTrigger value="peers">Peers</TabsTrigger>
+              <TabsTrigger value="media">Media</TabsTrigger>
+              <TabsTrigger value="signaling">Signaling</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-      <Tabs defaultValue="peers">
-        <TabsList>
-          <TabsTrigger value="peers">Peers</TabsTrigger>
-          <TabsTrigger value="media">Media</TabsTrigger>
-          <TabsTrigger value="signaling">Signaling</TabsTrigger>
-        </TabsList>
-      </Tabs>
+          <div className="grid items-start gap-4 xl:grid-cols-[1fr_340px]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <Card>
+                <CardHeader><CardTitle>Bandwidth</CardTitle><CardDescription>last 30 min</CardDescription></CardHeader>
+                <CardContent>
+                  <TimeSeriesChart
+                    height={150} yUnit=" kbps" xLabels={TIME_LABELS}
+                    series={[{ name: "Room bitrate", color: "var(--series-1)", data: series(60, 1, 2400, 340) }]}
+                  />
+                </CardContent>
+              </Card>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[1fr_340px]">
-        <div className="flex min-w-0 flex-col gap-4">
-          <Card>
-            <CardHeader><CardTitle>Bandwidth</CardTitle><CardDescription>last 30 min</CardDescription></CardHeader>
-            <CardContent>
-              <TimeSeriesChart
-                height={150} yUnit=" kbps" xLabels={TIME_LABELS}
-                series={[{ name: "Room bitrate", color: "var(--series-1)", data: series(60, 1, 2400, 340) }]}
-              />
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Topology</CardTitle>
+                  <CardDescription>{topo === "graph" ? "who forwards to whom" : "sender × receiver"}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <Tabs value={topo} onValueChange={(v) => setTopo(v as typeof topo)}>
+                      <TabsList>
+                        <TabsTrigger value="graph">Node-link</TabsTrigger>
+                        <TabsTrigger value="matrix">Matrix</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                    <span className="flex-1" />
+                    <span className="sl-label text-faint">Stroke width = bitrate</span>
+                  </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Topology</CardTitle>
-              <CardDescription>{topo === "graph" ? "who forwards to whom" : "sender × receiver"}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3.5">
-              <div className="flex items-center gap-2.5">
-                <Tabs value={topo} onValueChange={(v) => setTopo(v as typeof topo)}>
-                  <TabsList>
-                    <TabsTrigger value="graph">Node-link</TabsTrigger>
-                    <TabsTrigger value="matrix">Matrix</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <span className="flex-1" />
-                <span className="sl-label text-faint">Stroke width = bitrate</span>
-              </div>
+                  {topo === "graph" ? (
+                    <>
+                      <div className="rounded-md border border-subtle bg-sunken p-2"><NodeLink selected={peer.peer_id} /></div>
+                      <p className="text-12 text-muted text-pretty">
+                        Dashed edge = relay path, ICE degraded. Ring = selected peer. Hover an edge for its bitrate, loss and NACK ratio.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Matrix />
+                      <p className="text-12 text-muted text-pretty">
+                        Rows are senders, columns receivers. A pale row isolates the faulty uplink at a glance, at constant
+                        density whatever the peer count.
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
 
-              {topo === "graph" ? (
-                <>
-                  <div className="rounded-md border border-subtle bg-sunken p-2"><NodeLink selected={peer.peer_id} /></div>
-                  <p className="text-12 text-muted text-pretty">
-                    Dashed edge = relay path, ICE degraded. Ring = selected peer. Hover an edge for its bitrate, loss and NACK ratio.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Matrix />
-                  <p className="text-12 text-muted text-pretty">
-                    Rows are senders, columns receivers. A pale row isolates the faulty uplink at a glance, at constant
-                    density whatever the peer count.
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+              <Card className="overflow-hidden">
+                <CardHeader><CardTitle>Peers</CardTitle><CardDescription>Click a row to inspect</CardDescription></CardHeader>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Peer</TableHead><TableHead>Quality</TableHead>
+                      <TableHead className="text-right">Rtt</TableHead><TableHead className="text-right">Jitter</TableHead>
+                      <TableHead className="text-right">Loss</TableHead><TableHead className="text-right">Nack</TableHead>
+                      <TableHead>Codec</TableHead><TableHead>Tracks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {PEERS.map((p, i) => (
+                      <TableRow key={p.peer_id} data-selected={i === sel} className="cursor-pointer" onClick={() => setSel(i)}>
+                        <TableCell>
+                          <span className="sl-num inline-flex items-center gap-2 font-medium text-strong">
+                            <StatusDot status={p.status} />{p.peer_id}
+                          </span>
+                        </TableCell>
+                        <TableCell><QualityIndicator quality={qualityOf(p.score)} /></TableCell>
+                        <TableCell className="text-right"><LatencyChip ms={p.rtt} plain /></TableCell>
+                        <TableCell className="sl-num text-right text-muted">{p.jitter}ms</TableCell>
+                        <TableCell className={`sl-num text-right ${p.loss >= 2 ? "text-danger" : "text-muted"}`}>{p.loss.toFixed(2)}%</TableCell>
+                        <TableCell className={`sl-num text-right ${p.nack >= 5 ? "text-danger" : "text-muted"}`}>{p.nack.toFixed(2)}%</TableCell>
+                        <TableCell><Badge tone="accent">{p.codec}</Badge></TableCell>
+                        <TableCell className="text-muted">{p.tracks.join(", ")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
 
-          <Card className="overflow-hidden">
-            <CardHeader><CardTitle>Peers</CardTitle><CardDescription>Click a row to inspect</CardDescription></CardHeader>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Peer</TableHead><TableHead>Quality</TableHead>
-                  <TableHead className="text-right">Rtt</TableHead><TableHead className="text-right">Jitter</TableHead>
-                  <TableHead className="text-right">Loss</TableHead><TableHead className="text-right">Nack</TableHead>
-                  <TableHead>Codec</TableHead><TableHead>Tracks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {PEERS.map((p, i) => (
-                  <TableRow key={p.peer_id} data-selected={i === sel} className="cursor-pointer" onClick={() => setSel(i)}>
-                    <TableCell>
-                      <span className="sl-num inline-flex items-center gap-2 font-medium text-strong">
-                        <StatusDot status={p.status} />{p.peer_id}
-                      </span>
-                    </TableCell>
-                    <TableCell><QualityIndicator quality={qualityOf(p.score)} /></TableCell>
-                    <TableCell className="text-right"><LatencyChip ms={p.rtt} plain /></TableCell>
-                    <TableCell className="sl-num text-right text-muted">{p.jitter}ms</TableCell>
-                    <TableCell className={`sl-num text-right ${p.loss >= 2 ? "text-danger" : "text-muted"}`}>{p.loss.toFixed(2)}%</TableCell>
-                    <TableCell className={`sl-num text-right ${p.nack >= 5 ? "text-danger" : "text-muted"}`}>{p.nack.toFixed(2)}%</TableCell>
-                    <TableCell><Badge tone="accent">{p.codec}</Badge></TableCell>
-                    <TableCell className="text-muted">{p.tracks.join(", ")}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+            <div className="flex min-w-0 flex-col gap-4">
+              <Card className="overflow-hidden">
+                <CardHeader><CardTitle>Room</CardTitle></CardHeader>
+                <MetricGrid columns={2} className="rounded-none border-0 shadow-none">
+                  <MetricCard label="Peers" value={6} />
+                  <MetricCard label="Bitrate" value="2.4" unit="Mbps" />
+                  <MetricCard label="Rtt p50" value={94} unit="ms" state="warn" threshold="threshold 200ms" />
+                  <MetricCard label="Loss" value="1.41" unit="%" state="warn" threshold="threshold 2%" />
+                </MetricGrid>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Selected peer</CardTitle>
+                  <CardDescription className="sl-num">{peer.peer_id}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3.5">
+                  <PeerCard
+                    className="border-0 p-0 shadow-none hover:shadow-none"
+                    peer={{
+                      id: peer.peer_id, name: `${peer.region} · ${peer.codec}`,
+                      status: peer.status, rttMs: peer.rtt, lossPct: peer.loss, jitterMs: peer.jitter,
+                      quality: qualityOf(peer.score), tracks: peer.tracks,
+                    }}
+                  />
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-baseline justify-between">
+                      <span className="sl-label">Quality score</span>
+                      <span className="sl-num text-12 text-strong">{peer.score}</span>
+                    </div>
+                    <Progress value={peer.score} indicatorClassName={peer.score < 70 ? "bg-warn-solid" : undefined} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="overflow-hidden">
+                <CardHeader><CardTitle>Room timeline</CardTitle><CardDescription>live</CardDescription></CardHeader>
+                <EventList events={ROOM_EVENTS} className="max-h-[240px]" />
+              </Card>
+            </div>
+          </div>
+
+          <Link href="/rooms" className="text-13 font-medium">← All rooms</Link>
         </div>
-
-        <div className="flex min-w-0 flex-col gap-4">
-          <Card className="overflow-hidden">
-            <CardHeader><CardTitle>Room</CardTitle></CardHeader>
-            <MetricGrid columns={2} className="rounded-none border-0 shadow-none">
-              <MetricCard label="Peers" value={6} />
-              <MetricCard label="Bitrate" value="2.4" unit="Mbps" />
-              <MetricCard label="Rtt p50" value={94} unit="ms" state="warn" threshold="threshold 200ms" />
-              <MetricCard label="Loss" value="1.41" unit="%" state="warn" threshold="threshold 2%" />
-            </MetricGrid>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Selected peer</CardTitle>
-              <CardDescription className="sl-num">{peer.peer_id}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3.5">
-              <PeerCard
-                className="border-0 p-0 shadow-none hover:shadow-none"
-                peer={{
-                  id: peer.peer_id, name: `${peer.region} · ${peer.codec}`,
-                  status: peer.status, rttMs: peer.rtt, lossPct: peer.loss, jitterMs: peer.jitter,
-                  quality: qualityOf(peer.score), tracks: peer.tracks,
-                }}
-              />
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="sl-label">Quality score</span>
-                  <span className="sl-num text-12 text-strong">{peer.score}</span>
-                </div>
-                <Progress value={peer.score} indicatorClassName={peer.score < 70 ? "bg-warn-solid" : undefined} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden">
-            <CardHeader><CardTitle>Room timeline</CardTitle><CardDescription>live</CardDescription></CardHeader>
-            <EventList events={ROOM_EVENTS} className="max-h-[240px]" />
-          </Card>
-        </div>
-      </div>
-
-      <Link href="/rooms" className="text-13 font-medium">← All rooms</Link>
-    </div>
+      </PageBody>
+    </>
   );
 }
 
@@ -266,7 +278,14 @@ function Matrix() {
 
 export default function RoomDetailPage() {
   return (
-    <React.Suspense fallback={null}>
+    <React.Suspense
+      fallback={
+        <>
+          <AppHeader breadcrumb={[{ href: "/rooms", label: "Rooms" }]} title="Room" />
+          <PageBody>{null}</PageBody>
+        </>
+      }
+    >
       <RoomDetail />
     </React.Suspense>
   );

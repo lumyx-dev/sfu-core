@@ -20,7 +20,6 @@ export default function RoomsPage() {
       <PageBody>
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-26 font-semibold tracking-[-0.02em] text-strong">Rooms</h2>
             <span className="flex-1" />
             <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
               <TabsList>
