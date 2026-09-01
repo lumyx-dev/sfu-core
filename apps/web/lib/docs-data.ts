@@ -43,34 +43,37 @@ export const METRICS = [
   },
 ];
 
-export const DOC_NAV = [
+export type DocNavItem = { id: string; label: string; href?: string };
+export type DocNavSection = { title: string; items: DocNavItem[] };
+
+export const DOC_NAV: DocNavSection[] = [
   { title: "Getting started", items: [
-    { id: "x-intro", label: "Introduction" },
-    { id: "x-quickstart", label: "Quickstart" },
-    { id: "x-selfhost", label: "Self-hosting" },
-    { id: "x-cloud", label: "Lumyx Cloud" },
+    { id: "introduction", label: "Introduction", href: "/docs" },
+    { id: "quickstart", label: "Quickstart", href: "/docs/quickstart" },
+    { id: "self-hosting", label: "Self-hosting", href: "/docs/self-hosting" },
+    { id: "cloud", label: "Lumyx Cloud", href: "/docs/cloud" },
   ]},
   { title: "Core concepts", items: [
-    { id: "x-rooms", label: "Rooms and sessions" },
-    { id: "x-peers", label: "Peers and tracks" },
-    { id: "x-signaling", label: "Signaling protocol" },
-    { id: "x-forwarding", label: "Selective forwarding" },
+    { id: "rooms", label: "Rooms and sessions" },
+    { id: "peers", label: "Peers and tracks" },
+    { id: "signaling", label: "Signaling protocol" },
+    { id: "forwarding", label: "Selective forwarding" },
   ]},
   { title: "Observability", items: [
-    { id: "thresholds", label: "Metrics reference", active: true },
-    { id: "x-alerting", label: "Alerting and webhooks" },
-    { id: "x-topology", label: "Room topology" },
-    { id: "x-replay", label: "Session replay" },
-    { id: "x-prometheus", label: "Prometheus endpoint" },
+    { id: "metrics-reference", label: "Metrics reference", href: "/docs/metrics-reference" },
+    { id: "alerting", label: "Alerting and webhooks" },
+    { id: "topology", label: "Room topology" },
+    { id: "replay", label: "Session replay" },
+    { id: "prometheus", label: "Prometheus endpoint" },
   ]},
   { title: "Migrating", items: [
-    { id: "x-livekit", label: "From LiveKit" },
-    { id: "x-tokens", label: "Token compatibility" },
+    { id: "livekit", label: "From LiveKit" },
+    { id: "tokens", label: "Token compatibility" },
   ]},
   { title: "Reference", items: [
-    { id: "x-api", label: "REST API" },
-    { id: "x-config", label: "Configuration" },
-    { id: "x-errors", label: "Error codes" },
+    { id: "api", label: "REST API" },
+    { id: "config", label: "Configuration" },
+    { id: "errors", label: "Error codes" },
   ]},
 ];
 

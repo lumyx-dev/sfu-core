@@ -1,113 +1,94 @@
-import { SiteFrame } from "@/components/site/frame";
-import { Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Card, CardHeader, CardTitle, CardContent } from '@lumyx/ui';
-import { METRICS, DOC_NAV } from "@/lib/docs-data";
+import Link from "next/link";
+import { Card, CardContent } from '@lumyx/ui';
+import { DocsLayout, DocSection } from "@/components/site/docs-layout";
+import { VERSION, REPO } from "@/lib/site-data";
 
-export default function DocsPage() {
+const NEXT_STEPS = [
+  { href: "/docs/quickstart", label: "Quickstart", body: "Run the SFU locally and connect a client in a couple of minutes." },
+  { href: "/docs/self-hosting", label: "Self-hosting", body: "Deploy the binary in production — Docker, from source, or behind your own proxy." },
+  { href: "/docs/cloud", label: "Lumyx Cloud", body: "Same SFU, hosted. Regions, retention and alerting wired in." },
+  { href: "/docs/metrics-reference", label: "Metrics reference", body: "The six metrics the collector reads off RTCP, and what each threshold breach means." },
+];
+
+export default function DocsIntroductionPage() {
   return (
-    <SiteFrame>
-      <div className="mx-auto grid max-w-[1360px] grid-cols-1 items-start gap-10 px-10 py-10 lg:grid-cols-[220px_1fr_200px]">
-        <nav className="flex flex-col gap-5 lg:sticky lg:top-8">
-          {DOC_NAV.map((sec) => (
-            <div key={sec.title} className="flex flex-col gap-1">
-              <span className="sl-label pb-1">{sec.title}</span>
-              {sec.items.map((it) => (
-                <a
-                  key={it.id}
-                  href={`#${it.id}`}
-                  className={`rounded-sm px-2 py-1.5 text-13 no-underline hover:bg-hover hover:no-underline ${
-                    "active" in it && it.active ? "bg-active font-medium text-strong" : "text-muted"
-                  }`}
-                >
-                  {it.label}
-                </a>
-              ))}
-            </div>
+    <DocsLayout
+      crumb="Docs · Getting started · Introduction"
+      title="Introduction"
+      description="Lumyx is a WebRTC SFU with observability built into the media path — one binary carries signaling, forwarding and the dashboard, and the collector reads the six metrics below off RTCP as packets pass through."
+      activeId="introduction"
+      toc={[
+        { id: "what-it-is", label: "What Lumyx is" },
+        { id: "architecture", label: "How it's put together" },
+        { id: "open-source", label: "Open source vs. Cloud" },
+        { id: "next", label: "Where to go next" },
+      ]}
+    >
+      <DocSection id="what-it-is" title="What Lumyx is">
+        <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">
+          Lumyx is a selective forwarding unit (SFU) for real-time video and audio: it terminates ICE, DTLS and SRTP
+          from every peer in a room and forwards each publisher&apos;s tracks to the subscribers who need them,
+          without transcoding. Client SDKs and signaling messages are compatible with LiveKit, so most apps switch
+          by changing a URL.
+        </p>
+        <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">
+          What sets it apart is the second job it does on the same packets: a metrics collector sits in the media
+          path itself, so packet loss, RTT, jitter, NACK ratio, freeze ratio and bitrate are measured directly
+          rather than sampled from a separate exporter. Every peer gets default thresholds and alerting from the
+          moment it connects.
+        </p>
+      </DocSection>
+
+      <DocSection id="architecture" title="How it's put together">
+        <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">
+          Signaling, forwarding, the metrics collector and the dashboard all run inside one Rust binary — no Redis,
+          no separate signaling service, no sidecar to scrape. It starts with no config file and no external store;
+          you add a Postgres or object storage backend only when you need retention past the in-memory window.
+        </p>
+        <Card>
+          <CardContent className="flex flex-col gap-1">
+            {[
+              "peer ──ICE/DTLS/SRTP──▶ lumyx (signaling · forwarding · collector · dashboard)",
+              "                                │",
+              "                                ├─▶ RTCP read in the media path → 6 metrics",
+              "                                ├─▶ thresholds + 30s debounce → alerts",
+              "                                └─▶ /metrics (Prometheus) · dashboard :3000",
+            ].map((l, i) => (
+              <span key={i} className="sl-num whitespace-pre text-[12.5px] text-body">{l}</span>
+            ))}
+          </CardContent>
+        </Card>
+      </DocSection>
+
+      <DocSection id="open-source" title="Open source vs. Cloud">
+        <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">
+          Nothing is held back from the MIT repo: the SFU, all six metrics, default thresholds and the dashboard are
+          all there. Lumyx Cloud ({VERSION}) sells operation on top of the same binary — regions, quotas, retention
+          and per-environment keys — not extra features. Moving from Cloud back to self-hosted is a URL change; the
+          signaling protocol and token grants don&apos;t differ.
+        </p>
+        <Link
+          href={REPO}
+          className="inline-flex w-fit items-center gap-1.5 text-13 font-medium text-accent no-underline hover:no-underline"
+        >
+          {REPO.replace("https://", "")} ↗
+        </Link>
+      </DocSection>
+
+      <DocSection id="next" title="Where to go next">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {NEXT_STEPS.map((s) => (
+            <Link key={s.href} href={s.href} className="no-underline hover:no-underline">
+              <Card className="h-full transition-colors duration-[120ms] ease-[var(--ease-out)] hover:border-stroke">
+                <CardContent className="flex flex-col gap-1.5">
+                  <span className="text-14 font-medium text-strong">{s.label}</span>
+                  <span className="text-13 leading-relaxed text-muted text-pretty">{s.body}</span>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
-        </nav>
-
-        <main className="flex min-w-0 flex-col gap-8">
-          <div className="flex flex-col gap-3">
-            <span className="sl-num text-12 text-faint">Docs · Observability · Metrics reference</span>
-            <h1 className="text-44 font-semibold tracking-[-0.02em] text-strong text-pretty">Metrics reference</h1>
-            <p className="max-w-[680px] text-16 leading-relaxed text-muted text-pretty">
-              Six metrics, read from RTCP as the media passes through the SFU. Each one is armed by default with the
-              threshold below and a 30s debounce, per peer and — where the scope says so — per room.
-            </p>
-          </div>
-
-          <Card id="thresholds" className="overflow-hidden">
-            <CardHeader><CardTitle>Default thresholds</CardTitle></CardHeader>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Metric</TableHead><TableHead>Field</TableHead><TableHead>Unit</TableHead>
-                  <TableHead>Threshold</TableHead><TableHead>Scope</TableHead><TableHead>What it breaks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {METRICS.map((m) => (
-                  <TableRow key={m.field}>
-                    <TableCell className="font-medium text-strong">{m.name}</TableCell>
-                    <TableCell className="sl-num text-muted">{m.field}</TableCell>
-                    <TableCell className="text-muted">{m.unit}</TableCell>
-                    <TableCell className="sl-num font-medium text-strong">{m.threshold}</TableCell>
-                    <TableCell className="text-muted">{m.scope}</TableCell>
-                    <TableCell className="text-muted">{m.breaks}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-
-          {METRICS.map((m) => (
-            <section key={m.field} id={m.field} className="flex flex-col gap-3 border-t border-hairline pt-8">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="text-26 font-semibold tracking-[-0.02em] text-strong">{m.name}</h2>
-                <Badge tone="accent" className="sl-num">{m.field}</Badge>
-                <Badge className="sl-num">threshold {m.threshold}</Badge>
-              </div>
-              <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">{m.body}</p>
-              <div className="flex flex-col gap-1 rounded-md border border-subtle bg-sunken px-4 py-3.5">
-                {m.sample.map((s) => (
-                  <span key={s} className="sl-num whitespace-pre text-[12.5px] text-body">{s}</span>
-                ))}
-              </div>
-              <p className="max-w-[680px] text-13 text-muted text-pretty">{m.action}</p>
-            </section>
-          ))}
-
-          <section id="overrides" className="flex flex-col gap-3 border-t border-hairline pt-8">
-            <h2 className="text-26 font-semibold tracking-[-0.02em] text-strong">Overriding a threshold</h2>
-            <p className="max-w-[680px] text-14 leading-relaxed text-body text-pretty">
-              Thresholds live per project and per environment since v0.4.0. Set one and it applies to every room in that
-              environment; alerts still debounce for 30s before firing.
-            </p>
-            <Card>
-              <CardContent className="flex flex-col gap-1">
-                {[
-                  "PATCH /v1/projects/live-classroom/thresholds",
-                  "",
-                  '{ "packet_loss_ratio": 0.03,',
-                  '  "rtt_ms": 250 }',
-                ].map((l, i) => (
-                  <span key={i} className="sl-num whitespace-pre text-[12.5px] text-body">{l}</span>
-                ))}
-              </CardContent>
-            </Card>
-          </section>
-        </main>
-
-        <aside className="hidden flex-col gap-2 lg:sticky lg:top-8 lg:flex">
-          <span className="sl-label pb-1">On this page</span>
-          <a href="#thresholds" className="border-l-2 border-accent px-2.5 py-1 text-12 font-medium text-strong no-underline hover:no-underline">Default thresholds</a>
-          {METRICS.map((m) => (
-            <a key={m.field} href={`#${m.field}`} className="border-l-2 border-hairline px-2.5 py-1 text-12 text-muted no-underline hover:text-strong hover:no-underline">
-              {m.name}
-            </a>
-          ))}
-          <a href="#overrides" className="border-l-2 border-hairline px-2.5 py-1 text-12 text-muted no-underline hover:text-strong hover:no-underline">Overriding a threshold</a>
-        </aside>
-      </div>
-    </SiteFrame>
+        </div>
+      </DocSection>
+    </DocsLayout>
   );
 }
