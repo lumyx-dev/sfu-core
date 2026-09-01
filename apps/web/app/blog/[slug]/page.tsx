@@ -34,7 +34,7 @@ export default async function BlogPostPage({
   return (
     <SiteFrame>
       <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-start gap-10 px-10 py-20 lg:grid-cols-[180px_1fr]">
-        <SectionHead index="Blog" label={post.date} />
+        <SectionHead index={post.date} label="Blog" />
         <article className="flex max-w-[680px] flex-col gap-6">
           <div className="flex flex-col gap-3">
             <h1 className="text-44 font-semibold tracking-[-0.02em] text-strong text-pretty">{post.title}</h1>

@@ -5,6 +5,8 @@ import './globals.css';
 
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ?? 'lumyx.dev';
 
+// opengraph-image.png and twitter-image.png sit next to this file; Next turns them
+// into meta tags, but only resolves them to absolute URLs once it has a base.
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lumyx.dev'),
   title: 'Lumyx — the WebRTC SFU that tells you why the call was bad',
@@ -17,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={GeistSans.variable}>
       <body>
         {children}
-        {process.env.NODE_ENV === 'production' ? (
+        {process.env.VERCEL_ENV === 'production' ? (
           <Script
             defer
             data-domain={PLAUSIBLE_DOMAIN}
