@@ -2,7 +2,7 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
-  "globalEnv": ["NODE_ENV", "NEXT_PUBLIC_DASHBOARD_URL", "NEXT_PUBLIC_SITE_URL"],
+  "globalEnv": ["NODE_ENV", "NEXT_PUBLIC_DASHBOARD_URL", "NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_PLAUSIBLE_DOMAIN"],
   "globalPassThroughEnv": ["CI", "VERCEL", "VERCEL_ENV", "VERCEL_URL"],
   "tasks": {
     "build": {
