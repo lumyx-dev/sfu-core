@@ -9,4 +9,6 @@ export * from "./room-card";
 export * from "./video-tile";
 export * from "./event-list";
 export * from "./feedback";
+export * from "./wordmark";
+export * from "./sidebar-nav";
 export * from "./app-shell";

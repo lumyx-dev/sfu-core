@@ -29,6 +29,7 @@
     "tailwind-merge": "^3.0.2"
   },
   "peerDependencies": {
+    "next": "^16",
     "react": "^19",
     "react-dom": "^19"
   },
