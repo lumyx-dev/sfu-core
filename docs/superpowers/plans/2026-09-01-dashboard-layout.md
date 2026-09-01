@@ -280,6 +280,11 @@ Trois points de vigilance, tous traités par le `className` passé à `SidebarMe
 1. Par défaut shadcn survole en `hover:bg-sidebar-accent`, qui vaut `--accent-tint` (indigo). Lumyx survole en **neutre** (`bg-hover`) et réserve l'indigo à l'item **actif**. `cn()` utilise tailwind-merge : `hover:bg-hover` et `hover:bg-sidebar-accent` sont dans le même groupe `bg-color`, l'override gagne.
 2. `SidebarMenuButton` a `text-sm` par défaut ; `text-13` appartient au même groupe `font-size` (l'échelle numérique est enregistrée dans `cn()` via `FONT_SIZES`), il gagne donc aussi.
 3. La barre d'accent inset de 2px de l'item actif est un `shadow-[inset_2px_0_0_var(--accent)]` — c'est une `var()`, pas une couleur littérale, `verify:ds` l'accepte.
+4. `SidebarGroupLabel` porte `text-xs` en amont shadcn. `sl-label` fixe bien `font-size: 11px`,
+   mais ce n'est pas un utilitaire `text-*` : tailwind-merge ne le met pas en conflit avec
+   `text-xs`, les deux survivent, et c'est l'ordre de la feuille générée qui départage — fragile.
+   D'où le `text-11` explicite à côté de `sl-label` : lui **est** dans le groupe `font-size`, donc
+   il évince `text-xs` de façon déterministe. Ne pas le retirer en trouvant qu'il fait doublon.
 
 ```tsx
 "use client";
@@ -308,7 +313,7 @@ export function SidebarNav({ sections }: { sections: NavSection[] }) {
     <>
       {sections.map((section) => (
         <SidebarGroup key={section.label} className="gap-1 py-0">
-          <SidebarGroupLabel className="sl-label h-auto px-2 pb-1">
+          <SidebarGroupLabel className="sl-label h-auto px-2 pb-1 text-11">
             {section.label}
           </SidebarGroupLabel>
           <SidebarGroupContent>
