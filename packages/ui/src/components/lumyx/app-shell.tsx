@@ -3,7 +3,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from '../../lib/utils';
-import { StatusDot } from "./status-dot";
 import { Wordmark } from "./wordmark";
 import type { NavSection } from "./sidebar-nav";
 
@@ -47,36 +46,4 @@ export function AppShell({
       <div className="grid grid-rows-[auto_1fr_auto]">{children}</div>
     </div>
   );
-}
-
-/** Sticky toolbar on the card surface. */
-export function Toolbar({ title, meta, actions }: { title: React.ReactNode; meta?: React.ReactNode; actions?: React.ReactNode }) {
-  return (
-    <header className="sticky top-0 z-20 flex items-center justify-between gap-6 border-b border-hairline bg-card px-8 py-4">
-      <div className="flex flex-col gap-0.5">
-        <h1 className="text-20 font-semibold text-strong">{title}</h1>
-        {meta ? <div className="text-12 text-muted">{meta}</div> : null}
-      </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
-    </header>
-  );
-}
-
-/** Pinned at the bottom with live counters. */
-export function StatusStrip({ items }: { items: { label: string; value: string; live?: boolean }[] }) {
-  return (
-    <footer className="sticky bottom-0 z-20 flex items-center gap-6 border-t border-hairline bg-card px-8 py-2.5">
-      {items.map((it) => (
-        <span key={it.label} className="flex items-center gap-2">
-          {it.live ? <StatusDot status="live" /> : null}
-          <span className="sl-label">{it.label}</span>
-          <span className="sl-num text-12 font-medium text-strong">{it.value}</span>
-        </span>
-      ))}
-    </footer>
-  );
-}
-
-export function PageBody({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <main className={cn("sl-scroll mx-auto w-full max-w-[1360px] px-8 py-6", className)}>{children}</main>;
 }
