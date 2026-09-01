@@ -1082,9 +1082,13 @@ Attendu : les quatre **PASS**. `bun run test` couvre les tests existants de `lib
 
 - [ ] **Step 7 : commit**
 
+`apps/cloud` est un **dépôt git distinct** (`git@github.com:FrekiManagarm/lumyx-cloud.git`),
+gitignoré par le repo parent (`.gitignore:20`). Ses commits vont donc dans son propre repo, sur sa
+propre branche `feat/dashboard-layout` — jamais via un `git add` depuis la racine du monorepo.
+
 ```bash
-cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx
-rtk git add apps/cloud/components apps/cloud/app
+cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx/apps/cloud
+rtk git add components app
 rtk git commit -m "feat(cloud): chrome sur la sidebar shadcn, project switcher et menu compte"
 ```
 
@@ -1194,9 +1198,11 @@ Attendu : les quatre **PASS**.
 
 - [ ] **Step 5 : commit**
 
+Toujours dans le dépôt `apps/cloud`, pas dans le monorepo :
+
 ```bash
-cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx
-rtk git add apps/cloud/app
+cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx/apps/cloud
+rtk git add app
 rtk git commit -m "feat(cloud): AppHeader sur les neuf ecrans restants de la console"
 ```
 
@@ -1216,7 +1222,7 @@ rtk git commit -m "feat(cloud): AppHeader sur les neuf ecrans restants de la con
 
 ```bash
 cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx
-grep -rn "AppShell\|Toolbar" apps packages --include=*.tsx --include=*.ts -l 2>/dev/null | grep -v node_modules
+grep -rn "AppShell\|Toolbar" apps packages --include='*.tsx' --include='*.ts' -l 2>/dev/null | grep -v node_modules
 ```
 
 Attendu : **aucune sortie**. S'il en reste, la task 4, 5, 6 ou 7 est incomplète — la finir avant de supprimer le fichier.
