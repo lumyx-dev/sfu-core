@@ -67,7 +67,22 @@ for (const f of files) {
   }
 }
 
-// 5. cn() ne doit jamais avaler une couleur de texte a cause de l'echelle typographique
+// 5. Aucun import par alias @/ — les apps mappent `@/*` vers leur propre racine et
+// transpilent @lumyx/ui depuis les sources, donc un alias ici se resoudrait cote app.
+// Le CLI shadcn genere ses imports en @/ : c'est la regle qui les attrape.
+const ALIAS_IMPORT = /\bfrom\s+['"]@\/|\brequire\(\s*['"]@\/|\bimport\(\s*['"]@\//;
+for (const f of files) {
+  if (!['.ts', '.tsx'].includes(extname(f))) continue;
+  readFileSync(f, 'utf8')
+    .split('\n')
+    .forEach((line, i) => {
+      if (ALIAS_IMPORT.test(line)) {
+        fail('no-alias-imports', `${rel(f)}:${i + 1} — ${line.trim()}`);
+      }
+    });
+}
+
+// 6. cn() ne doit jamais avaler une couleur de texte a cause de l'echelle typographique
 // numerique (text-11 … text-44). tailwind-merge classe `text-13` dans `text-color` tant qu'on
 // ne lui apprend pas l'echelle — il supprimait alors text-on-accent / text-white des boutons
 // pleins (bg-accent / bg-danger), qui retombaient sur la couleur de texte heritee du body.
