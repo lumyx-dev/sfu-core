@@ -1,4 +1,4 @@
-import { Icon, ICONS, type IconName } from '@sightline/ui';
+import { Icon, ICONS, type IconName } from '@lumyx/ui';
 import { CoreSection } from './sections/core';
 import { DataSection } from './sections/data';
 import { FeedbackSection } from './sections/feedback';
@@ -59,7 +59,7 @@ export default function DesignSystemPage() {
     <main>
       <div style={{ padding: 'var(--space-9)', paddingBottom: 0, background: 'var(--surface-page)' }}>
         <h1 style={{ fontSize: 'var(--fs-26)', letterSpacing: 'var(--ls-display)' }}>
-          Sightline design system
+          Lumyx design system
         </h1>
       </div>
       <div style={{ background: 'var(--surface-page)' }}>

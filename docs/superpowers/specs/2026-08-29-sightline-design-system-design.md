@@ -22,7 +22,7 @@ marketing) auront chacun leur spec, et dépendent tous de celui-ci.
 ### Sources
 
 | Source | Ce qu'on en tire |
-|---|---|
+| --- | --- |
 | `designs/_ds/sightline-design-system-…/tokens/*.css` | Les 9 fichiers de tokens. **Copiés verbatim**, ce sont la source de vérité. |
 | `designs/_ds/sightline-design-system-…/_ds_bundle.js` | Les 37 composants, en JSX compilé Babel classic (`React.createElement`) — lisible, defaults et styles inline en clair. C'est l'original du port. |
 | `designs/_ds/sightline-design-system-…/readme.md` | Le guide du design system : intention, ton, contraintes. |
@@ -34,7 +34,7 @@ marketing) auront chacun leur spec, et dépendent tous de celui-ci.
 ## 2. Décisions validées
 
 | Décision | Choix retenu |
-|---|---|
+| --- | --- |
 | Périmètre | **Les 37 composants**, port fidèle 1:1 — même nom, même API (props et valeurs par défaut), mêmes valeurs visuelles. |
 | Mécanisme de style | **CSS Modules**, un `.module.css` par composant. |
 | Interaction | Les états `hover` / `focus` passent du `useState` de la source à de **vrais sélecteurs CSS** (`:hover`, `:focus-visible`, `:disabled`). |
@@ -108,7 +108,7 @@ vit avec `Toast`, `GridItem` avec `DashboardGrid` — comme dans la source.
 
 ### Distribution
 
-Le package exporte du **TSX source**, pas un build. Les deux apps ajoutent `@sightline/ui` à
+Le package exporte du **TSX source**, pas un build. Les deux apps ajoutent `@lumyx/ui` à
 `transpilePackages` dans leur `next.config.ts`. Pas d'étape de build, pas de watcher, pas de
 `dist/` à garder synchronisé.
 
@@ -116,7 +116,7 @@ Le package exporte du **TSX source**, pas un build. Les deux apps ajoutent `@sig
 
 ```json
 {
-  "name": "@sightline/ui",
+  "name": "@lumyx/ui",
   "exports": {
     ".": "./src/index.ts",
     "./styles.css": "./src/styles.css"
@@ -195,7 +195,7 @@ un hook, et dans 10 cas sur 12 l'unique état est `hover` ou `focus` — celui q
 suppriment.
 
 | Composant | Hooks dans la source | Après conversion |
-|---|---|---|
+| --- | --- | --- |
 | `Button`, `IconButton`, `DataTable`, `Sidebar`, `Tabs`, `PeerCard`, `RoomCard` | `useState(hover)` | Server Component |
 | `Input`, `Select` | `useState(focus)` | Server Component |
 | `Icon` | `useState(svg)` + `useEffect` (fetch) | Server Component — l'état disparaît avec `lucide-react` |
@@ -333,9 +333,9 @@ handoff les appellent telles quelles.
 
 Pour chaque app (`dashboard`, `sightline-cloud`, et plus tard `marketing`) :
 
-1. `@sightline/ui` en dépendance de workspace.
-2. `transpilePackages: ['@sightline/ui']` dans `next.config.ts`.
-3. `import '@sightline/ui/styles.css'` dans `app/globals.css` ou le layout racine.
+1. `@lumyx/ui` en dépendance de workspace.
+2. `transpilePackages: ['@lumyx/ui']` dans `next.config.ts`.
+3. `import '@lumyx/ui/styles.css'` dans `app/globals.css` ou le layout racine.
 4. Geist par `next/font`, avec sa variable CSS branchée sur `--font-sans`.
 
 `apps/dashboard` déclare déjà Geist via `next/font` — c'est ce qui a décidé la famille du design
@@ -360,7 +360,7 @@ indiscernable dans les deux thèmes.
 
 **Definition of done :**
 
-- [ ] Les 37 composants exportés depuis `@sightline/ui`, signatures conformes à la section 6.
+- [ ] Les 37 composants exportés depuis `@lumyx/ui`, signatures conformes à la section 6.
 - [ ] Les 9 fichiers de tokens présents, `fonts.css` mis à part identiques au handoff au diff près.
 - [ ] `/_ds` rend tout, en clair et en dark, sans erreur console.
 - [ ] `bun run check-types` vert sur le monorepo.
@@ -414,7 +414,7 @@ Explicitement **pas** dans ce sous-projet :
 ### Ce qui suit
 
 | # | Sous-projet | Dépend de |
-|---|---|---|
+| --- | --- | --- |
 | 1 | `packages/ui` — ce document | — |
 | 2 | `apps/dashboard` — 9 vues, mocks, puis `/metrics` du SFU | 1 |
 | 3 | `apps/sightline-cloud` — console, Sign up, Onboarding 5 étapes | 1 |
@@ -434,7 +434,7 @@ lira ses écrans comme référence d'implémentation, sans les porter.
 ## Annexe A — index des composants dans `_ds_bundle.js`
 
 | Composant | Ligne | Composant | Ligne |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Badge | 22 | SeverityBadge | 1595 |
 | Button | 76 | Toast | 1655 |
 | Card | 187 | ToastStack | 1733 |

@@ -54,9 +54,9 @@ packages/ui/
 
 apps/dashboard/
   next.config.ts                  modifié   transpilePackages
-  package.json                    modifié   dépendance @sightline/ui
+  package.json                    modifié   dépendance @lumyx/ui
   app/layout.tsx                  modifié   Geist next/font -> --font-sans
-  app/globals.css                 modifié   import de @sightline/ui/styles.css
+  app/globals.css                 modifié   import de @lumyx/ui/styles.css
   app/_ds/page.tsx                créé      la galerie, enrichie à chaque tâche
   app/_ds/sections/<cat>.tsx      créés (6) une section par catégorie
 
@@ -73,6 +73,7 @@ Un composant = un dossier. `ToastStack` vit dans le dossier `Toast/`, `GridItem`
 C'est le risque identifié en §9 de la spec : Next a historiquement restreint l'import de CSS depuis `node_modules`. On le lève **avant** d'écrire 37 composants.
 
 **Files:**
+
 - Create: `packages/ui/src/tokens/{fonts,palette,semantic,typography,spacing,radius,elevation,motion,base}.css`
 - Create: `packages/ui/src/styles.css`
 - Create: `packages/ui/src/lib/cn.ts`
@@ -83,8 +84,9 @@ C'est le risque identifié en §9 de la spec : Next a historiquement restreint l
 - Modify: `apps/dashboard/package.json`, `apps/dashboard/next.config.ts`, `apps/dashboard/app/layout.tsx`, `apps/dashboard/app/globals.css`
 
 **Interfaces:**
+
 - Consumes: rien (première tâche)
-- Produces: `cn(...args: (string | false | null | undefined)[]): string` · l'import `@sightline/ui/styles.css` · le pattern `<Nom>/<Nom>.tsx` + `<Nom>.module.css` + `index.ts` · la route `/_ds`
+- Produces: `cn(...args: (string | false | null | undefined)[]): string` · l'import `@lumyx/ui/styles.css` · le pattern `<Nom>/<Nom>.tsx` + `<Nom>.module.css` + `index.ts` · la route `/_ds`
 
 - [ ] **Step 1 : Copier les 9 fichiers de tokens verbatim**
 
@@ -213,7 +215,7 @@ export * from './components/_probe';
 
 ```json
 {
-  "name": "@sightline/ui",
+  "name": "@lumyx/ui",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -262,7 +264,7 @@ export * from './components/_probe';
 Ajouter la dépendance dans `apps/dashboard/package.json` :
 
 ```json
-"@sightline/ui": "workspace:*"
+"@lumyx/ui": "workspace:*"
 ```
 
 `apps/dashboard/next.config.ts` :
@@ -271,7 +273,7 @@ Ajouter la dépendance dans `apps/dashboard/package.json` :
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@sightline/ui'],
+  transpilePackages: ['@lumyx/ui'],
 };
 
 export default nextConfig;
@@ -280,7 +282,7 @@ export default nextConfig;
 Dans `apps/dashboard/app/globals.css`, en tout premier :
 
 ```css
-@import '@sightline/ui/styles.css';
+@import '@lumyx/ui/styles.css';
 ```
 
 Dans `apps/dashboard/app/layout.tsx`, exposer Geist sur `--font-geist` (c'est la variable que `fonts.css` consomme) :
@@ -300,7 +302,7 @@ const geist = Geist({
 - [ ] **Step 8 : Écrire la galerie minimale `apps/dashboard/app/_ds/page.tsx`**
 
 ```tsx
-import { Probe } from '@sightline/ui';
+import { Probe } from '@lumyx/ui';
 
 export default function DesignSystemPage() {
   return (
@@ -353,10 +355,12 @@ git commit -m "feat(ui): squelette du package, tokens du design system, integrat
 Les Global Constraints ne servent à rien si rien ne les vérifie. Cette tâche les rend exécutables, avant qu'il y ait 37 composants où chercher les écarts à la main.
 
 **Files:**
+
 - Create: `packages/ui/scripts/verify-ds.mjs`
 - Modify: `packages/ui/package.json` (script `verify:ds`), `package.json` racine, `turbo.json`
 
 **Interfaces:**
+
 - Consumes: l'arborescence `packages/ui/src/` de la Task 1
 - Produces: `bun run verify:ds` — sort en code 1 avec un rapport lisible dès qu'une contrainte est violée
 
@@ -501,12 +505,14 @@ git commit -m "chore(ui): garde-fous automatises des contraintes du design syste
 `Icon` est consommé par une grande partie des 34 composants restants. Il passe en premier.
 
 **Files:**
+
 - Create: `packages/ui/src/lib/icons.ts`
 - Create: `packages/ui/src/components/core/Icon/{Icon.tsx,index.ts}`
 - Modify: `packages/ui/src/index.ts`
 - Modify: `apps/dashboard/app/_ds/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1)
 - Produces:
   - `type IconName` — union des 29 noms kebab-case
@@ -624,7 +630,7 @@ export * from './components/_probe';
 Dans `apps/dashboard/app/_ds/page.tsx`, ajouter :
 
 ```tsx
-import { Icon, ICONS, type IconName } from '@sightline/ui';
+import { Icon, ICONS, type IconName } from '@lumyx/ui';
 
 // dans le <main> :
 <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
@@ -661,12 +667,14 @@ git commit -m "feat(ui): composant Icon adosse a lucide-react"
 ## Task 4 : `core` — les 8 composants restants
 
 **Files:**
+
 - Create: `packages/ui/src/components/core/{Badge,Button,Card,IconButton,Input,Pill,Select,StatusDot}/` (`.tsx`, `.module.css`, `index.ts`)
 - Modify: `packages/ui/src/index.ts`
 - Create: `apps/dashboard/app/_ds/sections/core.tsx`
 - Modify: `apps/dashboard/app/_ds/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1), `Icon` / `IconName` (Task 3)
 - Produces (signatures exactes, cf. spec §6) :
   - `Badge({ children, tone = 'neutral', uppercase = false, solid = false, style })` — `tone: 'neutral' | 'accent' | 'secondary' | 'ok' | 'warn' | 'danger' | 'info'`
@@ -908,7 +916,7 @@ Aucun n'a d'état. Appliquer le moule de `Card` pour la structure et celui de `B
 `Badge` (source `:12` pour la table `TONES`, `:22` pour le composant) — les 7 tons sont des triplets `[fond, bordure, texte]` :
 
 | tone | background | border-color | color |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `neutral` | `var(--surface-inset)` | `var(--border)` | `var(--text-body)` |
 | `accent` | `var(--accent-tint)` | `var(--accent-border)` | `var(--accent-text)` |
 | `secondary` | `var(--accent-2-tint)` | `transparent` | `var(--accent-2)` |
@@ -952,7 +960,7 @@ export * from './components/core/StatusDot';
 `apps/dashboard/app/_ds/sections/core.tsx` — rendre **toutes** les variantes, pas un échantillon :
 
 ```tsx
-import { Badge, Button, Card, IconButton, Input, Pill, Select, StatusDot, Icon } from '@sightline/ui';
+import { Badge, Button, Card, IconButton, Input, Pill, Select, StatusDot, Icon } from '@lumyx/ui';
 
 const VARIANTS = ['primary', 'secondary', 'quiet', 'danger', 'accentQuiet'] as const;
 const SIZES = ['sm', 'md', 'lg'] as const;
@@ -1044,6 +1052,7 @@ bun run --filter @sightline/dashboard dev
 ```
 
 Sur `/_ds`, contrôler point par point contre la maquette (ouvrir `$DS/../Dashboard UI.dc.html` dans un navigateur à côté) :
+
 - Le `Button` `primary` est indigo plein, ombre `xs` ; au survol il fonce, la bordure suit.
 - **Au clic à la souris, aucun ring n'apparaît. Au `Tab` clavier, le ring 3px apparaît.** C'est la correction volontaire de la source — le vérifier explicitement.
 - Le `Button` `danger` a un ring rouge au focus clavier, pas indigo.
@@ -1062,11 +1071,13 @@ git commit -m "feat(ui): 9 composants core (Badge Button Card Icon IconButton In
 ## Task 5 : `layout` — 5 composants
 
 **Files:**
+
 - Create: `packages/ui/src/components/layout/{AppShell,DashboardGrid,SplitPane,StatusStrip}/` (`GridItem` vit dans `DashboardGrid/`)
 - Modify: `packages/ui/src/index.ts`
 - Create: `apps/dashboard/app/_ds/sections/layout.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1)
 - Produces:
   - `AppShell({ sidebar, toolbar, footer, children, maxWidth, theme, style })`
@@ -1094,6 +1105,7 @@ Trois d'entre eux calculent leur géométrie à partir de props numériques : **
 - [ ] **Step 2 : Écrire la section `layout` de la galerie**
 
 `apps/dashboard/app/_ds/sections/layout.tsx` doit rendre :
+
 - une `DashboardGrid` en mode fixe 12 colonnes avec des `GridItem` de spans variés (12, 6+6, 4+4+4, 8+4), chacun contenant une `Card` pour matérialiser la cellule ;
 - la même en mode `auto` avec `minColumn={280}`, pour vérifier le `auto-fit` ;
 - un `SplitPane` avec une `Card` à gauche et une `Card` à droite, `railWidth` par défaut puis `reverse` ;
@@ -1121,11 +1133,13 @@ git commit -m "feat(ui): 5 composants layout (AppShell DashboardGrid GridItem Sp
 ## Task 6 : `navigation` — 4 composants
 
 **Files:**
+
 - Create: `packages/ui/src/components/navigation/{Breadcrumb,Sidebar,Tabs,Toolbar}/`
 - Modify: `packages/ui/src/index.ts`
 - Create: `apps/dashboard/app/_ds/sections/navigation.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1), `Icon` / `IconName` (Task 3), `Pill` et `StatusDot` (Task 4)
 - Produces:
   - `Breadcrumb({ items = [], onSelect, style })` — `items: { id?: string; label: string }[]`
@@ -1195,11 +1209,13 @@ git commit -m "feat(ui): 4 composants navigation (Breadcrumb Sidebar Tabs Toolba
 ## Task 7 : `feedback` — 7 composants
 
 **Files:**
+
 - Create: `packages/ui/src/components/feedback/{AlertBanner,EmptyState,ErrorState,LoadingSkeleton,SeverityBadge,Toast}/` (`ToastStack` vit dans `Toast/`)
 - Modify: `packages/ui/src/index.ts`
 - Create: `apps/dashboard/app/_ds/sections/feedback.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1), `Icon` (Task 3), `Button` et `Badge` (Task 4)
 - Produces:
   - `AlertBanner({ severity = 'warning', title, message, meta, action, onDismiss, style })`
@@ -1271,11 +1287,13 @@ git commit -m "feat(ui): 7 composants feedback (AlertBanner EmptyState ErrorStat
 ## Task 8 : `data` — les 5 composants non-SVG
 
 **Files:**
+
 - Create: `packages/ui/src/components/data/{DataTable,EventList,MetricCard,MetricGrid,ProgressBar}/`
 - Modify: `packages/ui/src/index.ts`
 - Create: `apps/dashboard/app/_ds/sections/data.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1), `Icon` (Task 3), `Badge` / `StatusDot` (Task 4)
 - Produces:
   - `DataTable({ columns = [], rows = [], onRowClick, selectedIndex, dense = false, style })`
@@ -1351,10 +1369,12 @@ git commit -m "feat(ui): 5 composants data (DataTable EventList MetricCard Metri
 Séparés de la Task 8 : ce sont les deux seuls composants à géométrie calculée, et les deux seuls endroits où le système autorise un dégradé. Ils méritent leur propre cycle de revue.
 
 **Files:**
+
 - Create: `packages/ui/src/components/data/{Sparkline,TimeSeriesChart}/`
 - Modify: `packages/ui/src/index.ts`, `apps/dashboard/app/_ds/sections/data.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1)
 - Produces:
   - `Sparkline({ data = [], width = 120, height = 32, tone = 'accent', fill = true, threshold, strokeWidth = 1.5, dot = true, style })`
@@ -1412,11 +1432,13 @@ git commit -m "feat(ui): Sparkline et TimeSeriesChart"
 ## Task 10 : `webrtc` — 5 composants
 
 **Files:**
+
 - Create: `packages/ui/src/components/webrtc/{LatencyChip,PeerCard,QualityIndicator,RoomCard,VideoTile}/`
 - Modify: `packages/ui/src/index.ts`
 - Create: `apps/dashboard/app/_ds/sections/webrtc.tsx`
 
 **Interfaces:**
+
 - Consumes: `cn` (Task 1), `Icon` (Task 3), `Badge` / `StatusDot` (Task 4), `Sparkline` (Task 9)
 - Produces:
   - `LatencyChip({ value, unit = 'ms', metric = 'rtt', label, plain = false, style })`
@@ -1440,6 +1462,7 @@ git commit -m "feat(ui): Sparkline et TimeSeriesChart"
 - [ ] **Step 2 : Écrire la section `webrtc` de la galerie**
 
 Rendre, avec les données réelles de la maquette (`Dashboard UI.dc.html:268-282`) :
+
 - les 4 `PeerCard` de `PEERS` (Task 8), dont `d41f9ab7` qui est `degraded` avec `rtt: 212` — **au-dessus du seuil de 200ms, donc son chiffre doit être coloré** ;
 - les 6 `RoomCard` de la maquette, dont `standup-eu` en `health: 'degraded'` et `load-test-9` en `idle` ;
 - `LatencyChip` pour chacune des 6 métriques, une valeur sous le seuil et une au-dessus, plus le mode `plain` ;
@@ -1468,6 +1491,7 @@ git commit -m "feat(ui): 5 composants webrtc (LatencyChip PeerCard QualityIndica
 Les 37 composants existent. Cette tâche assemble la galerie en outil de comparaison utilisable et passe la DoD de la spec §8.
 
 **Files:**
+
 - Modify: `apps/dashboard/app/_ds/page.tsx`
 - Create: `apps/dashboard/app/_ds/ThemeSection.tsx`
 - Modify: `packages/ui/src/index.ts` (retirer `_probe`)
@@ -1475,6 +1499,7 @@ Les 37 composants existent. Cette tâche assemble la galerie en outil de compara
 - Create: `packages/ui/README.md`
 
 **Interfaces:**
+
 - Consumes: les 37 composants (Tasks 3 à 10)
 - Produces: la route `/_ds`, en clair et en dark
 
@@ -1570,6 +1595,7 @@ bun run --filter @sightline/dashboard dev   # puis /_ds
 ```
 
 Cocher la DoD de la spec §8 :
+
 - [ ] Les 37 composants exportés, signatures conformes à la §6 de la spec.
 - [ ] Les 9 fichiers de tokens présents, identiques au handoff (`fonts.css` excepté) — vérifié par `verify:ds`.
 - [ ] `/_ds` rend tout, en clair et en dark, **sans erreur ni avertissement dans la console**.

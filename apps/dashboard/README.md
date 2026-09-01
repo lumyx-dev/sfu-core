@@ -1,6 +1,6 @@
-# `@sightline/dashboard`
+# `@lumyx/dashboard`
 
-The web UI for Sightline — rooms, peers and live media quality at a glance.
+The web UI for Lumyx — rooms, peers and live media quality at a glance.
 
 > **Scaffold.** This is still the default Next.js starter page. Nothing here talks to the SFU
 > yet. The interesting code lives in [`apps/sfu`](../sfu).
@@ -16,14 +16,14 @@ bun install && bun run dev
 Or just this app:
 
 ```bash
-bun run dev --filter=@sightline/dashboard
+bun run dev --filter=@lumyx/dashboard
 ```
 
 Next.js serves on `http://localhost:3000` by default — the same port the SFU uses. Run the
 dashboard on another port while both are up:
 
 ```bash
-bun run dev --filter=@sightline/dashboard -- --port 3001
+bun run dev --filter=@lumyx/dashboard -- --port 3001
 ```
 
 ## Stack

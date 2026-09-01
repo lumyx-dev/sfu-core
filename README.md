@@ -1,4 +1,4 @@
-<h1 align="center">Sightline 🔭</h1>
+<h1 align="center">Lumyx 🔭</h1>
 
 <p align="center">
   <strong>A WebRTC SFU written in Rust — with observability built into the media path, not bolted on.</strong>
@@ -13,7 +13,7 @@
 
 ```
   Peer A ──┐                ┌──────────────────────────┐
-           │                │      Sightline SFU       │              ┌─────────────────┐
+           │                │      lumyx SFU           │              ┌─────────────────┐
   Peer B ──┼──── RTP ──────►│  forward · rewrite · PLI │─── stats ───►│  /metrics  JSON │
            │                │        (Rust)            │              └─────────────────┘
   Peer C ──┘                └──────────────────────────┘
@@ -31,7 +31,7 @@ WebRTC breaks in production in ways your observability stack cannot see. Grafana
 what jitter is. Datadog has never heard of a NACK. When a call degrades, the SFU is the only
 process in the system that actually knows why — and every SFU throws that knowledge away.
 
-Sightline is built the other way round: the forwarding engine and the metrics pipeline are the
+lumyx is built the other way round: the forwarding engine and the metrics pipeline are the
 same codebase. Every packet that crosses the SFU is a data point you can query.
 
 Three reasons to look at it:
@@ -79,8 +79,8 @@ You need [Rust](https://rustup.rs/) and [mkcert](https://github.com/FiloSottile/
 The SFU serves HTTPS because browsers refuse `getUserMedia` and WebRTC on plain HTTP.
 
 ```bash
-git clone git@github.com:FrekiManagarm/sightline.git
-cd sightline
+git clone git@github.com:FrekiManagarm/lumyx.git
+cd lumyx
 ```
 
 Generate the local certificates the server expects (`localhost+1.pem` / `localhost+1-key.pem`
@@ -97,7 +97,7 @@ cargo run -p sfu --release
 ```
 
 ```
-🚀 Sightline SFU démarrage...
+🚀 lumyx SFU démarrage...
 ✅ Serveur HTTPS sur https://localhost:3000
 ```
 
@@ -293,7 +293,7 @@ pushed live over WebSocket.
 
 ## Contributing
 
-Sightline is early — which is the best moment to shape it. Bug reports, protocol nitpicks and
+lumyx is early — which is the best moment to shape it. Bug reports, protocol nitpicks and
 "your fan-out is wrong because…" issues are all genuinely welcome.
 
 ```bash

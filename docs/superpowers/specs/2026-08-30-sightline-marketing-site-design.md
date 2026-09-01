@@ -15,7 +15,7 @@ Le travail a été découpé en trois sous-projets indépendants, chacun avec so
 spec → plan → implémentation :
 
 | | Sous-projet | Cible | État |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **A** | Site marketing | `apps/web` (à créer) | **ce document** |
 | B | Dashboard d'observabilité | `apps/dashboard` | à spécifier |
 | C | Console Cloud | `apps/sightline-cloud` | à spécifier |
@@ -27,7 +27,7 @@ produit.
 ## 2. Objectif
 
 Construire `apps/web`, une application Next.js qui reproduit fidèlement les six maquettes
-marketing du handoff, en consommant `@sightline/ui` et ses tokens.
+marketing du handoff, en consommant `@lumyx/ui` et ses tokens.
 
 **Critère de succès :** les six pages sont visuellement indiscernables de leur maquette à
 1280px, elles tiennent la route de 360px à 1920px, `bun run build` et
@@ -39,7 +39,7 @@ tokens.
 **Dans le périmètre — six pages :**
 
 | Route | Maquette | Lignes |
-|---|---|---|
+| --- | --- | --- |
 | `/` | `$HANDOFF/designs/Home.dc.html` | 759 |
 | `/pricing` | `Pricing.dc.html` | 404 |
 | `/compare/livekit` | `Compare LiveKit.dc.html` | 361 |
@@ -66,7 +66,7 @@ de ce fichier dit explicitement que le pont « sert la mise en page au niveau de
 les composants ».
 
 | | Outil |
-|---|---|
+| --- | --- |
 | Layout de page, flux, espacement, breakpoints | utilitaires Tailwind (`flex`, `grid`, `gap-6`, `px-10`, `max-w-*`, `md:`, `lg:`) |
 | Typo display, grilles à ratios exacts, dégradés, ombres composées, keyframes | CSS Modules (`Nom.module.css`) |
 | **Toute couleur, tout rayon, toute durée** | **token `var(--*)`, sans exception** |
@@ -115,10 +115,10 @@ Puis alignée sur le monorepo :
 - Next épinglé à **16.3.2**, React **19.2.8**, comme `apps/dashboard` et
   `apps/sightline-cloud` (via le catalogue bun de la racine quand la dépendance y figure)
 - `"dev": "next dev --port 3002"` — 3000 est pris par le dashboard, 3001 par le cloud
-- `next.config.ts` : `transpilePackages: ['@sightline/ui']`
-- `@sightline/ui` en `workspace:*`, `tailwindcss` et `@tailwindcss/postcss` en `^4` comme
+- `next.config.ts` : `transpilePackages: ['@lumyx/ui']`
+- `@lumyx/ui` en `workspace:*`, `tailwindcss` et `@tailwindcss/postcss` en `^4` comme
   les deux autres apps
-- `globals.css` importe `@sightline/ui/styles.css` **avant** `tailwindcss`, dans cet ordre
+- `globals.css` importe `@lumyx/ui/styles.css` **avant** `tailwindcss`, dans cet ordre
   exact — c'est l'ordre de `apps/dashboard`, et celui que le pont `@theme` du design system
   suppose
 - scripts `build`, `start`, `lint`, `check-types` identiques aux autres apps pour que
@@ -130,7 +130,7 @@ Puis alignée sur le monorepo :
 apps/web/
   app/
     layout.tsx                 Geist (next/font), <MarketingMotion/>, <ScrollProgress/>
-    globals.css                @sightline/ui/styles.css + keyframes sl-* + reduced-motion
+    globals.css                @lumyx/ui/styles.css + keyframes sl-* + reduced-motion
     page.tsx                   Home
     _sections/                 sections de Home
     pricing/page.tsx  + _sections/
@@ -187,7 +187,7 @@ un unique composant client monté dans le layout fait le travail.
 ### 6.1 Contrat d'attributs
 
 | Attribut | Effet |
-|---|---|
+| --- | --- |
 | `data-anim="rise \| fade \| slide"` | quel keyframe jouer (défaut `rise`) |
 | `data-anim-delay="520"` | délai en millisecondes |
 | `data-anim-now` | joue au montage, sans attendre l'intersection |
@@ -317,7 +317,7 @@ de champ, avec le nom lisible, le champ brut, l'unité, le scope, le cas qui la 
 casser, un payload d'exemple et le seuil par défaut :
 
 | Champ | Unité | Scope | Seuil |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `packet_loss_ratio` | ratio, affiché en % | peer, room | > 2% |
 | `rtt_ms` | millisecondes | peer | > 200ms |
 | `jitter_ms` | millisecondes | peer | > 30ms |
@@ -325,10 +325,25 @@ casser, un payload d'exemple et le seuil par défaut :
 | `freeze_ratio` | ratio, affiché en % | peer | > 1% |
 | `bitrate_kbps` | kilobits par seconde | peer, track, room | < 100kbps |
 
-Ces six lignes sont les seules données non inventées de tout le handoff : elles viennent
-de la référence des métriques du README du repo. Elles vivent dans `content/metrics.ts` et
-**cette constante est partagée avec le sous-projet B** — le dashboard affiche les mêmes
-seuils.
+**Correction du 2026-08-30, après vérification contre le dépôt.** Ce paragraphe affirmait que
+ces six lignes étaient « les seules données non inventées de tout le handoff », venues de la
+référence des métriques du README. **C'est faux, et l'erreur était la mienne.**
+
+Il n'existe aucune référence des métriques dans `README.md` : les six noms de champ n'y
+apparaissent pas une seule fois. Le README dit l'inverse — `Quality metrics (jitter, loss, RTT,
+NACK) — ❌ Planned, the whole point of the project — next milestone` — et
+`apps/sfu/src/metrics/mod.rs` ne compte que `peers_connected`, `peers_disconnected` et deux
+compteurs que le README lui-même décrit comme définis mais jamais incrémentés.
+
+L'affirmation venait du `github.md` du handoff, que j'ai reprise sans la vérifier. Les six
+métriques et leurs seuils sont **inventés par le design, au même titre que les prix**, et la
+fonctionnalité qu'ils décrivent n'existe pas encore.
+
+Conséquence : `content/metrics.ts` porte un en-tête `UNVERIFIED` comme `pricing.ts` et
+`benchmarks.ts`, et la page Docs documente une API **prévue**, pas une API livrée. Publier
+cette page en l'état ferait dire au site l'inverse de ce que dit le README du dépôt. La
+décision — publier avec une mention « planned », différer la page, ou implémenter les métriques
+d'abord — appartient au propriétaire du dépôt.
 
 Suit la section « Overriding a threshold » et son exemple
 `PATCH /v1/projects/live-classroom/thresholds`.
@@ -375,8 +390,8 @@ Tout le contenu éditorial vit dans `content/`, en TypeScript typé, jamais dans
 `benchmarks.ts` remplace les mentions « benchmark pending » de Home et Pricing et attend
 trois mesures Rust réelles : mémoire au repos, peers par cœur, latence p99.
 
-`metrics.ts` est la seule constante fondée sur une source vérifiée (le README du repo) et
-ne porte donc pas d'avertissement.
+`metrics.ts` porte le même avertissement que les autres. Il était présenté ici comme la seule
+constante vérifiée ; la vérification contre le dépôt a montré le contraire (voir §7.4).
 
 ## 9. Responsive
 
@@ -390,7 +405,7 @@ Les paliers s'écrivent en breakpoints Tailwind, ce qui évite de répéter troi
 unique et les préfixes ajoutent les colonnes :
 
 | Palier | Préfixe | Comportement |
-|---|---|---|
+| --- | --- | --- |
 | < 768px | (base) | une colonne, h1 62 → 40px, h2 40 → 30px, CTA 52 → 34px, nav repliée, `px-5` |
 | 768–1119px | `md:` | grilles deux colonnes rétablies, pricing 5 colonnes en 3 puis 2, `md:px-6` |
 | ≥ 1120px | `lg:` | la maquette telle quelle, `max-w-[1280px]`, `lg:px-10` |
@@ -457,8 +472,8 @@ choix reste à valider. Le port suit `packages/ui`, qui a déjà tranché.
 
 ## 13. Annexe — correspondance maquette / route
 
-| Maquette | Route | Composants `@sightline/ui` principaux |
-|---|---|---|
+| Maquette | Route | Composants `@lumyx/ui` principaux |
+| --- | --- | --- |
 | `Home.dc.html` | `/` | Button, Badge, Tabs, StatusDot, MetricCard, DataTable |
 | `Pricing.dc.html` | `/pricing` | Button, Badge, Tabs, Input |
 | `Compare LiveKit.dc.html` | `/compare/livekit` | Button, Badge, Pill |

@@ -17,8 +17,8 @@
 //! streams and the room holds 420 — so these runs are as much a check on the
 //! negotiation batching as on the routing.
 
-use sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
-use sfu::transport::PeerConnection;
+use lumyx_sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
+use lumyx_sfu::transport::PeerConnection;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -102,7 +102,7 @@ struct World {
     start: Instant,
     now: Instant,
     /// Signaling channels, kept alive so `handle_offer` can push its answer.
-    _signaling: Vec<mpsc::Receiver<sfu::signaling::ServerMessage>>,
+    _signaling: Vec<mpsc::Receiver<lumyx_sfu::signaling::ServerMessage>>,
 }
 
 impl World {
@@ -390,8 +390,7 @@ impl Browser {
                 // the msid stream id — this is `event.streams[0].id` in a real
                 // browser, and it is how the client knows whose tile to fill.
                 if let Some(m) = self.rtc.media(media.mid) {
-                    self.source_of
-                        .insert(media.mid, m.stream_id().to_string());
+                    self.source_of.insert(media.mid, m.stream_id().to_string());
                 }
             }
             Event::MediaData(data) => {
@@ -492,12 +491,10 @@ fn assert_every_peer_is_separated(world: &World) {
 
         let mut sources: Vec<&str> = streams.iter().map(|(_, src, _)| src.as_str()).collect();
         sources.sort_unstable();
-        let expected: Vec<String> = (0..size)
-            .filter(|j| *j != i)
-            .map(peer_name)
-            .collect();
+        let expected: Vec<String> = (0..size).filter(|j| *j != i).map(peer_name).collect();
         assert_eq!(
-            sources, expected,
+            sources,
+            expected,
             "{} doit voir exactement les autres participants",
             peer_name(i)
         );

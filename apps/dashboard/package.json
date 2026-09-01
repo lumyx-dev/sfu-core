@@ -1,18 +1,21 @@
 {
-  "name": "@sightline/dashboard",
+  "name": "@lumyx/dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "verify:ds": "node scripts/verify-ds.mjs"
   },
   "dependencies": {
-    "@sightline/ui": "workspace:*",
+    "@lumyx/ui": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:",
+    "geist": "^1.3.1",
+    "lucide-react": "^0.487.0",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
