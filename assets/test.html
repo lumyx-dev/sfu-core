@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>Lumyx</title>
   <style>
-    /* ===== SIGHTLINE DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */
+    /* ===== LUMYX DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */
     /* One family, no monospace. Geist is what the repo's dashboard already declares via next/font,
    and its tabular figures are good enough to carry every number in the product. */
     @import url("https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap");
@@ -320,500 +320,439 @@
         transform: translateX(-100%)
       }
 
-      100% {
-        transform: translateX(100%)
+      .sl-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-strong) transparent
       }
-    }
 
-    * {
-      box-sizing: border-box
-    }
+      .sl-scroll::-webkit-scrollbar {
+        width: 10px;
+        height: 10px
+      }
 
-    body {
-      margin: 0;
-      font-family: var(--font-sans);
-      font-size: var(--fs-13);
-      line-height: var(--lh-snug);
-      background: var(--surface-page);
-      color: var(--text-body);
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility
-    }
+      .sl-scroll::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: var(--radius-pill);
+        border: 3px solid transparent;
+        background-clip: content-box
+      }
 
-    h1,
-    h2,
-    h3,
-    h4 {
-      margin: 0;
-      color: var(--text-strong);
-      font-weight: var(--fw-semibold);
-      letter-spacing: var(--ls-tight)
-    }
+      .sl-scroll::-webkit-scrollbar-track {
+        background: transparent
+      }
 
-    a {
-      color: var(--accent-text);
-      text-decoration: none
-    }
+      /* ===== END LUMYX DESIGN TOKENS ===== */
 
-    a:hover {
-      color: var(--accent-hover);
-      text-decoration: underline;
-      text-underline-offset: 2px
-    }
+      /* ── App shell ────────────────────────────────────────────────── */
+      .app {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 100vh;
+        max-width: var(--content-max);
+        margin: 0 auto;
+        padding: 0 var(--space-8);
+      }
 
-    ::selection {
-      background: var(--accent-tint);
-      color: var(--text-strong)
-    }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-6) 0;
+        border-bottom: 1px solid var(--border);
+      }
 
-    /* Every number in the product is tabular. */
-    .sl-num {
-      font-variant-numeric: tabular-nums;
-      font-feature-settings: 'tnum' 1
-    }
+      .brand {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-5);
+      }
 
-    /* 11px uppercase micro-label — the one typographic mannerism the system allows. */
-    .sl-label {
-      font-size: var(--fs-11);
-      font-weight: var(--fw-medium);
-      letter-spacing: var(--ls-label);
-      text-transform: uppercase;
-      color: var(--text-muted)
-    }
+      .brand-name {
+        font-size: var(--fs-16);
+        font-weight: var(--fw-semibold);
+        letter-spacing: var(--ls-display);
+        color: var(--text-strong);
+      }
 
-    .sl-scroll {
-      scrollbar-width: thin;
-      scrollbar-color: var(--border-strong) transparent
-    }
+      .brand-sub {
+        font-size: var(--fs-12);
+        color: var(--text-muted);
+      }
 
-    .sl-scroll::-webkit-scrollbar {
-      width: 10px;
-      height: 10px
-    }
+      /* ── Pill (core/Pill) ─────────────────────────────────────────── */
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-4);
+        padding: 5px 12px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-xs);
+        font-size: var(--fs-12);
+        color: var(--text-body);
+        white-space: nowrap;
+      }
 
-    .sl-scroll::-webkit-scrollbar-thumb {
-      background: var(--border-strong);
-      border-radius: var(--radius-pill);
-      border: 3px solid transparent;
-      background-clip: content-box
-    }
+      /* ── StatusDot (core/StatusDot) — script sets className = 'status-dot ' + phase ── */
+      .status-dot {
+        display: inline-block;
+        flex: 0 0 auto;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--idle);
+        --dot-color: var(--idle);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+        transition: background var(--dur-2) var(--ease-out);
+      }
 
-    .sl-scroll::-webkit-scrollbar-track {
-      background: transparent
-    }
+      .status-dot.connected {
+        background: var(--ok);
+        --dot-color: var(--ok);
+      }
 
-    /* ===== END SIGHTLINE DESIGN TOKENS ===== */
+      .status-dot.connecting {
+        background: var(--warn);
+        --dot-color: var(--warn);
+        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
+      }
 
-    /* ── App shell ────────────────────────────────────────────────── */
-    .app {
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      min-height: 100vh;
-      max-width: var(--content-max);
-      margin: 0 auto;
-      padding: 0 var(--space-8);
-    }
+      .status-dot.disconnected {
+        background: var(--danger);
+        --dot-color: var(--danger);
+      }
 
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-6) 0;
-      border-bottom: 1px solid var(--border);
-    }
+      /* ── main layout ──────────────────────────────────────────────── */
+      .main {
+        display: grid;
+        grid-template-columns: 1fr var(--rail-w);
+        gap: var(--gap-grid);
+        padding: var(--space-8) 0;
+        min-height: 0;
+      }
 
-    .brand {
-      display: flex;
-      align-items: baseline;
-      gap: var(--space-5);
-    }
+      .video-section {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+        min-width: 0;
+      }
 
-    .brand-name {
-      font-size: var(--fs-16);
-      font-weight: var(--fw-semibold);
-      letter-spacing: var(--ls-display);
-      color: var(--text-strong);
-    }
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+        min-width: 0;
+      }
 
-    .brand-sub {
-      font-size: var(--fs-12);
-      color: var(--text-muted);
-    }
+      /* ── Card (core/Card) ─────────────────────────────────────────── */
+      .card {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+      }
 
-    /* ── Pill (core/Pill) ─────────────────────────────────────────── */
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-4);
-      padding: 5px 12px;
-      border-radius: var(--radius-pill);
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-xs);
-      font-size: var(--fs-12);
-      color: var(--text-body);
-      white-space: nowrap;
-    }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-5);
+        padding: 14px var(--space-7);
+        flex: 0 0 auto;
+      }
 
-    /* ── StatusDot (core/StatusDot) — script sets className = 'status-dot ' + phase ── */
-    .status-dot {
-      display: inline-block;
-      flex: 0 0 auto;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--idle);
-      --dot-color: var(--idle);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
-      transition: background var(--dur-2) var(--ease-out);
-    }
+      .card-title-group {
+        display: inline-flex;
+        align-items: baseline;
+        gap: var(--space-4);
+        min-width: 0;
+      }
 
-    .status-dot.connected {
-      background: var(--ok);
-      --dot-color: var(--ok);
-    }
+      .card-title {
+        font-size: var(--fs-14);
+        font-weight: var(--fw-semibold);
+        color: var(--text-strong);
+      }
 
-    .status-dot.connecting {
-      background: var(--warn);
-      --dot-color: var(--warn);
-      animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-    }
+      .card-meta {
+        font-size: var(--fs-12);
+        color: var(--text-muted);
+      }
 
-    .status-dot.disconnected {
-      background: var(--danger);
-      --dot-color: var(--danger);
-    }
+      .card-body {
+        flex: 1;
+        min-height: 0;
+      }
 
-    /* ── main layout ──────────────────────────────────────────────── */
-    .main {
-      display: grid;
-      grid-template-columns: 1fr var(--rail-w);
-      gap: var(--gap-grid);
-      padding: var(--space-8) 0;
-      min-height: 0;
-    }
+      .card-body-padded {
+        padding: 0 var(--space-7) var(--space-7);
+      }
 
-    .video-section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-6);
-      min-width: 0;
-    }
+      /* ── Button (core/Button) ─────────────────────────────────────── */
+      .controls {
+        display: flex;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+      }
 
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-6);
-      min-width: 0;
-    }
+      .btn {
+        font-family: var(--font-sans);
+        font-weight: var(--fw-medium);
+        letter-spacing: var(--ls-normal);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        cursor: pointer;
+        outline: none;
+        transition:
+          background var(--dur-1) var(--ease-out),
+          border-color var(--dur-1) var(--ease-out),
+          box-shadow var(--dur-1) var(--ease-out);
+        font-size: var(--fs-13);
+        padding: 9px 16px;
+        border-radius: var(--radius-sm);
+        gap: var(--space-4);
+      }
 
-    /* ── Card (core/Card) ─────────────────────────────────────────── */
-    .card {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      overflow: hidden;
-    }
+      .btn:disabled {
+        cursor: not-allowed;
+        opacity: .45;
+      }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-5);
-      padding: 14px var(--space-7);
-      flex: 0 0 auto;
-    }
+      .btn:focus-visible {
+        box-shadow: var(--ring-accent);
+      }
 
-    .card-title-group {
-      display: inline-flex;
-      align-items: baseline;
-      gap: var(--space-4);
-      min-width: 0;
-    }
+      .btn-primary {
+        background: var(--accent);
+        border: 1px solid var(--accent);
+        color: var(--text-on-accent);
+        box-shadow: var(--shadow-xs);
+      }
 
-    .card-title {
-      font-size: var(--fs-14);
-      font-weight: var(--fw-semibold);
-      color: var(--text-strong);
-    }
+      .btn-primary:hover:not(:disabled) {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+      }
 
-    .card-meta {
-      font-size: var(--fs-12);
-      color: var(--text-muted);
-    }
+      .btn-secondary {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        color: var(--text-strong);
+        box-shadow: var(--shadow-xs);
+      }
 
-    .card-body {
-      flex: 1;
-      min-height: 0;
-    }
+      .btn-secondary:hover:not(:disabled) {
+        background: var(--surface-hover);
+        border-color: var(--border-strong);
+      }
 
-    .card-body-padded {
-      padding: 0 var(--space-7) var(--space-7);
-    }
+      .btn-danger {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        color: var(--danger);
+        box-shadow: var(--shadow-xs);
+      }
 
-    /* ── Button (core/Button) ─────────────────────────────────────── */
-    .controls {
-      display: flex;
-      gap: var(--space-4);
-      flex-wrap: wrap;
-    }
+      .btn-danger:hover:not(:disabled) {
+        background: var(--danger-tint);
+        border-color: var(--danger);
+      }
 
-    .btn {
-      font-family: var(--font-sans);
-      font-weight: var(--fw-medium);
-      letter-spacing: var(--ls-normal);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      cursor: pointer;
-      outline: none;
-      transition:
-        background var(--dur-1) var(--ease-out),
-        border-color var(--dur-1) var(--ease-out),
-        box-shadow var(--dur-1) var(--ease-out);
-      font-size: var(--fs-13);
-      padding: 9px 16px;
-      border-radius: var(--radius-sm);
-      gap: var(--space-4);
-    }
+      .btn-danger:focus-visible {
+        box-shadow: var(--ring-danger);
+      }
 
-    .btn:disabled {
-      cursor: not-allowed;
-      opacity: .45;
-    }
+      /* ── VideoTile (webrtc/VideoTile) ─────────────────────────────── */
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--gap-grid);
+      }
 
-    .btn:focus-visible {
-      box-shadow: var(--ring-accent);
-    }
+      .video-card {
+        position: relative;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: var(--surface-inset);
+        box-shadow: var(--shadow-xs);
+        min-width: 0;
+        aspect-ratio: 16/10;
+      }
 
-    .btn-primary {
-      background: var(--accent);
-      border: 1px solid var(--accent);
-      color: var(--text-on-accent);
-      box-shadow: var(--shadow-xs);
-    }
+      .video-card video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
 
-    .btn-primary:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
+      /* .label is set directly by the script for the remote card */
+      .video-card .label {
+        position: absolute;
+        bottom: var(--space-5);
+        left: var(--space-5);
+        right: var(--space-5);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-4);
+        min-width: 0;
+        background: var(--surface-overlay);
+        color: var(--text-on-overlay);
+        backdrop-filter: var(--blur-overlay);
+        padding: 4px 10px;
+        border-radius: var(--radius-pill);
+        font-size: var(--fs-12);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: max-content;
+      }
 
-    .btn-secondary {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      color: var(--text-strong);
-      box-shadow: var(--shadow-xs);
-    }
+      /* .indicator / .indicator.live are set directly by the script */
+      .video-card .indicator {
+        position: absolute;
+        top: var(--space-5);
+        right: var(--space-5);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--danger);
+        --dot-color: var(--danger);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+      }
 
-    .btn-secondary:hover:not(:disabled) {
-      background: var(--surface-hover);
-      border-color: var(--border-strong);
-    }
+      .video-card .indicator.live {
+        background: var(--ok);
+        --dot-color: var(--ok);
+        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
+      }
 
-    .btn-danger {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      color: var(--danger);
-      box-shadow: var(--shadow-xs);
-    }
+      .video-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-4);
+        color: var(--text-faint);
+        font-size: var(--fs-12);
+      }
 
-    .btn-danger:hover:not(:disabled) {
-      background: var(--danger-tint);
-      border-color: var(--danger);
-    }
+      /* ── MetricGrid / MetricCard (data/MetricGrid, data/MetricCard) ─ */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1px;
+        background: var(--border-subtle);
+      }
 
-    .btn-danger:focus-visible {
-      box-shadow: var(--ring-danger);
-    }
+      .metric {
+        padding: var(--space-6) var(--space-7);
+        background: var(--surface-card);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        min-width: 0;
+      }
 
-    /* ── VideoTile (webrtc/VideoTile) ─────────────────────────────── */
-    .video-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--gap-grid);
-    }
+      .metric-value {
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+        font-size: var(--fs-34);
+        font-weight: var(--fw-medium);
+        letter-spacing: var(--ls-display);
+        line-height: var(--lh-flat);
+        color: var(--text-strong);
+      }
 
-    .video-card {
-      position: relative;
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      border: 1px solid var(--border);
-      background: var(--surface-inset);
-      box-shadow: var(--shadow-xs);
-      min-width: 0;
-      aspect-ratio: 16/10;
-    }
+      .metric-unit {
+        font-size: var(--fs-14);
+        font-weight: var(--fw-regular);
+        color: var(--text-muted);
+      }
 
-    .video-card video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    /* .label is set directly by the script for the remote card */
-    .video-card .label {
-      position: absolute;
-      bottom: var(--space-5);
-      left: var(--space-5);
-      right: var(--space-5);
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-4);
-      min-width: 0;
-      background: var(--surface-overlay);
-      color: var(--text-on-overlay);
-      backdrop-filter: var(--blur-overlay);
-      padding: 4px 10px;
-      border-radius: var(--radius-pill);
-      font-size: var(--fs-12);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      width: max-content;
-    }
-
-    /* .indicator / .indicator.live are set directly by the script */
-    .video-card .indicator {
-      position: absolute;
-      top: var(--space-5);
-      right: var(--space-5);
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--danger);
-      --dot-color: var(--danger);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
-    }
-
-    .video-card .indicator.live {
-      background: var(--ok);
-      --dot-color: var(--ok);
-      animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-    }
-
-    .video-placeholder {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-4);
-      color: var(--text-faint);
-      font-size: var(--fs-12);
-    }
-
-    /* ── MetricGrid / MetricCard (data/MetricGrid, data/MetricCard) ─ */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1px;
-      background: var(--border-subtle);
-    }
-
-    .metric {
-      padding: var(--space-6) var(--space-7);
-      background: var(--surface-card);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-      min-width: 0;
-    }
-
-    .metric-value {
-      display: flex;
-      align-items: baseline;
-      gap: 3px;
-      font-size: var(--fs-34);
-      font-weight: var(--fw-medium);
-      letter-spacing: var(--ls-display);
-      line-height: var(--lh-flat);
-      color: var(--text-strong);
-    }
-
-    .metric-unit {
-      font-size: var(--fs-14);
-      font-weight: var(--fw-regular);
-      color: var(--text-muted);
-    }
-
-    /* ── EventList (data/EventList) — script builds .log-entry / .log-time /
+      /* ── EventList (data/EventList) — script builds .log-entry / .log-time /
        .log-msg directly, with type in {send,info,event,error} ─────── */
-    .log-container {
-      height: 260px;
-      overflow-y: auto;
-    }
+      .log-container {
+        height: 260px;
+        overflow-y: auto;
+      }
 
-    .log-entry {
-      display: grid;
-      grid-template-columns: 58px 1fr;
-      gap: var(--space-5);
-      align-items: baseline;
-      padding: 10px var(--space-7);
-      font-size: var(--fs-12);
-    }
+      .log-entry {
+        display: grid;
+        grid-template-columns: 58px 1fr;
+        gap: var(--space-5);
+        align-items: baseline;
+        padding: 10px var(--space-7);
+        font-size: var(--fs-12);
+      }
 
-    .log-entry:not(:first-child) {
-      border-top: 1px solid var(--border-subtle);
-    }
+      .log-entry:not(:first-child) {
+        border-top: 1px solid var(--border-subtle);
+      }
 
-    .log-time {
-      color: var(--text-faint);
-      font-variant-numeric: tabular-nums;
-      font-feature-settings: 'tnum' 1;
-    }
+      .log-time {
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
+      }
 
-    .log-msg {
-      word-break: break-word;
-    }
+      .log-msg {
+        word-break: break-word;
+      }
 
-    .log-msg.info {
-      color: var(--text-body);
-    }
+      .log-msg.info {
+        color: var(--text-body);
+      }
 
-    .log-msg.event {
-      color: var(--ok);
-    }
+      .log-msg.event {
+        color: var(--ok);
+      }
 
-    .log-msg.send {
-      color: var(--warn);
-    }
+      .log-msg.send {
+        color: var(--warn);
+      }
 
-    .log-msg.error {
-      color: var(--danger);
-    }
+      .log-msg.error {
+        color: var(--danger);
+      }
 
-    /* ── StatusStrip (layout/StatusStrip) ─────────────────────────── */
-    .statusstrip {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-6);
-      padding: var(--space-5) 0;
-      border-top: 1px solid var(--border);
-      font-size: var(--fs-12);
-      color: var(--text-muted);
-    }
+      /* ── StatusStrip (layout/StatusStrip) ─────────────────────────── */
+      .statusstrip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-6);
+        padding: var(--space-5) 0;
+        border-top: 1px solid var(--border);
+        font-size: var(--fs-12);
+        color: var(--text-muted);
+      }
 
-    .statusstrip-items {
-      display: flex;
-      gap: var(--space-7);
-      flex: 0 0 auto;
-    }
+      .statusstrip-items {
+        display: flex;
+        gap: var(--space-7);
+        flex: 0 0 auto;
+      }
 
-    .statusstrip-item {
-      display: inline-flex;
-      gap: var(--space-3);
-    }
+      .statusstrip-item {
+        display: inline-flex;
+        gap: var(--space-3);
+      }
 
-    .statusstrip-value {
-      color: var(--text-strong);
-    }
+      .statusstrip-value {
+        color: var(--text-strong);
+      }
   </style>
 </head>
 
@@ -822,7 +761,7 @@
 
     <header class="header">
       <div class="brand">
-        <span class="brand-name">Sightline</span>
+        <span class="brand-name">Lumyx</span>
         <span class="brand-sub">Session console</span>
       </div>
       <span class="pill">
