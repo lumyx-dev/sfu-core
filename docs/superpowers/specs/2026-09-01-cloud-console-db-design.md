@@ -1,7 +1,8 @@
 # Base de données de la console Cloud (auth + organisation/projets) — Design
 
 **Date :** 2026-09-01
-**Statut :** approuvé, prêt pour le plan d'implémentation
+**Statut :** implémenté (branche `feat/console-db` du dépôt `apps/cloud`) — voir §11 pour
+trois écarts découverts à l'implémentation, contre les versions installées de Better Auth
 **Sous-projet :** socle de données de la console Cloud (`apps/cloud`)
 
 ## 1. Contexte
@@ -192,3 +193,53 @@ la migration SQL correspondante.
 - Flows testés au niveau API : inscription, création d'organisation, invitation acceptée,
   création d'une clé API scopée projet + environnement, révocation, et présence de la ligne
   d'audit log correspondante pour chacun.
+
+## 11. Amendements post-implémentation
+
+Trois décisions de ce document se sont révélées irréalisables telles quelles contre les
+versions installées de `better-auth`/`@better-auth/api-key` (1.7.2). Chacune a été
+vérifiée directement contre le code source de la librairie (pas supposée), documentée dans
+le code au point exact où elle s'applique, et re-vérifiée indépendamment en revue. Ce
+paragraphe existe pour que ce document reste une autorité fiable — les sections ci-dessus
+ne sont pas corrigées en place pour garder trace de l'intention originale.
+
+**§4.3 / §6 — `additionalFields` n'existe pas.** Le plugin `apiKey` a été extrait de
+`better-auth` vers un package séparé, `@better-auth/api-key`, dont les options n'offrent
+aucun moyen d'ajouter des colonnes personnalisées (seulement un renommage des colonnes
+existantes). `projectId`/`environmentId` sont ajoutées via le mécanisme générique
+`schema.<model>.fields` d'un plugin local (`apiKeyScopeFields` dans
+`apps/cloud/lib/auth/auth.ts`) — un chemin différent, mais qui produit les mêmes colonnes
+réelles, confirmé par une génération CLI effective, pas seulement par lecture de types.
+
+**Conséquence plus sévère, non anticipée par ce document :** l'endpoint
+`auth.api.createApiKey` de `@better-auth/api-key` construit son `INSERT` à partir d'une
+liste de champs figée qui ne lit ni ne transmet `projectId`/`environmentId` sous aucune
+forme — confirmé empiriquement (violation Postgres `23502` avec les colonnes `NOT NULL`
+d'origine). La garantie « `tous deux requis` » de §4.3 est donc **irréalisable au niveau
+base de données** via cette API. Les colonnes ont été rendues nullables (FK toujours
+appliquée dès qu'une valeur est posée), et l'invariant « une clé est toujours scopée »
+vit désormais au niveau applicatif : `apps/cloud/lib/auth/api-keys.ts` expose
+`createScopedApiKey()`, seul point du code qui doit être utilisé pour créer une clé
+(appelle `createApiKey` puis un `UPDATE` immédiat sur les deux colonnes). Tout futur code
+de création de clé doit passer par cette fonction, jamais par `auth.api.createApiKey`
+directement.
+
+**§8 — `databaseHooks` ne couvre pas `organization`/`member`/`invitation`.** Cette clé de
+configuration de Better Auth ne couvre que `user`/`session`/`account`/`verification` dans
+la version installée. Le mécanisme réel pour les hooks de cycle de vie de l'organisation
+est l'option `organizationHooks` du plugin `organization` lui-même
+(`afterCreateOrganization`/`afterAddMember`/`afterCreateInvitation`) — confirmé jusque dans
+les gestionnaires de route réels (pas seulement les déclarations de type), qui appellent
+bien ces callbacks au bon moment. `logAudit()` (§8, mécanisme inchangé) est appelée depuis
+là plutôt que depuis `databaseHooks`.
+
+**Cause commune identifiée, hors périmètre de cette implémentation :** `@better-auth/cli`
+publié reste figé sur `better-auth@1.4.21`/`@better-auth/core@1.4.21`, trois versions
+mineures derrière celle installée dans ce projet (`1.7.2`) — sans version stable
+intermédiaire disponible sur le registre npm au moment de l'implémentation. Une
+régénération naïve via `@better-auth/cli generate` produit donc un schéma incomplet
+(colonnes manquantes sur `account`/`session`/`verification`, qui cassaient
+`auth.api.signUpEmail` pour tout appelant). Un générateur alternatif, version-cohérent,
+existe (`@better-auth/drizzle-adapter`'s `createSchema`, sur son point d'entrée
+`relations-v2`) mais n'a pas été adopté dans cette implémentation — recommandé pour qui
+reprendra le flux de régénération de schéma décrit en §9.
