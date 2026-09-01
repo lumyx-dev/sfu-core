@@ -11,7 +11,7 @@
 //! into the single one the client had offered — two encodings interleaved into
 //! one decoder.
 
-use sfu::transport::PeerConnection;
+use lumyx_sfu::transport::PeerConnection;
 use std::sync::Arc;
 use std::time::Instant;
 use str0m::change::{SdpAnswer, SdpOffer};
@@ -58,8 +58,12 @@ impl Browser {
     }
 }
 
-async fn sfu_connection(peer_id: &str) -> (PeerConnection, mpsc::Receiver<sfu::signaling::ServerMessage>)
-{
+async fn sfu_connection(
+    peer_id: &str,
+) -> (
+    PeerConnection,
+    mpsc::Receiver<lumyx_sfu::signaling::ServerMessage>,
+) {
     let (tx, rx) = mpsc::channel(32);
     let conn = PeerConnection::new(Arc::from(peer_id), tx, "127.0.0.1".to_string()).await;
     (conn, rx)
@@ -80,14 +84,14 @@ async fn connect(browser: &mut Browser, sfu: &mut PeerConnection) {
 fn renegotiate(
     browser: &mut Browser,
     sfu: &mut PeerConnection,
-) -> Vec<(sfu::media::TrackKey, Mid)> {
+) -> Vec<(lumyx_sfu::media::TrackKey, Mid)> {
     let offer = sfu.negotiate().expect("le SFU doit re-offrir");
     let answer = browser.answer(&offer).expect("le navigateur répond");
     sfu.accept_answer(&answer).expect("l'answer est appliquée")
 }
 
-fn track(publisher: &str, mid: &str) -> sfu::media::TrackKey {
-    sfu::media::TrackKey::new(Arc::from(publisher), Mid::from(mid))
+fn track(publisher: &str, mid: &str) -> lumyx_sfu::media::TrackKey {
+    lumyx_sfu::media::TrackKey::new(Arc::from(publisher), Mid::from(mid))
 }
 
 #[tokio::test]
@@ -100,7 +104,7 @@ async fn the_initial_offer_is_answered() {
     // The answer also reaches the client through the signaling channel.
     assert!(matches!(
         signaling.try_recv(),
-        Ok(sfu::signaling::ServerMessage::SfuAnswer { .. })
+        Ok(lumyx_sfu::signaling::ServerMessage::SfuAnswer { .. })
     ));
 }
 

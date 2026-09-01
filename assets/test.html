@@ -3,700 +3,756 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Sightline</title>
+  <title>Lumyx</title>
   <style>
-/* ===== SIGHTLINE DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */
-/* One family, no monospace. Geist is what the repo's dashboard already declares via next/font,
+    /* ===== LUMYX DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */
+    /* One family, no monospace. Geist is what the repo's dashboard already declares via next/font,
    and its tabular figures are good enough to carry every number in the product. */
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap");
 
-:root{
-  /* ── Neutrals: near-neutral with a faint cool cast. The system is 90% these. ── */
-  --n-0:#ffffff;
-  --n-25:#fbfbfc;
-  --n-50:#f5f6f8;
-  --n-100:#ebedf1;
-  --n-150:#e4e7ec;
-  --n-200:#dee1e7;
-  --n-300:#c6cad4;
-  --n-400:#9298a6;
-  --n-500:#6b7180;
-  --n-600:#4d5361;
-  --n-700:#383d49;
-  --n-800:#23262e;
-  --n-900:#15171c;
-  --n-950:#0b0c10;
+    :root {
+      /* ── Neutrals: near-neutral with a faint cool cast. The system is 90% these. ── */
+      --n-0: #ffffff;
+      --n-25: #fbfbfc;
+      --n-50: #f5f6f8;
+      --n-100: #ebedf1;
+      --n-150: #e4e7ec;
+      --n-200: #dee1e7;
+      --n-300: #c6cad4;
+      --n-400: #9298a6;
+      --n-500: #6b7180;
+      --n-600: #4d5361;
+      --n-700: #383d49;
+      --n-800: #23262e;
+      --n-900: #15171c;
+      --n-950: #0b0c10;
 
-  /* ── Accent: indigo. Saturated and confident — the primary action, the selected row,
+      /* ── Accent: indigo. Saturated and confident — the primary action, the selected row,
         focus rings, and the primary data series. ── */
-  --indigo-50:#eeecfe;
-  --indigo-100:#ded8fd;
-  --indigo-400:#7c68f8;
-  --indigo-500:#4f39f6;
-  --indigo-600:#3d24d9;
-  --indigo-700:#2f1aa8;
-  --indigo-900:#1e1170;
+      --indigo-50: #eeecfe;
+      --indigo-100: #ded8fd;
+      --indigo-400: #7c68f8;
+      --indigo-500: #4f39f6;
+      --indigo-600: #3d24d9;
+      --indigo-700: #2f1aa8;
+      --indigo-900: #1e1170;
 
-  /* ── Secondary: coral. The room / session axis, against indigo's peer axis. ── */
-  --coral-50:#fff0ea;
-  --coral-400:#ff8a5c;
-  --coral-500:#f0521f;
-  --coral-600:#c93c0f;
+      /* ── Secondary: coral. The room / session axis, against indigo's peer axis. ── */
+      --coral-50: #fff0ea;
+      --coral-400: #ff8a5c;
+      --coral-500: #f0521f;
+      --coral-600: #c93c0f;
 
-  /* ── Semantics. The 500s are fills, dots, chart strokes and dark-mode ink; the 600s are the
+      /* ── Semantics. The 500s are fills, dots, chart strokes and dark-mode ink; the 600s are the
         light-theme ink steps (they clear 4.5:1 on both white and their own tint). ── */
-  --green-50:#e6f9ef;
-  --green-400:#34c77b;
-  --green-500:#0fa15c;
-  --green-600:#0a7a45;
-  --amber-50:#fff4de;
-  --amber-400:#f9b23c;
-  --amber-500:#dd8a00;
-  --amber-600:#9a5f00;
-  --red-50:#ffecea;
-  --red-400:#ff6b5a;
-  --red-500:#e5342a;
-  --red-600:#b8201c;
-  --blue-50:#e9f1ff;
-  --blue-400:#5b9bff;
-  --blue-500:#2f6df0;
-  --blue-600:#1f4fc0;
+      --green-50: #e6f9ef;
+      --green-400: #34c77b;
+      --green-500: #0fa15c;
+      --green-600: #0a7a45;
+      --amber-50: #fff4de;
+      --amber-400: #f9b23c;
+      --amber-500: #dd8a00;
+      --amber-600: #9a5f00;
+      --red-50: #ffecea;
+      --red-400: #ff6b5a;
+      --red-500: #e5342a;
+      --red-600: #b8201c;
+      --blue-50: #e9f1ff;
+      --blue-400: #5b9bff;
+      --blue-500: #2f6df0;
+      --blue-600: #1f4fc0;
 
-  /* ── Chart series: five values that stay legible next to each other. ── */
-  --series-1:#4f39f6;
-  --series-2:#f0521f;
-  --series-3:#0fa15c;
-  --series-4:#dd8a00;
-  --series-5:#6b7180;
-}
+      /* ── Chart series: five values that stay legible next to each other. ── */
+      --series-1: #4f39f6;
+      --series-2: #f0521f;
+      --series-3: #0fa15c;
+      --series-4: #dd8a00;
+      --series-5: #6b7180;
+    }
 
-/* Light is the default. `.theme-dark` re-points the same aliases — every component reads only
+    /* Light is the default. `.theme-dark` re-points the same aliases — every component reads only
    from this file, so nothing needs a dark-mode branch in JS. */
-:root{
-  --surface-page:var(--n-50);
-  --surface-card:var(--n-0);
-  --surface-sunken:var(--n-25);
-  --surface-inset:var(--n-50);
-  --surface-hover:var(--n-50);
-  --surface-active:var(--n-100);
-  --surface-overlay:rgba(11,12,16,.55);
+    :root {
+      --surface-page: var(--n-50);
+      --surface-card: var(--n-0);
+      --surface-sunken: var(--n-25);
+      --surface-inset: var(--n-50);
+      --surface-hover: var(--n-50);
+      --surface-active: var(--n-100);
+      --surface-overlay: rgba(11, 12, 16, .55);
 
-  /* Hairlines, deliberately quiet: shadow and surface carry the separation, not the stroke. */
-  --border:var(--n-100);
-  --border-strong:var(--n-150);
-  --border-subtle:#f1f2f6;
+      /* Hairlines, deliberately quiet: shadow and surface carry the separation, not the stroke. */
+      --border: var(--n-100);
+      --border-strong: var(--n-150);
+      --border-subtle: #f1f2f6;
 
-  --text-strong:var(--n-900);
-  --text-body:var(--n-700);
-  --text-muted:var(--n-500);
-  --text-faint:var(--n-400);
-  --text-on-accent:var(--n-0);
-  --text-on-overlay:var(--n-0);
+      --text-strong: var(--n-900);
+      --text-body: var(--n-700);
+      --text-muted: var(--n-500);
+      --text-faint: var(--n-400);
+      --text-on-accent: var(--n-0);
+      --text-on-overlay: var(--n-0);
 
-  --accent:var(--indigo-500);
-  --accent-hover:var(--indigo-600);
-  --accent-tint:var(--indigo-50);
-  --accent-border:var(--indigo-100);
-  --accent-text:var(--indigo-600);
+      --accent: var(--indigo-500);
+      --accent-hover: var(--indigo-600);
+      --accent-tint: var(--indigo-50);
+      --accent-border: var(--indigo-100);
+      --accent-text: var(--indigo-600);
 
-  --accent-2:var(--coral-500);
-  --accent-2-tint:var(--coral-50);
+      --accent-2: var(--coral-500);
+      --accent-2-tint: var(--coral-50);
 
-  /* Ink steps: these carry 11–13px text, so they are the 600s, not the bright fills. */
-  --ok:var(--green-600);
-  --ok-tint:var(--green-50);
-  --ok-solid:var(--green-500);
-  --warn:var(--amber-600);
-  --warn-tint:var(--amber-50);
-  --warn-solid:var(--amber-500);
-  --danger:var(--red-600);
-  --danger-tint:var(--red-50);
-  --danger-solid:var(--red-500);
-  --info:var(--blue-600);
-  --info-tint:var(--blue-50);
-  --info-solid:var(--blue-500);
-  --idle:var(--n-400);
-  --idle-tint:var(--n-100);
-}
+      /* Ink steps: these carry 11–13px text, so they are the 600s, not the bright fills. */
+      --ok: var(--green-600);
+      --ok-tint: var(--green-50);
+      --ok-solid: var(--green-500);
+      --warn: var(--amber-600);
+      --warn-tint: var(--amber-50);
+      --warn-solid: var(--amber-500);
+      --danger: var(--red-600);
+      --danger-tint: var(--red-50);
+      --danger-solid: var(--red-500);
+      --info: var(--blue-600);
+      --info-tint: var(--blue-50);
+      --info-solid: var(--blue-500);
+      --idle: var(--n-400);
+      --idle-tint: var(--n-100);
+    }
 
-.theme-dark{
-  --surface-page:var(--n-950);
-  --surface-card:var(--n-900);
-  --surface-sunken:#101216;
-  --surface-inset:#101216;
-  --surface-hover:var(--n-800);
-  --surface-active:var(--n-700);
-  --surface-overlay:rgba(6,7,10,.66);
+    .theme-dark {
+      --surface-page: var(--n-950);
+      --surface-card: var(--n-900);
+      --surface-sunken: #101216;
+      --surface-inset: #101216;
+      --surface-hover: var(--n-800);
+      --surface-active: var(--n-700);
+      --surface-overlay: rgba(6, 7, 10, .66);
 
-  --border:#22262e;
-  --border-strong:#2f343d;
-  --border-subtle:#191c22;
+      --border: #22262e;
+      --border-strong: #2f343d;
+      --border-subtle: #191c22;
 
-  --text-strong:var(--n-50);
-  --text-body:var(--n-200);
-  --text-muted:var(--n-400);
-  --text-faint:var(--n-500);
-  --text-on-accent:var(--n-0);
+      --text-strong: var(--n-50);
+      --text-body: var(--n-200);
+      --text-muted: var(--n-400);
+      --text-faint: var(--n-500);
+      --text-on-accent: var(--n-0);
 
-  --accent:var(--indigo-400);
-  --accent-hover:#9484fa;
-  --accent-tint:rgba(124,104,248,.16);
-  --accent-border:rgba(124,104,248,.34);
-  --accent-text:#a596fb;
+      --accent: var(--indigo-400);
+      --accent-hover: #9484fa;
+      --accent-tint: rgba(124, 104, 248, .16);
+      --accent-border: rgba(124, 104, 248, .34);
+      --accent-text: #a596fb;
 
-  --accent-2:var(--coral-400);
-  --accent-2-tint:rgba(255,138,92,.16);
+      --accent-2: var(--coral-400);
+      --accent-2-tint: rgba(255, 138, 92, .16);
 
-  --ok:var(--green-400);
-  --ok-tint:rgba(52,199,123,.16);
-  --ok-solid:var(--green-400);
-  --warn:var(--amber-400);
-  --warn-tint:rgba(249,178,60,.16);
-  --warn-solid:var(--amber-400);
-  --danger:var(--red-400);
-  --danger-tint:rgba(255,107,90,.16);
-  --danger-solid:var(--red-400);
-  --info:var(--blue-400);
-  --info-tint:rgba(91,155,255,.16);
-  --info-solid:var(--blue-400);
-  --idle:var(--n-500);
-  --idle-tint:var(--n-800);
-}
+      --ok: var(--green-400);
+      --ok-tint: rgba(52, 199, 123, .16);
+      --ok-solid: var(--green-400);
+      --warn: var(--amber-400);
+      --warn-tint: rgba(249, 178, 60, .16);
+      --warn-solid: var(--amber-400);
+      --danger: var(--red-400);
+      --danger-tint: rgba(255, 107, 90, .16);
+      --danger-solid: var(--red-400);
+      --info: var(--blue-400);
+      --info-tint: rgba(91, 155, 255, .16);
+      --info-solid: var(--blue-400);
+      --idle: var(--n-500);
+      --idle-tint: var(--n-800);
+    }
 
-:root{
-  --font-sans:'Geist','Geist Fallback',system-ui,-apple-system,'Segoe UI',sans-serif;
+    :root {
+      --font-sans: 'Geist', 'Geist Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* One scale, no monospace tier. Data and prose share it. */
-  --fs-11:11px; /* @kind font */
-  --fs-12:12px; /* @kind font */
-  --fs-13:13px; /* @kind font */
-  --fs-14:14px; /* @kind font */
-  --fs-16:16px; /* @kind font */
-  --fs-20:20px; /* @kind font */
-  --fs-26:26px; /* @kind font */
-  --fs-34:34px; /* @kind font */
-  --fs-44:44px; /* @kind font */
+      /* One scale, no monospace tier. Data and prose share it. */
+      --fs-11: 11px;
+      /* @kind font */
+      --fs-12: 12px;
+      /* @kind font */
+      --fs-13: 13px;
+      /* @kind font */
+      --fs-14: 14px;
+      /* @kind font */
+      --fs-16: 16px;
+      /* @kind font */
+      --fs-20: 20px;
+      /* @kind font */
+      --fs-26: 26px;
+      /* @kind font */
+      --fs-34: 34px;
+      /* @kind font */
+      --fs-44: 44px;
+      /* @kind font */
 
-  --lh-flat:1; /* @kind font */
-  --lh-tight:1.2; /* @kind font */
-  --lh-snug:1.4; /* @kind font */
-  --lh-body:1.6; /* @kind font */
+      --lh-flat: 1;
+      /* @kind font */
+      --lh-tight: 1.2;
+      /* @kind font */
+      --lh-snug: 1.4;
+      /* @kind font */
+      --lh-body: 1.6;
+      /* @kind font */
 
-  --fw-light:300; /* @kind font */
-  --fw-regular:400; /* @kind font */
-  --fw-medium:500; /* @kind font */
-  --fw-semibold:600; /* @kind font */
-  --fw-bold:700; /* @kind font */
+      --fw-light: 300;
+      /* @kind font */
+      --fw-regular: 400;
+      /* @kind font */
+      --fw-medium: 500;
+      /* @kind font */
+      --fw-semibold: 600;
+      /* @kind font */
+      --fw-bold: 700;
+      /* @kind font */
 
-  --ls-display:-0.02em; /* @kind font */
-  --ls-tight:-0.01em; /* @kind font */
-  --ls-normal:0; /* @kind font */
-  --ls-label:0.06em; /* @kind font */
-}
+      --ls-display: -0.02em;
+      /* @kind font */
+      --ls-tight: -0.01em;
+      /* @kind font */
+      --ls-normal: 0;
+      /* @kind font */
+      --ls-label: 0.06em;
+      /* @kind font */
+    }
 
-:root{
-  --space-0:0;
-  --space-1:2px;
-  --space-2:4px;
-  --space-3:6px;
-  --space-4:8px;
-  --space-5:12px;
-  --space-6:16px;
-  --space-7:20px;
-  --space-8:24px;
-  --space-9:32px;
-  --space-10:40px;
-  --space-11:48px;
-  --space-12:64px;
+    :root {
+      --space-0: 0;
+      --space-1: 2px;
+      --space-2: 4px;
+      --space-3: 6px;
+      --space-4: 8px;
+      --space-5: 12px;
+      --space-6: 16px;
+      --space-7: 20px;
+      --space-8: 24px;
+      --space-9: 32px;
+      --space-10: 40px;
+      --space-11: 48px;
+      --space-12: 64px;
 
-  --pad-card:var(--space-7);
-  --pad-card-tight:var(--space-6);
-  --pad-cell:var(--space-5) var(--space-6);
-  --gap-grid:var(--space-6);
-  --gap-section:var(--space-8);
+      --pad-card: var(--space-7);
+      --pad-card-tight: var(--space-6);
+      --pad-cell: var(--space-5) var(--space-6);
+      --gap-grid: var(--space-6);
+      --gap-section: var(--space-8);
 
-  --content-max:1360px;
-  --sidebar-w:248px;
-  --rail-w:340px;
-  --grid-size:8px; /* @kind spacing */
-}
+      --content-max: 1360px;
+      --sidebar-w: 248px;
+      --rail-w: 340px;
+      --grid-size: 8px;
+      /* @kind spacing */
+    }
 
-:root{
-  /* Soft. Nothing in the product has a hard corner except the page itself. */
-  --radius-xs:8px;
-  --radius-sm:12px;
-  --radius-md:14px;
-  --radius-lg:18px;
-  --radius-xl:24px;
-  --radius-pill:999px;
-  --border-width:1px; /* @kind other */
-}
+    :root {
+      /* Soft. Nothing in the product has a hard corner except the page itself. */
+      --radius-xs: 8px;
+      --radius-sm: 12px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --radius-pill: 999px;
+      --border-width: 1px;
+      /* @kind other */
+    }
 
-:root{
-  /* Real, soft, neutral shadows — cast from a single high light source. No coloured glow. */
-  --shadow-xs:0 1px 2px rgba(21,23,28,.05);
-  --shadow-sm:0 1px 3px rgba(21,23,28,.07), 0 1px 2px rgba(21,23,28,.04);
-  --shadow-md:0 6px 16px -4px rgba(21,23,28,.11), 0 2px 6px -2px rgba(21,23,28,.06);
-  --shadow-lg:0 16px 40px -12px rgba(21,23,28,.17), 0 4px 12px -6px rgba(21,23,28,.09);
-  --shadow-none:none; /* @kind shadow */
+    :root {
+      /* Real, soft, neutral shadows — cast from a single high light source. No coloured glow. */
+      --shadow-xs: 0 1px 2px rgba(21, 23, 28, .05);
+      --shadow-sm: 0 1px 3px rgba(21, 23, 28, .07), 0 1px 2px rgba(21, 23, 28, .04);
+      --shadow-md: 0 6px 16px -4px rgba(21, 23, 28, .11), 0 2px 6px -2px rgba(21, 23, 28, .06);
+      --shadow-lg: 0 16px 40px -12px rgba(21, 23, 28, .17), 0 4px 12px -6px rgba(21, 23, 28, .09);
+      --shadow-none: none;
+      /* @kind shadow */
 
-  --ring-accent:0 0 0 3px rgba(79,57,246,.20); /* @kind shadow */
-  --ring-danger:0 0 0 3px rgba(184,32,28,.20); /* @kind shadow */
+      --ring-accent: 0 0 0 3px rgba(79, 57, 246, .20);
+      /* @kind shadow */
+      --ring-danger: 0 0 0 3px rgba(184, 32, 28, .20);
+      /* @kind shadow */
 
-  --blur-overlay:blur(6px); /* @kind other */
-}
+      --blur-overlay: blur(6px);
+      /* @kind other */
+    }
 
-.theme-dark{
-  --shadow-xs:0 1px 2px rgba(0,0,0,.4);
-  --shadow-sm:0 1px 3px rgba(0,0,0,.45);
-  --shadow-md:0 8px 20px -6px rgba(0,0,0,.55);
-  --shadow-lg:0 20px 48px -16px rgba(0,0,0,.65);
-  --ring-accent:0 0 0 3px rgba(124,104,248,.28); /* @kind shadow */
-  --ring-danger:0 0 0 3px rgba(255,107,90,.24); /* @kind shadow */
-}
+    .theme-dark {
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, .4);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, .45);
+      --shadow-md: 0 8px 20px -6px rgba(0, 0, 0, .55);
+      --shadow-lg: 0 20px 48px -16px rgba(0, 0, 0, .65);
+      --ring-accent: 0 0 0 3px rgba(124, 104, 248, .28);
+      /* @kind shadow */
+      --ring-danger: 0 0 0 3px rgba(255, 107, 90, .24);
+      /* @kind shadow */
+    }
 
-:root{
-  --dur-1:120ms; /* @kind other */ /* hover, tint changes */
-  --dur-2:180ms; /* @kind other */ /* the default */
-  --dur-3:260ms; /* @kind other */ /* size / position */
-  --ease-out:cubic-bezier(.2,.6,.2,1); /* @kind other */
-  --ease-in-out:cubic-bezier(.4,0,.2,1); /* @kind other */
-}
+    :root {
+      --dur-1: 120ms;
+      /* @kind other */
+      /* hover, tint changes */
+      --dur-2: 180ms;
+      /* @kind other */
+      /* the default */
+      --dur-3: 260ms;
+      /* @kind other */
+      /* size / position */
+      --ease-out: cubic-bezier(.2, .6, .2, 1);
+      /* @kind other */
+      --ease-in-out: cubic-bezier(.4, 0, .2, 1);
+      /* @kind other */
+    }
 
-/* The only looping animation in the system: a slow, low-contrast breath on a live indicator.
+    /* The only looping animation in the system: a slow, low-contrast breath on a live indicator.
    Nothing blinks, nothing pulses hard, nothing shimmers in a colour. */
-@keyframes sl-breathe{0%,100%{opacity:1}50%{opacity:.5}}
-@keyframes sl-shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+    @keyframes sl-breathe {
 
-*{box-sizing:border-box}
-body{margin:0;font-family:var(--font-sans);font-size:var(--fs-13);line-height:var(--lh-snug);background:var(--surface-page);color:var(--text-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-h1,h2,h3,h4{margin:0;color:var(--text-strong);font-weight:var(--fw-semibold);letter-spacing:var(--ls-tight)}
-a{color:var(--accent-text);text-decoration:none}
-a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offset:2px}
-::selection{background:var(--accent-tint);color:var(--text-strong)}
+      0%,
+      100% {
+        opacity: 1
+      }
 
-/* Every number in the product is tabular. */
-.sl-num{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
-
-/* 11px uppercase micro-label — the one typographic mannerism the system allows. */
-.sl-label{font-size:var(--fs-11);font-weight:var(--fw-medium);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-muted)}
-
-.sl-scroll{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
-.sl-scroll::-webkit-scrollbar{width:10px;height:10px}
-.sl-scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:var(--radius-pill);border:3px solid transparent;background-clip:content-box}
-.sl-scroll::-webkit-scrollbar-track{background:transparent}
-/* ===== END SIGHTLINE DESIGN TOKENS ===== */
-
-    /* ── App shell ────────────────────────────────────────────────── */
-    .app {
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      min-height: 100vh;
-      max-width: var(--content-max);
-      margin: 0 auto;
-      padding: 0 var(--space-8);
+      50% {
+        opacity: .5
+      }
     }
 
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-6) 0;
-      border-bottom: 1px solid var(--border);
-    }
+    @keyframes sl-shimmer {
+      0% {
+        transform: translateX(-100%)
+      }
 
-    .brand {
-      display: flex;
-      align-items: baseline;
-      gap: var(--space-5);
-    }
+      .sl-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-strong) transparent
+      }
 
-    .brand-name {
-      font-size: var(--fs-16);
-      font-weight: var(--fw-semibold);
-      letter-spacing: var(--ls-display);
-      color: var(--text-strong);
-    }
+      .sl-scroll::-webkit-scrollbar {
+        width: 10px;
+        height: 10px
+      }
 
-    .brand-sub {
-      font-size: var(--fs-12);
-      color: var(--text-muted);
-    }
+      .sl-scroll::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: var(--radius-pill);
+        border: 3px solid transparent;
+        background-clip: content-box
+      }
 
-    /* ── Pill (core/Pill) ─────────────────────────────────────────── */
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-4);
-      padding: 5px 12px;
-      border-radius: var(--radius-pill);
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-xs);
-      font-size: var(--fs-12);
-      color: var(--text-body);
-      white-space: nowrap;
-    }
+      .sl-scroll::-webkit-scrollbar-track {
+        background: transparent
+      }
 
-    /* ── StatusDot (core/StatusDot) — script sets className = 'status-dot ' + phase ── */
-    .status-dot {
-      display: inline-block;
-      flex: 0 0 auto;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--idle);
-      --dot-color: var(--idle);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
-      transition: background var(--dur-2) var(--ease-out);
-    }
+      /* ===== END LUMYX DESIGN TOKENS ===== */
 
-    .status-dot.connected {
-      background: var(--ok);
-      --dot-color: var(--ok);
-    }
+      /* ── App shell ────────────────────────────────────────────────── */
+      .app {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 100vh;
+        max-width: var(--content-max);
+        margin: 0 auto;
+        padding: 0 var(--space-8);
+      }
 
-    .status-dot.connecting {
-      background: var(--warn);
-      --dot-color: var(--warn);
-      animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-    }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-6) 0;
+        border-bottom: 1px solid var(--border);
+      }
 
-    .status-dot.disconnected {
-      background: var(--danger);
-      --dot-color: var(--danger);
-    }
+      .brand {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-5);
+      }
 
-    /* ── main layout ──────────────────────────────────────────────── */
-    .main {
-      display: grid;
-      grid-template-columns: 1fr var(--rail-w);
-      gap: var(--gap-grid);
-      padding: var(--space-8) 0;
-      min-height: 0;
-    }
+      .brand-name {
+        font-size: var(--fs-16);
+        font-weight: var(--fw-semibold);
+        letter-spacing: var(--ls-display);
+        color: var(--text-strong);
+      }
 
-    .video-section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-6);
-      min-width: 0;
-    }
+      .brand-sub {
+        font-size: var(--fs-12);
+        color: var(--text-muted);
+      }
 
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-6);
-      min-width: 0;
-    }
+      /* ── Pill (core/Pill) ─────────────────────────────────────────── */
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-4);
+        padding: 5px 12px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-xs);
+        font-size: var(--fs-12);
+        color: var(--text-body);
+        white-space: nowrap;
+      }
 
-    /* ── Card (core/Card) ─────────────────────────────────────────── */
-    .card {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      overflow: hidden;
-    }
+      /* ── StatusDot (core/StatusDot) — script sets className = 'status-dot ' + phase ── */
+      .status-dot {
+        display: inline-block;
+        flex: 0 0 auto;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--idle);
+        --dot-color: var(--idle);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+        transition: background var(--dur-2) var(--ease-out);
+      }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-5);
-      padding: 14px var(--space-7);
-      flex: 0 0 auto;
-    }
+      .status-dot.connected {
+        background: var(--ok);
+        --dot-color: var(--ok);
+      }
 
-    .card-title-group {
-      display: inline-flex;
-      align-items: baseline;
-      gap: var(--space-4);
-      min-width: 0;
-    }
+      .status-dot.connecting {
+        background: var(--warn);
+        --dot-color: var(--warn);
+        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
+      }
 
-    .card-title {
-      font-size: var(--fs-14);
-      font-weight: var(--fw-semibold);
-      color: var(--text-strong);
-    }
+      .status-dot.disconnected {
+        background: var(--danger);
+        --dot-color: var(--danger);
+      }
 
-    .card-meta {
-      font-size: var(--fs-12);
-      color: var(--text-muted);
-    }
+      /* ── main layout ──────────────────────────────────────────────── */
+      .main {
+        display: grid;
+        grid-template-columns: 1fr var(--rail-w);
+        gap: var(--gap-grid);
+        padding: var(--space-8) 0;
+        min-height: 0;
+      }
 
-    .card-body {
-      flex: 1;
-      min-height: 0;
-    }
+      .video-section {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+        min-width: 0;
+      }
 
-    .card-body-padded {
-      padding: 0 var(--space-7) var(--space-7);
-    }
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+        min-width: 0;
+      }
 
-    /* ── Button (core/Button) ─────────────────────────────────────── */
-    .controls {
-      display: flex;
-      gap: var(--space-4);
-      flex-wrap: wrap;
-    }
+      /* ── Card (core/Card) ─────────────────────────────────────────── */
+      .card {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+      }
 
-    .btn {
-      font-family: var(--font-sans);
-      font-weight: var(--fw-medium);
-      letter-spacing: var(--ls-normal);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      cursor: pointer;
-      outline: none;
-      transition:
-        background var(--dur-1) var(--ease-out),
-        border-color var(--dur-1) var(--ease-out),
-        box-shadow var(--dur-1) var(--ease-out);
-      font-size: var(--fs-13);
-      padding: 9px 16px;
-      border-radius: var(--radius-sm);
-      gap: var(--space-4);
-    }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-5);
+        padding: 14px var(--space-7);
+        flex: 0 0 auto;
+      }
 
-    .btn:disabled {
-      cursor: not-allowed;
-      opacity: .45;
-    }
+      .card-title-group {
+        display: inline-flex;
+        align-items: baseline;
+        gap: var(--space-4);
+        min-width: 0;
+      }
 
-    .btn:focus-visible {
-      box-shadow: var(--ring-accent);
-    }
+      .card-title {
+        font-size: var(--fs-14);
+        font-weight: var(--fw-semibold);
+        color: var(--text-strong);
+      }
 
-    .btn-primary {
-      background: var(--accent);
-      border: 1px solid var(--accent);
-      color: var(--text-on-accent);
-      box-shadow: var(--shadow-xs);
-    }
+      .card-meta {
+        font-size: var(--fs-12);
+        color: var(--text-muted);
+      }
 
-    .btn-primary:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
+      .card-body {
+        flex: 1;
+        min-height: 0;
+      }
 
-    .btn-secondary {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      color: var(--text-strong);
-      box-shadow: var(--shadow-xs);
-    }
+      .card-body-padded {
+        padding: 0 var(--space-7) var(--space-7);
+      }
 
-    .btn-secondary:hover:not(:disabled) {
-      background: var(--surface-hover);
-      border-color: var(--border-strong);
-    }
+      /* ── Button (core/Button) ─────────────────────────────────────── */
+      .controls {
+        display: flex;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+      }
 
-    .btn-danger {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
-      color: var(--danger);
-      box-shadow: var(--shadow-xs);
-    }
+      .btn {
+        font-family: var(--font-sans);
+        font-weight: var(--fw-medium);
+        letter-spacing: var(--ls-normal);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        cursor: pointer;
+        outline: none;
+        transition:
+          background var(--dur-1) var(--ease-out),
+          border-color var(--dur-1) var(--ease-out),
+          box-shadow var(--dur-1) var(--ease-out);
+        font-size: var(--fs-13);
+        padding: 9px 16px;
+        border-radius: var(--radius-sm);
+        gap: var(--space-4);
+      }
 
-    .btn-danger:hover:not(:disabled) {
-      background: var(--danger-tint);
-      border-color: var(--danger);
-    }
+      .btn:disabled {
+        cursor: not-allowed;
+        opacity: .45;
+      }
 
-    .btn-danger:focus-visible {
-      box-shadow: var(--ring-danger);
-    }
+      .btn:focus-visible {
+        box-shadow: var(--ring-accent);
+      }
 
-    /* ── VideoTile (webrtc/VideoTile) ─────────────────────────────── */
-    .video-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--gap-grid);
-    }
+      .btn-primary {
+        background: var(--accent);
+        border: 1px solid var(--accent);
+        color: var(--text-on-accent);
+        box-shadow: var(--shadow-xs);
+      }
 
-    .video-card {
-      position: relative;
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      border: 1px solid var(--border);
-      background: var(--surface-inset);
-      box-shadow: var(--shadow-xs);
-      min-width: 0;
-      aspect-ratio: 16/10;
-    }
+      .btn-primary:hover:not(:disabled) {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+      }
 
-    .video-card video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+      .btn-secondary {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        color: var(--text-strong);
+        box-shadow: var(--shadow-xs);
+      }
 
-    /* .label is set directly by the script for the remote card */
-    .video-card .label {
-      position: absolute;
-      bottom: var(--space-5);
-      left: var(--space-5);
-      right: var(--space-5);
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-4);
-      min-width: 0;
-      background: var(--surface-overlay);
-      color: var(--text-on-overlay);
-      backdrop-filter: var(--blur-overlay);
-      padding: 4px 10px;
-      border-radius: var(--radius-pill);
-      font-size: var(--fs-12);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      width: max-content;
-    }
+      .btn-secondary:hover:not(:disabled) {
+        background: var(--surface-hover);
+        border-color: var(--border-strong);
+      }
 
-    /* .indicator / .indicator.live are set directly by the script */
-    .video-card .indicator {
-      position: absolute;
-      top: var(--space-5);
-      right: var(--space-5);
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--danger);
-      --dot-color: var(--danger);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
-    }
+      .btn-danger {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        color: var(--danger);
+        box-shadow: var(--shadow-xs);
+      }
 
-    .video-card .indicator.live {
-      background: var(--ok);
-      --dot-color: var(--ok);
-      animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-    }
+      .btn-danger:hover:not(:disabled) {
+        background: var(--danger-tint);
+        border-color: var(--danger);
+      }
 
-    .video-placeholder {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-4);
-      color: var(--text-faint);
-      font-size: var(--fs-12);
-    }
+      .btn-danger:focus-visible {
+        box-shadow: var(--ring-danger);
+      }
 
-    /* ── MetricGrid / MetricCard (data/MetricGrid, data/MetricCard) ─ */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1px;
-      background: var(--border-subtle);
-    }
+      /* ── VideoTile (webrtc/VideoTile) ─────────────────────────────── */
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--gap-grid);
+      }
 
-    .metric {
-      padding: var(--space-6) var(--space-7);
-      background: var(--surface-card);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-      min-width: 0;
-    }
+      .video-card {
+        position: relative;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: var(--surface-inset);
+        box-shadow: var(--shadow-xs);
+        min-width: 0;
+        aspect-ratio: 16/10;
+      }
 
-    .metric-value {
-      display: flex;
-      align-items: baseline;
-      gap: 3px;
-      font-size: var(--fs-34);
-      font-weight: var(--fw-medium);
-      letter-spacing: var(--ls-display);
-      line-height: var(--lh-flat);
-      color: var(--text-strong);
-    }
+      .video-card video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
 
-    .metric-unit {
-      font-size: var(--fs-14);
-      font-weight: var(--fw-regular);
-      color: var(--text-muted);
-    }
+      /* .label is set directly by the script for the remote card */
+      .video-card .label {
+        position: absolute;
+        bottom: var(--space-5);
+        left: var(--space-5);
+        right: var(--space-5);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-4);
+        min-width: 0;
+        background: var(--surface-overlay);
+        color: var(--text-on-overlay);
+        backdrop-filter: var(--blur-overlay);
+        padding: 4px 10px;
+        border-radius: var(--radius-pill);
+        font-size: var(--fs-12);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: max-content;
+      }
 
-    /* ── EventList (data/EventList) — script builds .log-entry / .log-time /
+      /* .indicator / .indicator.live are set directly by the script */
+      .video-card .indicator {
+        position: absolute;
+        top: var(--space-5);
+        right: var(--space-5);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--danger);
+        --dot-color: var(--danger);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+      }
+
+      .video-card .indicator.live {
+        background: var(--ok);
+        --dot-color: var(--ok);
+        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
+      }
+
+      .video-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-4);
+        color: var(--text-faint);
+        font-size: var(--fs-12);
+      }
+
+      /* ── MetricGrid / MetricCard (data/MetricGrid, data/MetricCard) ─ */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1px;
+        background: var(--border-subtle);
+      }
+
+      .metric {
+        padding: var(--space-6) var(--space-7);
+        background: var(--surface-card);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        min-width: 0;
+      }
+
+      .metric-value {
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+        font-size: var(--fs-34);
+        font-weight: var(--fw-medium);
+        letter-spacing: var(--ls-display);
+        line-height: var(--lh-flat);
+        color: var(--text-strong);
+      }
+
+      .metric-unit {
+        font-size: var(--fs-14);
+        font-weight: var(--fw-regular);
+        color: var(--text-muted);
+      }
+
+      /* ── EventList (data/EventList) — script builds .log-entry / .log-time /
        .log-msg directly, with type in {send,info,event,error} ─────── */
-    .log-container {
-      height: 260px;
-      overflow-y: auto;
-    }
+      .log-container {
+        height: 260px;
+        overflow-y: auto;
+      }
 
-    .log-entry {
-      display: grid;
-      grid-template-columns: 58px 1fr;
-      gap: var(--space-5);
-      align-items: baseline;
-      padding: 10px var(--space-7);
-      font-size: var(--fs-12);
-    }
+      .log-entry {
+        display: grid;
+        grid-template-columns: 58px 1fr;
+        gap: var(--space-5);
+        align-items: baseline;
+        padding: 10px var(--space-7);
+        font-size: var(--fs-12);
+      }
 
-    .log-entry:not(:first-child) {
-      border-top: 1px solid var(--border-subtle);
-    }
+      .log-entry:not(:first-child) {
+        border-top: 1px solid var(--border-subtle);
+      }
 
-    .log-time {
-      color: var(--text-faint);
-      font-variant-numeric: tabular-nums;
-      font-feature-settings: 'tnum' 1;
-    }
+      .log-time {
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
+      }
 
-    .log-msg {
-      word-break: break-word;
-    }
+      .log-msg {
+        word-break: break-word;
+      }
 
-    .log-msg.info {
-      color: var(--text-body);
-    }
+      .log-msg.info {
+        color: var(--text-body);
+      }
 
-    .log-msg.event {
-      color: var(--ok);
-    }
+      .log-msg.event {
+        color: var(--ok);
+      }
 
-    .log-msg.send {
-      color: var(--warn);
-    }
+      .log-msg.send {
+        color: var(--warn);
+      }
 
-    .log-msg.error {
-      color: var(--danger);
-    }
+      .log-msg.error {
+        color: var(--danger);
+      }
 
-    /* ── StatusStrip (layout/StatusStrip) ─────────────────────────── */
-    .statusstrip {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-6);
-      padding: var(--space-5) 0;
-      border-top: 1px solid var(--border);
-      font-size: var(--fs-12);
-      color: var(--text-muted);
-    }
+      /* ── StatusStrip (layout/StatusStrip) ─────────────────────────── */
+      .statusstrip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-6);
+        padding: var(--space-5) 0;
+        border-top: 1px solid var(--border);
+        font-size: var(--fs-12);
+        color: var(--text-muted);
+      }
 
-    .statusstrip-items {
-      display: flex;
-      gap: var(--space-7);
-      flex: 0 0 auto;
-    }
+      .statusstrip-items {
+        display: flex;
+        gap: var(--space-7);
+        flex: 0 0 auto;
+      }
 
-    .statusstrip-item {
-      display: inline-flex;
-      gap: var(--space-3);
-    }
+      .statusstrip-item {
+        display: inline-flex;
+        gap: var(--space-3);
+      }
 
-    .statusstrip-value {
-      color: var(--text-strong);
-    }
+      .statusstrip-value {
+        color: var(--text-strong);
+      }
   </style>
 </head>
 
@@ -705,7 +761,7 @@ a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offse
 
     <header class="header">
       <div class="brand">
-        <span class="brand-name">Sightline</span>
+        <span class="brand-name">Lumyx</span>
         <span class="brand-sub">Session console</span>
       </div>
       <span class="pill">

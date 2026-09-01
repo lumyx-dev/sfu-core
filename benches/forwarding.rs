@@ -19,7 +19,7 @@
 //! path — a payload copy reintroduced at write time, say — would be entirely
 //! invisible here.
 
-use sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
+use lumyx_sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
 use std::hint::black_box;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -102,10 +102,7 @@ fn run(peers: usize, iterations: usize) -> (std::time::Duration, usize) {
     }
     let elapsed = start.elapsed();
 
-    let writes: usize = sinks
-        .iter()
-        .map(|s| s.writes.load(Ordering::Relaxed))
-        .sum();
+    let writes: usize = sinks.iter().map(|s| s.writes.load(Ordering::Relaxed)).sum();
 
     (elapsed, writes)
 }
@@ -113,9 +110,7 @@ fn run(peers: usize, iterations: usize) -> (std::time::Duration, usize) {
 fn main() {
     const ITERATIONS: usize = 20_000;
 
-    println!(
-        "\nForwarding — {ITERATIONS} paquets publiés par un peer, payload 1200 o\n"
-    );
+    println!("\nForwarding — {ITERATIONS} paquets publiés par un peer, payload 1200 o\n");
     println!(
         "{:>6} {:>11} {:>10} {:>10} {:>12} {:>13}",
         "peers", "écritures", "attendu", "surcoût", "µs/paquet", "ns/écriture"

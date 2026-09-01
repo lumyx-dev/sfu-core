@@ -1,7 +1,7 @@
 //! SFU server entry point.
 
-use sfu::app::{AppState, build_router};
-use sfu::config::Config;
+use lumyx_sfu::app::{AppState, build_router};
+use lumyx_sfu::config::Config;
 
 #[tokio::main]
 async fn main() {
@@ -11,7 +11,7 @@ async fn main() {
         .with_env_filter(config.log_filter.clone())
         .init();
 
-    tracing::info!("🚀 Sightline SFU démarrage...");
+    tracing::info!("🚀 Lumyx SFU démarrage...");
 
     let tls =
         axum_server::tls_rustls::RustlsConfig::from_pem_file(&config.cert_path, &config.key_path)

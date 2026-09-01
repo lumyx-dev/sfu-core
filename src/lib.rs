@@ -1,4 +1,4 @@
-//! Sightline SFU — WebRTC conferencing server.
+//! Lumyx SFU — WebRTC conferencing server.
 //!
 //! Three layers, stacked from the bottom up:
 //!

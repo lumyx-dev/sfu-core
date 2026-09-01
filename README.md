@@ -1,4 +1,4 @@
-# Sightline SFU
+# Lumyx SFU
 
 Serveur de conférence WebRTC (SFU) en Rust, sur [str0m](https://github.com/algesten/str0m).
 
@@ -25,7 +25,7 @@ chaque participant voit tous les autres.
 ## Configuration
 
 | Variable | Défaut |
-|---|---|
+| --- | --- |
 | `SFU_BIND_ADDR` | `0.0.0.0:3000` |
 | `SFU_CERT_PATH` | `localhost+1.pem` |
 | `SFU_KEY_PATH` | `localhost+1-key.pem` |
@@ -43,7 +43,7 @@ cargo clippy --all-targets
 Trois niveaux, du plus rapide au plus fidèle :
 
 | Cible | Ce qui est couvert |
-|---|---|
+| --- | --- |
 | `tests/forwarding.rs` | routage RTP sans réseau — la couche média ne parle qu'au trait `RtpSink`, que les tests implémentent en mémoire |
 | `tests/negotiation.rs` | la danse SDP, un `Rtc` str0m jouant le navigateur en face d'une `PeerConnection` |
 | `tests/room.rs` | une room entière de bout en bout — ICE, DTLS, SRTP et média réels, sockets simulées — à 3, 5, 10 et 15 participants |
