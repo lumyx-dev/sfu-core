@@ -18,4 +18,5 @@ pub mod media;
 pub mod metrics;
 pub mod room;
 pub mod signaling;
+pub mod telemetry;
 pub mod transport;
