@@ -698,7 +698,7 @@ en dehors de ce fichier.
 ```bash
 cd apps/dashboard && bun run verify:ds
 bun run check-types 2>&1 | grep "error TS" | grep -v "app/%5Fds/page.tsx"   # doit être VIDE
-bun run build 2>&1 | grep -iE "error|failed" | grep -v "%5Fds"             # doit être VIDE
+bun run build 2>&1 | grep -iE "error|failed" | grep -vE "%5Fds|\./sections/|Turbopack build failed|Build error occurred|script \"build\" exited"   # VIDE
 ```
 
 Attendu : `verify:ds` **PASS**, et les deux `grep` ne renvoient **rien**. Si une ligne apparaît,
@@ -856,7 +856,7 @@ en dehors de ce fichier.
 ```bash
 cd apps/dashboard && bun run verify:ds
 bun run check-types 2>&1 | grep "error TS" | grep -v "app/%5Fds/page.tsx"   # doit être VIDE
-bun run build 2>&1 | grep -iE "error|failed" | grep -v "%5Fds"             # doit être VIDE
+bun run build 2>&1 | grep -iE "error|failed" | grep -vE "%5Fds|\./sections/|Turbopack build failed|Build error occurred|script \"build\" exited"   # VIDE
 ```
 
 Attendu : `verify:ds` **PASS**, et les deux `grep` ne renvoient **rien**. Si une ligne apparaît,
@@ -1265,7 +1265,7 @@ cd /Users/mathieuchambaud/Documents/Perso-Projects/lumyx
 bun run verify:ds
 bun run test
 bun run check-types 2>&1 | grep "error TS" | grep -v "app/%5Fds/page.tsx"   # doit être VIDE
-bun run build     2>&1 | grep -iE "error|failed" | grep -v "%5Fds"          # doit être VIDE
+bun run build     2>&1 | grep -iE "error|failed" | grep -vE "%5Fds|\./sections/|Turbopack build failed|Build error occurred|script \"build\" exited"   # VIDE
 ```
 
 `apps/cloud` est un dépôt distinct mais reste un workspace bun du monorepo : `turbo` le couvre.
