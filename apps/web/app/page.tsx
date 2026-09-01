@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button, Card, LumyxMark } from '@lumyx/ui';
-import { DarkBand } from "@/components/site/chrome";
+import { ThemeToggle } from "@/components/site/theme-toggle";
 import { CodePanel } from "@/components/site/code-panel";
 import { PlatformBento } from "@/components/site/platform-bento";
 import { CONFIG_STEPS, FEATURE_GROUPS, NO_LIST, TIERS } from "@/lib/platform-data";
@@ -18,7 +18,7 @@ const NAV = [
 
 /**
  * The landing page — "Platform".
- * Dense, product-first, many entry points. The whole page is a `.dark` scope.
+ * Dense, product-first, many entry points.
  */
 export default function HomePage() {
   return (
@@ -39,6 +39,7 @@ export default function HomePage() {
           ))}
         </nav>
         <span className="flex-1" />
+        <ThemeToggle />
         <Link href="/signup" className="text-[12.5px] text-muted no-underline hover:text-strong hover:no-underline">
           Sign in
         </Link>
@@ -241,6 +242,6 @@ export default function HomePage() {
           <a href={REPO} className="text-13 font-medium">Self-hosting docs</a>
         </Card>
       </section>
-    </DarkBand>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button, StatusDot, LumyxMark } from '@lumyx/ui';
 import { FOOTER_COLS, VERSION, REPO } from "@/lib/site-data";
+import { ThemeToggle } from "./theme-toggle";
 
 function Mark({ size = 20 }: { size?: number }) {
   return <LumyxMark size={size} className="text-accent" />;
@@ -32,6 +33,7 @@ export function SiteHeader() {
         </nav>
         <span className="flex-1" />
         <span className="sl-num hidden text-12 text-faint sm:inline">{VERSION}</span>
+        <ThemeToggle />
         <a href={REPO} className="inline-flex h-8 items-center rounded-sm border border-hairline px-3 text-[12.5px] text-body no-underline hover:bg-hover hover:no-underline">
           GitHub
         </a>
@@ -71,11 +73,6 @@ export function SiteFooter() {
       </div>
     </footer>
   );
-}
-
-/** Dark bands are a `.dark` scope — no component carries a dark-mode branch. */
-export function DarkBand({ id, className, children }: { id?: string; className?: string; children: React.ReactNode }) {
-  return <div id={id} className={`dark bg-page text-body ${className ?? ""}`}>{children}</div>;
 }
 
 export function SectionHead({ index, label, blurb }: { index: string; label: string; blurb?: string }) {

@@ -54,12 +54,15 @@ In `apps/web/app/layout.tsx`, add the import and render the script only in produ
 ```tsx
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
+import { ThemeProvider } from 'next-themes';
 import Script from 'next/script';
 import './globals.css';
 
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ?? 'lumyx.dev';
 
 export const metadata: Metadata = {
+  // opengraph-image.png and twitter-image.png sit next to this file; Next turns them
+  // into meta tags, but only resolves them to absolute URLs once it has a base.
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lumyx.dev'),
   title: 'Lumyx — the WebRTC SFU that tells you why the call was bad',
   description:
@@ -68,9 +71,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={GeistSans.variable}>
+    <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
       <body>
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          {children}
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' ? (
           <Script
             defer
@@ -160,6 +165,7 @@ export function softwareApplicationJsonLd() {
 - [ ] **Step 2: Render it on the home page**
 
 In `apps/web/app/page.tsx`, add the import and the script as the first child of the returned tree. React does not HTML-escape text children of `<script>` (verified against this repo's React/ReactDOM version by rendering to static markup), so the `.replace(/</g, "\\u003c")` below is what makes this safe against a `</script>` breakout — see the note after the snippet for why it needs a double backslash:
+In `apps/web/app/page.tsx`, add the import and the script as the first child of the returned tree (React does not HTML-escape text children of `<script>`, so this is safe against injection as long as `<` is escaped to `<` — verified against this repo's React/ReactDOM version by rendering to static markup):
 
 ```tsx
 import { organizationJsonLd, softwareApplicationJsonLd } from "@/lib/schema";
@@ -176,6 +182,14 @@ import { organizationJsonLd, softwareApplicationJsonLd } from "@/lib/schema";
 ```
 
 > **Note on baseline:** if `HomePage`'s top-level wrapper is no longer `<DarkBand>` by the time this task runs, place the `<script>` as the first child of whatever that wrapper actually is — the only requirement is it is the first thing inside the returned tree. The double backslash in `"\\u003c"` is intentional: it makes the *string value* contain the literal six characters `\u003c` rather than the character `<` — a single backslash would be parsed away by JS as a real unicode escape and produce a no-op.
+
+and inside `HomePage`, right after the opening `<div className="min-h-dvh bg-page text-body">`:
+
+```tsx
+      <script type="application/ld+json">
+        {JSON.stringify([organizationJsonLd(), softwareApplicationJsonLd()]).replace(/</g, "\u003c")}
+      </script>
+```
 
 - [ ] **Step 3: Verify**
 
