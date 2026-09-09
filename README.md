@@ -1,3 +1,7 @@
+<p align="center">
+  <img alt="Lumyx — Open-source WebRTC SFU with observability in the media path" src="docs/brand/lumyx-github-1280x640.png" width="100%">
+</p>
+
 <h1 align="center">Lumyx 🔭</h1>
 
 <p align="center">
