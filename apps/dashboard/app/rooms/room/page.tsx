@@ -1,4 +1,5 @@
 "use client";
+
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -164,7 +165,7 @@ function RoomDetail() {
 
               <Card className="overflow-hidden">
                 <CardHeader><CardTitle>Room timeline</CardTitle><CardDescription>live</CardDescription></CardHeader>
-                <EventList events={ROOM_EVENTS} className="max-h-[240px]" />
+                <EventList events={ROOM_EVENTS} className="max-h-60" />
               </Card>
             </div>
           </div>
@@ -187,7 +188,7 @@ const NODES = [
 
 function NodeLink({ selected }: { selected: string }) {
   return (
-    <svg viewBox="0 0 620 300" className="block h-[290px] w-full" role="img" aria-label="Room topology">
+    <svg viewBox="0 0 620 300" className="block h-72.5 w-full" role="img" aria-label="Room topology">
       <g fill="none">
         {NODES.map((n) => (
           <line
@@ -225,8 +226,8 @@ const cellStyle = (v: number | null) =>
   v === null
     ? { bg: "repeating-linear-gradient(45deg,var(--n-150),var(--n-150) 4px,transparent 4px,transparent 8px)", border: "var(--border-strong)", title: "self" }
     : v >= 0.75 ? { bg: "var(--ok-tint)", border: "var(--ok-solid)", title: "healthy · loss under 2%" }
-    : v >= 0.5 ? { bg: "var(--warn-tint)", border: "var(--warn-solid)", title: "approaching threshold" }
-    : { bg: "var(--danger-tint)", border: "var(--danger-solid)", title: "breached · loss above 2%" };
+      : v >= 0.5 ? { bg: "var(--warn-tint)", border: "var(--warn-solid)", title: "approaching threshold" }
+        : { bg: "var(--danger-tint)", border: "var(--danger-solid)", title: "breached · loss above 2%" };
 
 function Matrix() {
   return (
@@ -245,7 +246,7 @@ function Matrix() {
                 <span
                   key={j}
                   title={`${p.peer_id} → ${PEERS[j].peer_id} · ${s.title}`}
-                  className="h-[38px] rounded-xs border"
+                  className="h-9.5 rounded-xs border"
                   style={{ background: s.bg, borderColor: s.border }}
                 />
               );

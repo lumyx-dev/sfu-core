@@ -131,7 +131,7 @@ const BASE_PLANS: Plan[] = [
   { name: "Self-hosted", price: "€0", per: "forever", headline: "MIT, no metering", who: "You run the binary on your own infra.", features: ["Unlimited participant-minutes", "All 6 metrics + thresholds", "Dashboard included", "Retention = your storage"], cta: "View on GitHub", variant: "secondary", featured: false },
   { name: "Free", price: "€0", per: "/mo", headline: "10,000 participant-minutes", who: "Prototypes, staging, or a first trickle of production traffic.", features: ["50 GB egress included", "1 project · 1 region", "24-hour retention", "Email alerts"], cta: "Get started free", variant: "secondary", featured: false },
   { name: "Starter", price: "€49", per: "/mo", headline: "50,000 participant-minutes", who: "First production app, one or two environments.", features: ["1 TB egress included", "3 projects · 2 regions", "7-day retention", "Email + webhook alerts"], cta: "Get started free", variant: "secondary", featured: false },
-  { name: "Scale", price: "€499", per: "/mo", headline: "500,000 participant-minutes", who: "Video is the product and someone is on call.", features: ["4 TB egress included", "Unlimited projects · 4 regions", "30-day retention + session replay", "Slack + PagerDuty"], cta: "Get started free", variant: "primary", featured: true },
+  { name: "Scale", price: "€599", per: "/mo", headline: "500,000 participant-minutes", who: "Video is the product and someone is on call.", features: ["4 TB egress included", "Unlimited projects · 4 regions", "30-day retention + session replay", "Slack + PagerDuty"], cta: "Get started free", variant: "primary", featured: true },
   { name: "Business", price: "Custom", per: "", headline: "Negotiated volume", who: "Contractual commitments and dedicated capacity.", features: ["Dedicated regions", "99.95% SLA · 1h support", "SSO + audit log", "90-day retention or more"], cta: "Contact us", variant: "secondary", featured: false },
 ];
 
@@ -139,7 +139,7 @@ export const PLANS: Record<"monthly" | "annual", Plan[]> = {
   monthly: BASE_PLANS,
   annual: BASE_PLANS.map((p) =>
     p.name === "Starter" ? { ...p, price: "€39", headline: "50,000 min · billed yearly" }
-    : p.name === "Scale" ? { ...p, price: "€399", headline: "500,000 min · billed yearly" }
+    : p.name === "Scale" ? { ...p, price: "€499", headline: "500,000 min · billed yearly" }
     : p
   ),
 };

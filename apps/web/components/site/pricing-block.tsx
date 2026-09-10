@@ -24,7 +24,7 @@ export function PricingBlock() {
         <Tabs value={period} onValueChange={(v) => setPeriod(v as "monthly" | "annual")}>
           <TabsList>
             <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="annual">Yearly −20%</TabsTrigger>
+            <TabsTrigger value="annual">Yearly · save up to 20%</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>

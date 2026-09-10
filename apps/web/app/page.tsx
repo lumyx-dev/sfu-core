@@ -22,7 +22,7 @@ const NAV = [
  */
 export default function HomePage() {
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh bg-page text-body">
       <script type="application/ld+json">
         {JSON.stringify([organizationJsonLd(), softwareApplicationJsonLd()]).replace(/</g, "\\u003c")}
       </script>
