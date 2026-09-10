@@ -4,13 +4,13 @@
 //! command working both with and without a database, which is what the
 //! optional-persistence promise requires.
 
-use sfu::config::TelemetryConfig;
-use sfu::telemetry::tasks::spawn_writer;
-use sfu::telemetry::{
+use chrono::Utc;
+use lumyx_sfu::config::TelemetryConfig;
+use lumyx_sfu::telemetry::tasks::spawn_writer;
+use lumyx_sfu::telemetry::{
     Batch, Entry, EventKind, EventRecord, PeerSample, PgWriter, QueueSink, TelemetrySink,
     TrackKind, TrackSample,
 };
-use chrono::Utc;
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,19 +35,22 @@ async fn writer() -> Option<PgWriter> {
         instance_name: format!("test-{}", Uuid::new_v4()),
         ..TelemetryConfig::default()
     };
-    Some(PgWriter::connect(&cfg, "0.1.0-test").await.expect("connexion"))
+    Some(
+        PgWriter::connect(&cfg, "0.1.0-test")
+            .await
+            .expect("connexion"),
+    )
 }
 
 #[tokio::test]
 async fn migrations_apply_and_the_instance_row_exists() {
     let Some(w) = writer().await else { return };
 
-    let (count,): (i64,) =
-        sqlx::query_as("select count(*) from telemetry.instance where id = $1")
-            .bind(w.instance_id())
-            .fetch_one(w.pool())
-            .await
-            .expect("requête");
+    let (count,): (i64,) = sqlx::query_as("select count(*) from telemetry.instance where id = $1")
+        .bind(w.instance_id())
+        .fetch_one(w.pool())
+        .await
+        .expect("requête");
 
     assert_eq!(count, 1, "la connexion doit enregistrer son instance");
 }
@@ -62,8 +65,17 @@ async fn a_batch_lands_in_the_right_tables() {
     let now = Utc::now();
 
     let batch = Batch::from_entries(vec![
-        Entry::RoomOpened { id: room, name: "test-room".into(), at: now },
-        Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now },
+        Entry::RoomOpened {
+            id: room,
+            name: "test-room".into(),
+            at: now,
+        },
+        Entry::PeerJoined {
+            id: peer,
+            peer_id: connection,
+            room_id: room,
+            at: now,
+        },
     ]);
     w.write(&batch).await.expect("écriture");
 
@@ -99,10 +111,28 @@ async fn a_connection_visiting_two_rooms_produces_two_peer_rows_sharing_one_peer
     let now = Utc::now();
 
     w.write(&Batch::from_entries(vec![
-        Entry::RoomOpened { id: room_a, name: "room-a".into(), at: now },
-        Entry::PeerJoined { id: occupancy_a, peer_id: connection, room_id: room_a, at: now },
-        Entry::RoomOpened { id: room_b, name: "room-b".into(), at: now },
-        Entry::PeerJoined { id: occupancy_b, peer_id: connection, room_id: room_b, at: now },
+        Entry::RoomOpened {
+            id: room_a,
+            name: "room-a".into(),
+            at: now,
+        },
+        Entry::PeerJoined {
+            id: occupancy_a,
+            peer_id: connection,
+            room_id: room_a,
+            at: now,
+        },
+        Entry::RoomOpened {
+            id: room_b,
+            name: "room-b".into(),
+            at: now,
+        },
+        Entry::PeerJoined {
+            id: occupancy_b,
+            peer_id: connection,
+            room_id: room_b,
+            at: now,
+        },
     ]))
     .await
     .expect("écriture des deux occupations");
@@ -164,8 +194,17 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
     let track = Uuid::new_v4();
     let now = Utc::now();
     w.write(&Batch::from_entries(vec![
-        Entry::RoomOpened { id: room, name: "orpheline".into(), at: now },
-        Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now },
+        Entry::RoomOpened {
+            id: room,
+            name: "orpheline".into(),
+            at: now,
+        },
+        Entry::PeerJoined {
+            id: peer,
+            peer_id: connection,
+            room_id: room,
+            at: now,
+        },
         // Un track resté publié : sans lui, la branche `tracks` de
         // `recover_open_sessions` pourrait disparaître sans faire échouer ce
         // test (room + peer suffisent déjà à satisfaire une simple `>= 2`).
@@ -184,7 +223,10 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
     // Exactement trois lignes restées ouvertes : la room, le peer, le track.
     // Une assertion exacte fait échouer ce test si une des trois branches
     // disparaît silencieusement, ce qu'une simple `>=` ne détecterait pas.
-    assert_eq!(closed, 3, "la room, le peer et le track restés ouverts doivent être fermés");
+    assert_eq!(
+        closed, 3,
+        "la room, le peer et le track restés ouverts doivent être fermés"
+    );
 
     let (reason,): (Option<String>,) =
         sqlx::query_as("select ended_reason from telemetry.rooms where id = $1")
@@ -208,7 +250,10 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
             .fetch_one(w.pool())
             .await
             .expect("requête");
-    assert!(ended.is_some(), "un track resté publié doit être fermé aussi");
+    assert!(
+        ended.is_some(),
+        "un track resté publié doit être fermé aussi"
+    );
 }
 
 /// Une room et un peer pour porter les entités qui en dépendent. Les
@@ -220,8 +265,17 @@ async fn room_and_peer(w: &PgWriter) -> (Uuid, Uuid) {
     let connection = Uuid::new_v4();
     let now = Utc::now();
     w.write(&Batch::from_entries(vec![
-        Entry::RoomOpened { id: room, name: "support".into(), at: now },
-        Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now },
+        Entry::RoomOpened {
+            id: room,
+            name: "support".into(),
+            at: now,
+        },
+        Entry::PeerJoined {
+            id: peer,
+            peer_id: connection,
+            room_id: room,
+            at: now,
+        },
     ]))
     .await
     .expect("room + peer de support");
@@ -262,35 +316,39 @@ async fn a_track_sample_round_trips_every_column_without_transposition() {
     // Des valeurs toutes différentes : une transposition entre deux colonnes
     // adjacentes de même type (nacks/plis, par exemple) doit faire échouer
     // l'assertion, ce qu'une même valeur partout ne détecterait pas.
-    w.write(&Batch::from_entries(vec![Entry::TrackSample(TrackSample {
-        track_id: track,
-        at: t1,
-        bytes: 11,
-        packets: 22,
-        nacks: 3,
-        plis: 4,
-        firs: 5,
-        jitter_ms: Some(6.6),
-        loss: Some(0.7),
-        rtt_ms: Some(8.8),
-    })]))
+    w.write(&Batch::from_entries(vec![Entry::TrackSample(
+        TrackSample {
+            track_id: track,
+            at: t1,
+            bytes: 11,
+            packets: 22,
+            nacks: 3,
+            plis: 4,
+            firs: 5,
+            jitter_ms: Some(6.6),
+            loss: Some(0.7),
+            rtt_ms: Some(8.8),
+        },
+    )]))
     .await
     .expect("échantillon complet");
 
     // Un second échantillon sans aucun rapport RTCP reçu : les trois colonnes
     // optionnelles doivent rester `null`, pas `0.0`.
-    w.write(&Batch::from_entries(vec![Entry::TrackSample(TrackSample {
-        track_id: track,
-        at: t2,
-        bytes: 111,
-        packets: 222,
-        nacks: 33,
-        plis: 44,
-        firs: 55,
-        jitter_ms: None,
-        loss: None,
-        rtt_ms: None,
-    })]))
+    w.write(&Batch::from_entries(vec![Entry::TrackSample(
+        TrackSample {
+            track_id: track,
+            at: t2,
+            bytes: 111,
+            packets: 222,
+            nacks: 33,
+            plis: 44,
+            firs: 55,
+            jitter_ms: None,
+            loss: None,
+            rtt_ms: None,
+        },
+    )]))
     .await
     .expect("échantillon sans rtcp");
 
@@ -475,18 +533,25 @@ async fn a_track_moves_through_published_codec_and_ended() {
     .await
     .expect("codec");
 
-    w.write(&Batch::from_entries(vec![Entry::TrackEnded { id: track, at: ended_at }]))
-        .await
-        .expect("fin");
+    w.write(&Batch::from_entries(vec![Entry::TrackEnded {
+        id: track,
+        at: ended_at,
+    }]))
+    .await
+    .expect("fin");
 
-    let (kind, codec, clock_rate, ended): (String, Option<String>, Option<i32>, Option<chrono::DateTime<Utc>>) =
-        sqlx::query_as(
-            "select kind::text, codec, clock_rate, ended_at from telemetry.tracks where id = $1",
-        )
-        .bind(track)
-        .fetch_one(w.pool())
-        .await
-        .expect("requête track");
+    let (kind, codec, clock_rate, ended): (
+        String,
+        Option<String>,
+        Option<i32>,
+        Option<chrono::DateTime<Utc>>,
+    ) = sqlx::query_as(
+        "select kind::text, codec, clock_rate, ended_at from telemetry.tracks where id = $1",
+    )
+    .bind(track)
+    .fetch_one(w.pool())
+    .await
+    .expect("requête track");
 
     assert_eq!(kind, "video");
     assert_eq!(codec.as_deref(), Some("vp8"));
@@ -501,16 +566,25 @@ async fn peer_left_and_ice_state_round_trip() {
     let at = Utc::now();
 
     w.write(&Batch::from_entries(vec![
-        Entry::IceState { peer_id: peer, state: "disconnected".into(), at },
-        Entry::PeerLeft { id: peer, at, close_code: Some(1006) },
+        Entry::IceState {
+            peer_id: peer,
+            state: "disconnected".into(),
+            at,
+        },
+        Entry::PeerLeft {
+            id: peer,
+            at,
+            close_code: Some(1006),
+        },
     ]))
     .await
     .expect("écriture");
 
-    let (left, close_code, ice_state): (Option<chrono::DateTime<Utc>>, Option<i32>, Option<String>) =
-        sqlx::query_as(
-            "select left_at, close_code, ice_state from telemetry.peers where id = $1",
-        )
+    let (left, close_code, ice_state): (
+        Option<chrono::DateTime<Utc>>,
+        Option<i32>,
+        Option<String>,
+    ) = sqlx::query_as("select left_at, close_code, ice_state from telemetry.peers where id = $1")
         .bind(peer)
         .fetch_one(w.pool())
         .await
@@ -549,7 +623,7 @@ async fn entries_queued_through_the_sink_reach_the_database() {
     let Some(w) = writer().await else { return };
     let w = Arc::new(w);
 
-    let metrics = sfu::metrics::Metrics::new();
+    let metrics = lumyx_sfu::metrics::Metrics::new();
     let (sink, rx) = QueueSink::new(64, metrics.clone());
     // Un intervalle court : le test attend un tick, pas une seconde entière.
     spawn_writer(w.clone(), rx, Duration::from_millis(50));
@@ -562,8 +636,17 @@ async fn entries_queued_through_the_sink_reach_the_database() {
     // Un cycle de vie minimal mais significatif — ouverture de room puis
     // arrivée d'un peer — poussé par la file plutôt que par `PgWriter::write`
     // directement : c'est le chemin bout-en-bout que cette tâche assemble.
-    sink.record(Entry::RoomOpened { id: room, name: "queue-e2e".into(), at: now });
-    sink.record(Entry::PeerJoined { id: peer, peer_id: connection, room_id: room, at: now });
+    sink.record(Entry::RoomOpened {
+        id: room,
+        name: "queue-e2e".into(),
+        at: now,
+    });
+    sink.record(Entry::PeerJoined {
+        id: peer,
+        peer_id: connection,
+        room_id: room,
+        at: now,
+    });
 
     let name = poll_room_name(w.pool(), room, Duration::from_millis(500))
         .await
@@ -584,7 +667,7 @@ async fn dropping_the_sink_flushes_pending_entries_before_shutdown() {
     let Some(w) = writer().await else { return };
     let w = Arc::new(w);
 
-    let metrics = sfu::metrics::Metrics::new();
+    let metrics = lumyx_sfu::metrics::Metrics::new();
     // Intervalle volontairement long : si l'écriture n'arrivait que par le
     // tick, ce test se contenterait d'attendre le tick. Il ne peut passer que
     // grâce au chemin d'arrêt propre (flush avant break), ce qui est
@@ -594,7 +677,11 @@ async fn dropping_the_sink_flushes_pending_entries_before_shutdown() {
 
     let room = Uuid::new_v4();
     let now = Utc::now();
-    sink.record(Entry::RoomOpened { id: room, name: "shutdown-flush".into(), at: now });
+    sink.record(Entry::RoomOpened {
+        id: room,
+        name: "shutdown-flush".into(),
+        at: now,
+    });
 
     // Seul moyen de faire tomber le dernier `Sender` : abandonner le sink
     // lui-même, qui le possède. `rx.recv()` ne rend `None` qu'à ce prix, ce
