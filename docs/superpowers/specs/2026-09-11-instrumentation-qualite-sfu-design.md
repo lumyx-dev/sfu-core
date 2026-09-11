@@ -195,11 +195,29 @@ Conversions, une fois pour toutes :
 
 **Propriété d'acceptation — le sampler ne fait aucun travail par paquet.** Il ne s'exécute que sur l'événement de statistiques, une fois par seconde et par peer. Ce n'est pas une optimisation : c'est la forme du design, et c'est ce qui rend vraie l'exigence « l'instrumentation ne doit pas dégrader ce qu'elle mesure ».
 
+### 5.2 bis Un canal dédié pour les statistiques
+
+**Amendement au moment du plan — sans lui, la campagne mesurerait faux.**
+
+Le canal `transport → session` est borné à 128 entrées et écrit en `try_send` : plein, il **jette** (`session.rs:29`, `RTP_INGRESS_CAPACITY`). C'est la bonne politique pour du média temps réel. Appliquée aux statistiques, elle produit l'inverse de ce qu'on cherche : sous réseau dégradé — donc sous rafale de paquets, donc canal saturé — les échantillons seraient jetés **précisément dans les cellules de la matrice qui décident du gate**. La campagne rendrait des trous là où elle doit rendre des chiffres.
+
+`CONTEXT.md` justifie le canal unique par une contrainte d'ordre : « the announcement of a track and the packets of that track must stay in order ». Cette contrainte lie `TrackAdded` et `Media`. Elle **ne s'applique pas** à un échantillon de statistiques, qui n'a aucune relation d'ordre avec les paquets.
+
+Donc : un second canal `mpsc::channel::<StatsEvent>(64)`, du `event_loop` vers `spawn_transport_pump`, qui consomme les deux en `tokio::select!`. Un échantillon par seconde et par peer ne peut pas saturer une profondeur de 64 ; la politique de rejet est conservée par sécurité, et un rejet y devient l'anomalie qu'il doit être, pas le régime nominal.
+
+Le `Sampler` reste ignorant de tout cela : il rend des deltas, le `event_loop` les emballe en `StatsEvent`, et la pompe — qui détient déjà `Arc<Telemetry>` et sait résoudre les identifiants pour `TrackAdded` — les enregistre. `transport/` ne gagne aucune dépendance vers `telemetry/`, exactement comme au §5.2.
+
 ### 5.3 L'horloge RTP
 
 `Event::MediaAdded` ne porte pas le codec — seul le premier `PayloadParams` le porte, ce que `CONTEXT.md` documente déjà et dont `Entry::TrackCodec` dépend.
 
-`PeerConnection` gagne donc `rx_clock: HashMap<Mid, u32>`, renseigné au même endroit que `TrackCodec`, dans `to_packet`. Un événement de statistiques arrivant avant le premier paquet produit `jitter_ms: None` — cas déjà prévu par le schéma (`-- null si aucun rapport`).
+**Amendement au moment du plan : aucun nouveau champ n'est nécessaire, et la source n'est pas `rx_kind`.**
+
+Une méthode `PeerConnection::rtp_clock(mid) -> Option<u32>` interroge `Rtc::media(mid)` puis `Media::kind()`, et rend 90 kHz pour la vidéo, 48 kHz pour l'audio — les mêmes valeurs que `to_packet` (`peer_connection.rs:367`) dérive déjà.
+
+Le détour par str0m plutôt que par `rx_kind` n'est pas gratuit : `rx_kind` ne contient que les m-lines que *ce* peer **publie**, alors que les statistiques de leg arrivent sur des m-lines **sortantes**. Un registre local n'aurait donc couvert aucun leg. `Rtc::media` connaît les deux directions, donc une seule méthode sert tout le sampler et il n'y a pas de second registre à tenir en phase.
+
+Un mid inconnu de str0m produit `jitter_ms: None` — cas déjà prévu par le schéma (`-- null si aucun rapport`).
 
 ### 5.4 Les legs — le seul manque de schéma
 
@@ -230,7 +248,7 @@ pub struct LegSample {
 
 **Résolution du `track_id`**, pièce par pièce, toutes existantes :
 
-1. `PeerConnection` maintient l'inverse de `allocated` : `allocated_by_mid: HashMap<Mid, TrackKey>`, mis à jour dans `accept_answer`. Le champ `allocated` étant privé, l'invariant est contenu dans un seul fichier.
+1. **`PeerConnection::source_on(mid) -> Option<TrackKey>` existe déjà** (`peer_connection.rs:258`) : elle sert déjà à router les demandes de keyframe. Aucun index inverse à ajouter — le plan avait prévu un `allocated_by_mid`, il est inutile. Le parcours est linéaire sur les abonnements d'un peer, exécuté une fois par seconde et par m-line sortante : à 8 participants, ~196 comparaisons par seconde et par peer.
 2. `TrackKey` donne `(peer_id du publisher, mid source)`.
 3. `telemetry::peer_uuid()` convertit le `peer_id` du publisher en `Uuid`.
 4. `Telemetry::occupancy_of()` donne l'occupancy du publisher.
@@ -400,6 +418,7 @@ Avant chaque PR : `cargo test`, `cargo clippy --all-targets`, `cargo fmt`, plus 
 | Tracks fantômes créés par les mids sortants | §5.4 : `LegSample` distinct, jamais `track_id(occupancy, mid_sortant)` |
 | Delta négatif dans une colonne `not null` | §5.2 : `saturating_sub` systématique |
 | Travail ajouté dans la boucle d'événements du peer, qui bloquerait le média | Le sampler ne fait que de l'arithmétique et une écriture non bloquante ; §5.8 le vérifie |
+| Statistiques affamées par le média sur le canal partagé, sous les conditions mêmes que la campagne mesure | §5.2 bis : canal dédié, profondeur 64 |
 | L'anneau grossit sans borne sur une longue campagne | Capacité fixe, éviction FIFO, testée |
 | La matrice n'est pas exécutable à la main (11 h sur trois itérations) | §4.2 : exigence explicite d'automatisation portée par LUM-551 |
 | La documentation rediverge dans six mois | §6 : une seule source de vérité, la sémantique vit dans les doc comments |
