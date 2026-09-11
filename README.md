@@ -48,6 +48,16 @@ Three reasons to look at it:
   no async runtime. 68 tests run in 0.03s. That is rare in SFU codebases, and it is why this one
   is safe to change.
 
+### Where it sits
+
+mediasoup, Janus and ion-sfu are the reference low-level SFU toolkits, and they are good at what
+they do. None of them ships observability. You get a forwarding engine and a callback surface,
+then you build the metrics pipeline, the per-participant quality view and the alerting yourself —
+every team, every time, from scratch. That rebuild is the part lumyx refuses to hand back to you.
+
+The comparison runs the other way too: those three are mature, battle-tested, and have years of
+production traffic behind them. lumyx is alpha and says so in the next table. Pick accordingly.
+
 ---
 
 ## Project status
@@ -273,6 +283,22 @@ bun install && bun run dev
 
 ---
 
+## Non-goals
+
+Two things lumyx will not do. Better to find out here than after you have integrated it.
+
+- **No server-side recording or egress.** No composition, no transcoding, no MP4 writer. The SFU
+  forwards packets; recording belongs in the client, or in a separate service you own.
+- **No AI or voice-agent pipeline.** No speech-to-text hop, no LLM in the loop, no synthesized
+  audio injected into a room.
+
+Neither is a "planned later" — they are permanent exclusions. A media path with no composition
+and no inference in it stays small enough to unit-test and cheap enough to instrument on every
+packet, which is the whole premise of the project. If you need either, a low-level toolkit plus a
+purpose-built service will serve you better, and that is a perfectly good answer.
+
+---
+
 ## Roadmap
 
 **Next up — quality metrics.** Turning RTCP feedback (Receiver Reports, NACKs, PLIs) already
@@ -299,6 +325,10 @@ pushed live over WebSocket.
 
 lumyx is early — which is the best moment to shape it. Bug reports, protocol nitpicks and
 "your fan-out is wrong because…" issues are all genuinely welcome.
+
+Questions, "does it do X?" and setup trouble go to
+[**Discussions**](https://github.com/FrekiManagarm/lumyx/discussions) rather than issues — answers
+there stay searchable for whoever hits the same wall next.
 
 ```bash
 cargo test && cargo clippy --all-targets
