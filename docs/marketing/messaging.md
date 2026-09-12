@@ -10,6 +10,9 @@ nothing shipped to an audience is.
 
 **Owner:** Mathieu Chambaud · **Last updated:** 2026-09-12 · Tracks `LUM-618`.
 
+Companion files: `thread-template.md` (how to write), `thread-backlog.md` (what about),
+`cadence.md` (when).
+
 ---
 
 ## The rule that governs everything below
@@ -74,14 +77,14 @@ Supporting line, when one is needed:
 > deferred: no compositing, no transcoding, no inference in the media path. It's also why
 > the media layer talks to an `RtpSink` trait and never to the transport — RTP routing is
 > tested against an in-memory sink, with no socket, no DTLS handshake and no async
-> runtime. 68 tests run in 0.03 s. That is unusual in SFU codebases, and it's what makes
+> runtime. 147 tests run in 3.6 s. That is unusual in SFU codebases, and it's what makes
 > this one safe to change.
 >
 > **Where it stands.** Alpha, honestly. The media path works end to end between browsers —
 > ICE, DTLS, SRTP, real RTP forwarding, room-scoped fan-out. The quality metrics that are
 > the point of the project are the next milestone, not a shipped feature. The README
-> carries a status table that marks each piece ✅, ⚠️ or ❌, including three `/metrics`
-> counters that are defined but never incremented. Read it before you benchmark anything.
+> carries a status table marking each piece ✅, ⚠️ or ❌. Read it before you benchmark
+> anything.
 
 ---
 
@@ -124,18 +127,30 @@ than "they have no metrics," which is false and will be corrected publicly.
 The credibility of everything above rests on this list being exact. Every line is
 checkable by cloning the repo.
 
-**Works:** ICE/DTLS/SRTP handshake via str0m · WebSocket JSON signaling · concurrent room
-management with auto-GC · audio and video RTP forwarding, scoped per room · 68 tests plus
-a hot-path bench (~3 µs/packet at 50 peers, on the bench, not in production).
+Verified against the code on 2026-09-12, not against the README — see the warning below.
 
-**Partial or inert:** three of the five `/metrics` counters are defined but never
-incremented · the PLI escalator runs but sends nothing · SSRC/seq/timestamp rewrite is
-computed then discarded.
+**Works:** ICE/DTLS/SRTP handshake via str0m · WebSocket JSON signaling · concurrent room
+management with auto-GC · audio and video RTP forwarding, scoped per room · one outgoing
+m-line per source track, with renegotiation on join and leave · PLI working in both
+directions · `/metrics` fed (packets, bytes, keyframes, connections) · 147 tests passing
+in 3.6 s, plus a hot-path bench (~3 µs/packet at 50 peers — a bench figure, not
+production) · exercised at 3, 5, 10 and 15 participants, in Rust end-to-end tests and in
+real headless Chromes.
+
+**Known and unfixed:** two SDP round-trips on each peer arrival, one more than needed ·
+one UDP socket per peer, where production SFUs demultiplex per ICE ufrag · the
+dropped-packet counters exist and log but don't reach `/metrics` · the old dev private key
+is still in the git history pending a `git filter-repo`.
 
 **Not built:** simulcast, SVC, bandwidth estimation · quality metrics (jitter, loss, RTT,
 NACK) — the point of the project and the next milestone · public/NAT deployment (no STUN
 client) · the real-time dashboard, which is a bare Next.js scaffold · session replay,
 alerting.
+
+> ⚠️ **The README's status table is stale** and understates the project: it still says 68
+> tests, PLI inert and three dead `/metrics` counters. All three were fixed since. Nothing
+> above may be published until the README is brought back in line — the status table is
+> what every claim here points at, so it has to be the accurate document, not this one.
 
 **Project:** MIT · single maintainer · Rust edition 2024 on str0m · questions go to GitHub
 Discussions.
@@ -185,8 +200,8 @@ or Reddit post and an improvised answer at 23:00 is how a position gets lost.
 ### "Is it production-ready?"
 
 > No. It's alpha and the README has a status table saying which parts are ✅, ⚠️ and ❌ —
-> including three `/metrics` counters that are defined and never incremented. Today it
-> forwards audio and video between browsers over real ICE/DTLS/SRTP, room-scoped. It has
+> and which is which. Today it forwards audio and video between browsers over real
+> ICE/DTLS/SRTP, room-scoped, verified up to 15 participants. It has
 > no STUN client, so it doesn't deploy past localhost yet, and the quality metrics that
 > are the entire point are the next milestone rather than a feature. If you need something
 > in production this quarter, use mediasoup or Janus.
@@ -199,7 +214,7 @@ it only works if the answer to this question is blunt.
 > Fair, and MIT plus a small codebase is most of my answer. The layered architecture is
 > the rest of it: the media layer talks to an `RtpSink` trait and never to the transport,
 > so RTP routing is tested with an in-memory sink — no socket, no DTLS, no async runtime,
-> 68 tests in 0.03 s. That's the difference between a project someone else can pick up and
+> 147 tests in 3.6 s. That's the difference between a project someone else can pick up and
 > one that dies with its author. I'm also publishing the work weekly, including what
 > breaks, so the state of it is never a mystery.
 
