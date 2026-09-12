@@ -78,7 +78,7 @@ impl Default for TelemetryConfig {
     }
 }
 
-/// The machine's hostname, or `sightline-sfu` when it cannot be read.
+/// The machine's hostname, or `lumyx-sfu` when it cannot be read.
 ///
 /// No dependency for this: `hostname(3)` through `std` does not exist, and
 /// pulling a crate to read one string would be disproportionate.
@@ -89,7 +89,7 @@ fn hostname() -> String {
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "sightline-sfu".to_string())
+        .unwrap_or_else(|| "lumyx-sfu".to_string())
 }
 
 /// Reads a duration expressed in seconds, falling back to `default` when the
