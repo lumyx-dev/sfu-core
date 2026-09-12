@@ -18,6 +18,7 @@ Thumbs.db
 
 # Private — jamais pushé
 apps/cloud/
+apps/landing/
 
 # Turborepo
 .turbo/
