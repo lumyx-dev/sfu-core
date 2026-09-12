@@ -1175,7 +1175,7 @@ git -C apps/cloud commit -m "test: cover signup-to-audit-log flow end to end"
 - [ ] **Step 1: Replace the boilerplate `create-next-app` README with setup instructions**
 
 ```markdown
-# `apps/cloud` — Sightline Cloud console
+# `apps/cloud` — Lumyx Cloud console
 
 ## Database
 

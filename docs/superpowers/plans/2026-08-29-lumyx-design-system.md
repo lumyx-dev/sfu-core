@@ -1,14 +1,14 @@
-# Sightline Design System — Implementation Plan
+# Lumyx Design System — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Porter les 9 fichiers de tokens et les 37 composants du design system Sightline dans `packages/ui`, consommables par les apps Next du monorepo.
+**Goal:** Porter les 9 fichiers de tokens et les 37 composants du design system Lumyx dans `packages/ui`, consommables par les apps Next du monorepo.
 
 **Architecture:** Le package exporte du TSX source (pas de build) ; les apps l'ajoutent à `transpilePackages`. Les tokens sont copiés verbatim depuis le handoff et restent la seule source de vérité des valeurs. Chaque composant est un dossier `Nom/` avec `Nom.tsx` + `Nom.module.css` : les styles inline de la source deviennent des règles CSS, et les états `hover`/`focus` gérés en `useState` deviennent de vrais `:hover` / `:focus-visible`.
 
 **Tech Stack:** TypeScript 5, React 19.2.8, Next 16.3.2 (App Router), Tailwind CSS v4, `lucide-react` ^0.469.0, bun 1.3.11, Turborepo 2.
 
-**Spec:** `docs/superpowers/specs/2026-08-29-sightline-design-system-design.md`
+**Spec:** `docs/superpowers/specs/2026-08-29-lumyx-design-system-design.md`
 
 **Source du port :** `~/Downloads/design_handoff_sightline/designs/_ds/sightline-design-system-ae3b1246-552c-4bc3-a902-433b694a7230/`
 Dans ce plan, ce chemin est noté `$DS`. Le bundle `$DS/_ds_bundle.js` est du JSX compilé Babel classic, lisible. L'annexe A de la spec donne le numéro de ligne de chacun des 37 composants.
@@ -308,7 +308,7 @@ export default function DesignSystemPage() {
   return (
     <main style={{ padding: 'var(--space-9)', display: 'grid', gap: 'var(--space-9)' }}>
       <h1 style={{ fontSize: 'var(--fs-26)', letterSpacing: 'var(--ls-display)' }}>
-        Sightline design system
+        Lumyx design system
       </h1>
       <section style={{ display: 'grid', gap: 'var(--space-5)' }}>
         <span className="sl-label">Probe</span>
@@ -323,7 +323,7 @@ export default function DesignSystemPage() {
 
 ```bash
 bun install
-bun run --filter @sightline/dashboard dev
+bun run --filter @lumyx/dashboard dev
 ```
 
 Ouvrir `http://localhost:3000/_ds`.
@@ -336,7 +336,7 @@ Ouvrir `http://localhost:3000/_ds`.
 
 ```bash
 bun run check-types
-bun run --filter @sightline/dashboard build
+bun run --filter @lumyx/dashboard build
 ```
 
 Attendu : les deux passent.
@@ -650,7 +650,7 @@ import { Icon, ICONS, type IconName } from '@lumyx/ui';
 
 ```bash
 bun run check-types && DS=$DS bun run verify:ds
-bun run --filter @sightline/dashboard dev
+bun run --filter @lumyx/dashboard dev
 ```
 
 Sur `/_ds` : les 29 glyphes s'affichent à 16px, alignés avec leur nom, sans flash au chargement (plus de fetch réseau — vérifier dans l'onglet Réseau des devtools qu'aucune requête ne part vers `unpkg.com`).
@@ -1047,8 +1047,8 @@ Monter `<CoreSection />` dans `apps/dashboard/app/_ds/page.tsx`.
 - [ ] **Step 7 : Vérifier**
 
 ```bash
-bun run check-types && DS=$DS bun run verify:ds && bun run --filter @sightline/dashboard build
-bun run --filter @sightline/dashboard dev
+bun run check-types && DS=$DS bun run verify:ds && bun run --filter @lumyx/dashboard build
+bun run --filter @lumyx/dashboard dev
 ```
 
 Sur `/_ds`, contrôler point par point contre la maquette (ouvrir `$DS/../Dashboard UI.dc.html` dans un navigateur à côté) :
@@ -1143,7 +1143,7 @@ git commit -m "feat(ui): 5 composants layout (AppShell DashboardGrid GridItem Sp
 - Consumes: `cn` (Task 1), `Icon` / `IconName` (Task 3), `Pill` et `StatusDot` (Task 4)
 - Produces:
   - `Breadcrumb({ items = [], onSelect, style })` — `items: { id?: string; label: string }[]`
-  - `Sidebar({ items = [], activeId, onSelect, brand = 'Sightline', brandMeta, footer, width = 248, style })` — `items: { id: string; label: string; icon?: IconName; count?: number; status?: 'live' | 'error' }[]`
+  - `Sidebar({ items = [], activeId, onSelect, brand = 'Lumyx', brandMeta, footer, width = 248, style })` — `items: { id: string; label: string; icon?: IconName; count?: number; status?: 'live' | 'error' }[]`
   - `Tabs({ tabs = [], activeId, onSelect, variant = 'underline', style })` — `tabs: { id: string; label: string; count?: number }[]`
   - `Toolbar({ left, right, children, sticky = false, style })`
 
@@ -1165,7 +1165,7 @@ L'état **sélectionné** est une prop (`activeId`), pas un état interne : il d
 
 Les quatre transmettent `onSelect` sans le consommer → aucun `'use client'`.
 
-`Sidebar` rend par défaut la marque : le mot « Sightline » en `--fw-semibold` / `--ls-display`, précédé d'un carré 20px `--radius-xs` en `--accent`. Reproduire tel quel — c'est la seule identité visuelle du produit tant qu'il n'y a pas de logo (spec §9).
+`Sidebar` rend par défaut la marque : le mot « Lumyx » en `--fw-semibold` / `--ls-display`, précédé d'un carré 20px `--radius-xs` en `--accent`. Reproduire tel quel — c'est la seule identité visuelle du produit tant qu'il n'y a pas de logo (spec §9).
 
 `Tabs` a deux variants : `underline` (défaut) et le second à relever dans `:2130-2159`.
 
@@ -1321,7 +1321,7 @@ Source `:683`. Il utilise `useRef` + `useEffect` pour l'auto-scroll quand `autoS
 ```tsx
 'use client';
 // Seul composant client du design system : autoScroll a besoin d'une ref et d'un effet.
-// Cf. docs/superpowers/specs/2026-08-29-sightline-design-system-design.md §5.
+// Cf. docs/superpowers/specs/2026-08-29-lumyx-design-system-design.md §5.
 
 import { useEffect, useRef } from 'react';
 ```
@@ -1472,7 +1472,7 @@ Rendre, avec les données réelles de la maquette (`Dashboard UI.dc.html:268-282
 - [ ] **Step 3 : Vérifier**
 
 ```bash
-bun run check-types && DS=$DS bun run verify:ds && bun run --filter @sightline/dashboard build
+bun run check-types && DS=$DS bun run verify:ds && bun run --filter @lumyx/dashboard build
 ```
 
 Sur `/_ds` : la `PeerCard` de `d41f9ab7` montre son RTT en rouge et les trois autres en neutre. Si tous les chiffres sont colorés, ou aucun, le seuil n'est pas câblé — relire la source.
@@ -1584,14 +1584,14 @@ grep -rhoE "^export function ([A-Z][A-Za-z]*)" packages/ui/src/components --incl
 DS=$DS bun run verify:ds     # contraintes
 bun run check-types          # types
 bun run lint                 # lint
-bun run --filter @sightline/dashboard build   # build
+bun run --filter @lumyx/dashboard build   # build
 ```
 
 Puis la recette visuelle, la seule qui prouve la fidélité :
 
 ```bash
 open "$DS/../Dashboard UI.dc.html"
-bun run --filter @sightline/dashboard dev   # puis /_ds
+bun run --filter @lumyx/dashboard dev   # puis /_ds
 ```
 
 Cocher la DoD de la spec §8 :

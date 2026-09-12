@@ -1,4 +1,4 @@
-# Design — `packages/ui` : port du design system Sightline
+# Design — `packages/ui` : port du design system Lumyx
 
 Date : 2026-08-29
 Statut : validé, prêt pour le plan d'implémentation
@@ -8,12 +8,12 @@ Sous-projet : 1/4
 
 ## 1. Contexte
 
-Le handoff `~/Downloads/design_handoff_sightline` livre les maquettes hi-fi de Sightline : 9 écrans
+Le handoff `~/Downloads/design_handoff_sightline` livre les maquettes hi-fi de Lumyx : 9 écrans
 `.dc.html` (site public, console Cloud, dashboard d'observabilité) et le design system qui les
 compose — 9 fichiers de tokens CSS et 37 composants React.
 
 Dans le monorepo, `packages/ui` est vide (un `package.json` et un `README.md`). `apps/dashboard` et
-`apps/sightline-cloud` sont deux `create-next-app` bruts. Aucune UI produit n'existe. Ce n'est donc
+`apps/cloud` sont deux `create-next-app` bruts. Aucune UI produit n'existe. Ce n'est donc
 pas un remplacement mais une construction.
 
 Ce document ne couvre que le **sous-projet 1 : `packages/ui`**. Les trois autres (dashboard, cloud,
@@ -305,7 +305,7 @@ StatusStrip(left, items=[], style)
 
 ```
 Breadcrumb(items=[], onSelect, style)
-Sidebar(items=[], activeId, onSelect, brand='Sightline', brandMeta, footer, width=248, style)
+Sidebar(items=[], activeId, onSelect, brand='Lumyx', brandMeta, footer, width=248, style)
 Tabs(tabs=[], activeId, onSelect, variant='underline', style)
 Toolbar(left, right, children, sticky=false, style)
 ```
@@ -331,7 +331,7 @@ handoff les appellent telles quelles.
 
 ## 7. Intégration côté apps
 
-Pour chaque app (`dashboard`, `sightline-cloud`, et plus tard `marketing`) :
+Pour chaque app (`dashboard`, `apps/cloud`, et plus tard `marketing`) :
 
 1. `@lumyx/ui` en dépendance de workspace.
 2. `transpilePackages: ['@lumyx/ui']` dans `next.config.ts`.
@@ -385,11 +385,11 @@ mécanisme de sélecteurs, sans le scoping automatique.
 
 - **Les icônes.** Le handoff signale lui-même Lucide comme « une substitution à confirmer » : le
   repo n'embarque aucun set. On la garde.
-- **Pas de logo.** La marque est le mot « Sightline » en Geist 600 / −0.02em, précédé d'un carré
+- **Pas de logo.** La marque est le mot « Lumyx » en Geist 600 / −0.02em, précédé d'un carré
   20px radius 6px en `--accent`. C'est ce que fait `Sidebar` par défaut. Un vrai mark le remplacera.
 - **`packages/auth`, `packages/db`, `packages/env`, `packages/config` sont vides** et le restent :
   le design system n'en dépend d'aucun. Rien n'y est touché.
-- **`apps/sightline-cloud/.git`** est un dépôt imbriqué (le repo privé `sightline-cloud`). Rien n'y
+- **`apps/cloud/.git`** est un dépôt imbriqué (le repo privé `apps/cloud`). Rien n'y
   sera commité dans ce sous-projet.
 - **Les données des maquettes sont inventées.** Seuls les noms de métriques et les seuils sont
   réels : `packet_loss_ratio` > 2%, `jitter_ms` > 30ms, `rtt_ms` > 200ms, `nack_ratio` > 5%,
@@ -417,7 +417,7 @@ Explicitement **pas** dans ce sous-projet :
 | --- | --- | --- |
 | 1 | `packages/ui` — ce document | — |
 | 2 | `apps/dashboard` — 9 vues, mocks, puis `/metrics` du SFU | 1 |
-| 3 | `apps/sightline-cloud` — console, Sign up, Onboarding 5 étapes | 1 |
+| 3 | `apps/cloud` — console, Sign up, Onboarding 5 étapes | 1 |
 | 4 | `apps/marketing` — Home, Pricing, Compare, Docs, Changelog + moteur d'animation | 1 |
 
 **Note pour la spec 2.** `_ds_bundle.js` contient aussi des écrans dashboard complets en React

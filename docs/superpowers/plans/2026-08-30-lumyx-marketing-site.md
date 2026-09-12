@@ -1,4 +1,4 @@
-# Site marketing Sightline (`apps/web`) — Implementation Plan
+# Site marketing Lumyx (`apps/web`) — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript 5, React 19.2.8, Next 16.3.2 (App Router), Tailwind CSS v4, `@lumyx/ui` (workspace), `bun test`, bun 1.3.11, Turborepo 2.
 
-**Spec:** `docs/superpowers/specs/2026-08-30-sightline-marketing-site-design.md`
+**Spec:** `docs/superpowers/specs/2026-08-30-lumyx-marketing-site-design.md`
 
 **Source du port :** `~/Downloads/design_handoff_sightline/`
 Dans ce plan ce chemin est noté `$HANDOFF`. Les maquettes sont dans `$HANDOFF/designs/*.dc.html`.
@@ -71,7 +71,7 @@ Remplacer intégralement le fichier par :
 
 ```json
 {
-  "name": "@sightline/web",
+  "name": "@lumyx/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -179,7 +179,7 @@ import './globals.css';
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
 
 export const metadata: Metadata = {
-  title: 'Sightline — observability in the media path',
+  title: 'Lumyx — observability in the media path',
   description:
     'A Rust WebRTC SFU with jitter, packet loss, RTT and NACK ratio per peer and per room, live.',
 };
@@ -201,7 +201,7 @@ Remplacer `apps/web/app/page.tsx` par :
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <h1 style={{ fontSize: 'var(--fs-26)' }}>Sightline</h1>
+      <h1 style={{ fontSize: 'var(--fs-26)' }}>Lumyx</h1>
       <p style={{ color: 'var(--text-muted)' }}>scaffold ok</p>
     </main>
   );
@@ -394,11 +394,11 @@ export interface FooterColumn {
 
 export const SITE_VERSION = 'v0.4.1';
 
-export const GITHUB_URL = 'https://github.com/FrekiManagarm/sightline';
+export const GITHUB_URL = 'https://github.com/FrekiManagarm/lumyx';
 
 export const HEADER_NAV: NavLink[] = [
   { label: 'Observability', href: '/#observability' },
-  { label: 'Why Sightline', href: '/#why' },
+  { label: 'Why Lumyx', href: '/#why' },
   { label: 'vs LiveKit', href: '/compare/livekit' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Docs', href: '/docs' },
@@ -445,7 +445,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
 
 - [ ] **Step 2: Écrire `Wordmark.tsx`**
 
-Le handoff confirme qu'il n'existe aucun logo : la marque est un carré `--accent` en radius 6px suivi du mot « Sightline » en 15px/600/`-0.02em`.
+Le handoff confirme qu'il n'existe aucun logo : la marque est un carré `--accent` en radius 6px suivi du mot « Lumyx » en 15px/600/`-0.02em`.
 
 ```tsx
 export function Wordmark({ size = 20 }: { size?: number }) {
@@ -462,7 +462,7 @@ export function Wordmark({ size = 20 }: { size?: number }) {
         }}
       />
       <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-strong)' }}>
-        Sightline
+        Lumyx
       </span>
     </span>
   );
@@ -504,7 +504,7 @@ export function SiteHeader({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
       style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-8 px-5 md:px-6 lg:px-10">
-        <Link href="/" aria-label="Sightline — home">
+        <Link href="/" aria-label="Lumyx — home">
           <Wordmark />
         </Link>
         <nav className="hidden flex-1 items-center gap-6 md:flex">
@@ -594,7 +594,7 @@ export default function Home() {
     <>
       <SiteHeader />
       <main className="mx-auto max-w-[1280px] px-5 py-24 md:px-6 lg:px-10">
-        <h1 style={{ fontSize: 'var(--fs-26)' }}>Sightline</h1>
+        <h1 style={{ fontSize: 'var(--fs-26)' }}>Lumyx</h1>
       </main>
       <SiteFooter />
     </>
@@ -980,7 +980,7 @@ Attendu : ÉCHEC, avec une erreur de résolution du module `./pricing` (le fichi
 // UNVERIFIED — chiffres proposés par le handoff de design, non validés produit.
 // Origine : $HANDOFF/designs/Pricing.dc.html (const PLANS, PRICING_GROUPS, FAQ + estimate()).
 // Le modèle Cloud (plans, quotas, unités de facturation, prix) doit être confirmé contre
-// sightline-cloud avant toute mise en ligne publique.
+// apps/cloud avant toute mise en ligne publique.
 
 export type Period = 'monthly' | 'annual';
 
@@ -1144,7 +1144,7 @@ git commit -m "feat(web): estimateur de cout et donnees de pricing"
     }
     export interface CompareRow {
       label: string;
-      sightline: string;
+      lumyx: string;
       other: string;
     }
     export const START: SnippetSet;
@@ -1396,7 +1396,7 @@ Trois blocs en grille `1fr 1fr`, gap 44px, séparés par un `border-bottom: 1px 
 
 - [ ] **Step 4: Écrire `CompareStrip.tsx`**
 
-Grille `1.1fr 1fr 1fr`, en-tête sur `--surface-sunken` avec trois `.sl-label` (« Architectural default », « Sightline » en `--accent-text`, « Typical Go SFU stack »), wrapper en radius 18px `overflow: hidden`. Les lignes viennent de `COMPARE_ROWS`. Un lien « See the full comparison → » vers `/compare/livekit` ferme la section. Sous 768px la grille défile horizontalement dans un conteneur `overflow-x-auto` avec une largeur minimale de 640px.
+Grille `1.1fr 1fr 1fr`, en-tête sur `--surface-sunken` avec trois `.sl-label` (« Architectural default », « Lumyx » en `--accent-text`, « Typical Go SFU stack »), wrapper en radius 18px `overflow: hidden`. Les lignes viennent de `COMPARE_ROWS`. Un lien « See the full comparison → » vers `/compare/livekit` ferme la section. Sous 768px la grille défile horizontalement dans un conteneur `overflow-x-auto` avec une largeur minimale de 640px.
 
 - [ ] **Step 5: Écrire `PricingStrip.tsx`**
 
@@ -1615,7 +1615,7 @@ Copier mot pour mot les cinq constantes de la classe de logique : `SUMMARY` (3 e
 
 - [ ] **Step 2: Écrire `Summary.tsx` et `CompareGroups.tsx`**
 
-`Summary` : trois blocs numérotés, chacun avec `data-anim="rise"` et le `delay` porté par la donnée. `CompareGroups` : même traitement que le tableau comparatif de Pricing — conteneur `overflow-x-auto`, colonne de libellés collante, colonne Sightline mise en avant en `--accent-tint`.
+`Summary` : trois blocs numérotés, chacun avec `data-anim="rise"` et le `delay` porté par la donnée. `CompareGroups` : même traitement que le tableau comparatif de Pricing — conteneur `overflow-x-auto`, colonne de libellés collante, colonne Lumyx mise en avant en `--accent-tint`.
 
 - [ ] **Step 3: Écrire `Topology.tsx` et son module**
 
@@ -1959,4 +1959,4 @@ git commit -m "fix(web): passe responsive et reduced-motion sur les six pages"
 - **Aucune authentification, aucune base de données, aucun appel réseau.** Sign up est une UI. Le branchement appartient au sous-projet C.
 - **Les chiffres publiés ne sont pas validés.** `content/pricing.ts`, `content/benchmarks.ts` et `content/releases.ts` portent un en-tête `UNVERIFIED`. Le site est démontrable mais **ne doit pas être déployé publiquement** avant confirmation. Seul `content/metrics.ts` est fondé sur une source vérifiée.
 - **`content/metrics.ts` sera partagé avec le sous-projet B.** Il vit pour l'instant dans `apps/web` ; le déplacer dans un package commun quand le dashboard en aura besoin, plutôt que de le dupliquer.
-- **`apps/sightline-cloud` est un dépôt git imbriqué non déclaré comme sous-module.** Ce plan n'y touche pas, mais il faudra trancher avant le sous-projet C.
+- **`apps/cloud` est un dépôt git imbriqué non déclaré comme sous-module.** Ce plan n'y touche pas, mais il faudra trancher avant le sous-projet C.

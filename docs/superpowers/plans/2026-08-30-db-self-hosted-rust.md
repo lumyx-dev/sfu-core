@@ -144,7 +144,7 @@ impl Default for TelemetryConfig {
     }
 }
 
-/// The machine's hostname, or `sightline-sfu` when it cannot be read.
+/// The machine's hostname, or `lumyx-sfu` when it cannot be read.
 ///
 /// No dependency for this: `hostname(3)` through `std` does not exist, and
 /// pulling a crate to read one string would be disproportionate.
@@ -155,7 +155,7 @@ fn hostname() -> String {
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "sightline-sfu".to_string())
+        .unwrap_or_else(|| "lumyx-sfu".to_string())
 }
 
 /// Reads a duration expressed in seconds, falling back to `default` when the
@@ -1069,8 +1069,8 @@ async fn restarting_closes_the_sessions_the_previous_run_left_open() {
 - [ ] **Step 3: Lancer le test pour vérifier qu'il échoue**
 
 ```bash
-docker run --rm -d --name sightline-pg -e POSTGRES_PASSWORD=sightline -p 5433:5432 postgres:17
-export SFU_TEST_DATABASE_URL=postgres://postgres:sightline@localhost:5433/postgres
+docker run --rm -d --name lumyx-pg -e POSTGRES_PASSWORD=lumyx -p 5433:5432 postgres:17
+export SFU_TEST_DATABASE_URL=postgres://postgres:lumyx@localhost:5433/postgres
 rtk cargo test -p sfu --test telemetry_pg
 ```
 Expected: FAIL — `unresolved import sfu::telemetry::PgWriter`
@@ -1313,7 +1313,7 @@ Aucune feature Cargo : sqlx est une dépendance inconditionnelle, c'est
 - [ ] **Step 5: Lancer les tests, avec puis sans base**
 
 ```bash
-SFU_TEST_DATABASE_URL=postgres://postgres:sightline@localhost:5433/postgres \
+SFU_TEST_DATABASE_URL=postgres://postgres:lumyx@localhost:5433/postgres \
   rtk cargo test -p sfu --test telemetry_pg
 rtk cargo test -p sfu    # sans la variable : tout doit passer, les tests PG s'annoncent ignorés
 rtk cargo clippy --all-targets
@@ -2733,7 +2733,7 @@ async fn maintenance_creates_the_partitions_the_writer_needs() {
 
 ```bash
 rtk cargo test -p sfu
-SFU_TEST_DATABASE_URL=postgres://postgres:sightline@localhost:5433/postgres \
+SFU_TEST_DATABASE_URL=postgres://postgres:lumyx@localhost:5433/postgres \
   rtk cargo test -p sfu
 rtk cargo clippy --all-targets
 ```
@@ -2766,7 +2766,7 @@ if !touched.is_empty() {
     let payload = serde_json::json!({ "rooms": touched }).to_string();
     // `pg_notify` plutôt que `NOTIFY` : la charge utile est un paramètre lié,
     // donc pas de SQL construit par concaténation.
-    sqlx::query("select pg_notify('sightline_live', $1)")
+    sqlx::query("select pg_notify('lumyx_live', $1)")
         .bind(&payload)
         .execute(&mut *tx)
         .await?;
@@ -2776,9 +2776,9 @@ if !touched.is_empty() {
 - [ ] **Step 2: Vérification manuelle de bout en bout**
 
 ```bash
-docker run --rm -d --name sightline-pg -e POSTGRES_PASSWORD=sightline -p 5433:5432 postgres:17
+docker run --rm -d --name lumyx-pg -e POSTGRES_PASSWORD=lumyx -p 5433:5432 postgres:17
 cd apps/sfu
-SFU_DATABASE_URL=postgres://postgres:sightline@localhost:5433/postgres \
+SFU_DATABASE_URL=postgres://postgres:lumyx@localhost:5433/postgres \
 SFU_INSTANCE_NAME=sfu-dev SFU_REGION=eu-west-3 \
   cargo run -p sfu --release
 ```
@@ -2804,10 +2804,10 @@ Trois vérifications, chacune attrapant un défaut différent :
 Avec trois onglets connectés et de la vidéo qui circule :
 
 ```bash
-docker stop sightline-pg
+docker stop lumyx-pg
 ```
 
-La vidéo doit continuer sans interruption visible. `curl -k https://localhost:3000/metrics` doit montrer `telemetry_entries_dropped` qui monte, et les logs une seule ligne d'avertissement par rafale, pas une par lot. Puis `docker start sightline-pg` : l'écriture reprend et un `Télémétrie — écriture rétablie` apparaît.
+La vidéo doit continuer sans interruption visible. `curl -k https://localhost:3000/metrics` doit montrer `telemetry_entries_dropped` qui monte, et les logs une seule ligne d'avertissement par rafale, pas une par lot. Puis `docker start lumyx-pg` : l'écriture reprend et un `Télémétrie — écriture rétablie` apparaît.
 
 C'est la vérification qui compte le plus dans ce plan : elle prouve la contrainte globale « une base ne dégrade jamais un appel ».
 

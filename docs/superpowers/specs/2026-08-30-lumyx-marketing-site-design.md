@@ -1,4 +1,4 @@
-# Site marketing Sightline (`apps/web`) — Design
+# Site marketing Lumyx (`apps/web`) — Design
 
 **Date :** 2026-08-30
 **Statut :** approuvé, prêt pour le plan d'implémentation
@@ -18,7 +18,7 @@ spec → plan → implémentation :
 | --- | --- | --- | --- |
 | **A** | Site marketing | `apps/web` (à créer) | **ce document** |
 | B | Dashboard d'observabilité | `apps/dashboard` | à spécifier |
-| C | Console Cloud | `apps/sightline-cloud` | à spécifier |
+| C | Console Cloud | `apps/cloud` | à spécifier |
 
 A passe en premier : c'est la surface demandée en priorité, elle ne dépend d'aucun
 backend, et elle valide le design system sur des écrans réels avant qu'on touche au
@@ -50,7 +50,7 @@ tokens.
 **Hors périmètre :** toute authentification réelle, toute base de données, tout appel
 réseau sortant, les écrans Onboarding / Cloud UI / Dashboard UI (sous-projets B et C), et
 la création d'un logo (le handoff confirme qu'il n'en existe aucun — la marque est le mot
-« Sightline » en Geist 600 précédé d'un carré 20px `--accent` en radius 6px).
+« Lumyx » en Geist 600 précédé d'un carré 20px `--accent` en radius 6px).
 
 ## 4. Décisions arrêtées
 
@@ -111,9 +111,9 @@ par le défaut proposé : tout ce qui compte est réécrit à l'étape suivante.
 
 Puis alignée sur le monorepo :
 
-- `name: "@sightline/web"`, `private: true`
+- `name: "@lumyx/web"`, `private: true`
 - Next épinglé à **16.3.2**, React **19.2.8**, comme `apps/dashboard` et
-  `apps/sightline-cloud` (via le catalogue bun de la racine quand la dépendance y figure)
+  `apps/cloud` (via le catalogue bun de la racine quand la dépendance y figure)
 - `"dev": "next dev --port 3002"` — 3000 est pris par le dashboard, 3001 par le cloud
 - `next.config.ts` : `transpilePackages: ['@lumyx/ui']`
 - `@lumyx/ui` en `workspace:*`, `tailwindcss` et `@tailwindcss/postcss` en `^4` comme
@@ -293,13 +293,13 @@ texte en `--text-strong` et fond `--accent-tint`, là où les autres colonnes so
 
 Cinq sections : le résumé en trois blocs numérotés (« Observability is the product », « One
 binary to operate », « Human video, not agents »), la grille comparative en quatre groupes
-(Architecture, Observability, Product scope, Licence & maturity), ce que Sightline
+(Architecture, Observability, Product scope, Licence & maturity), ce que Lumyx
 remplace, la migration en trois étapes avec ses diffs de code, et **« Cases where LiveKit
 is still the better call »** en quatre entrées.
 
 Cette dernière section reste intégralement. C'est une section d'honnêteté assumée par le
 design : elle dit de ne pas migrer une charge qui dépend de l'enregistrement serveur ou de
-l'egress, que les agents vocaux IA sont le terrain de LiveKit, que Sightline s'appuie sur
+l'egress, que les agents vocaux IA sont le terrain de LiveKit, que Lumyx s'appuie sur
 les SDK clients LiveKit sans support contractuel dessus, et que l'infrastructure est
 jeune. **Ne pas la couper, ne pas l'adoucir.**
 
@@ -384,7 +384,7 @@ Tout le contenu éditorial vit dans `content/`, en TypeScript typé, jamais dans
 // UNVERIFIED — chiffres proposés par le handoff de design, non validés produit.
 // Origine : $HANDOFF/designs/Pricing.dc.html (const PLANS, PRICING_GROUPS).
 // Le modèle Cloud (plans, quotas, unités, prix) doit être confirmé contre
-// sightline-cloud avant toute mise en ligne publique.
+// apps/cloud avant toute mise en ligne publique.
 ```
 
 `benchmarks.ts` remplace les mentions « benchmark pending » de Home et Pricing et attend
@@ -457,7 +457,7 @@ site est constructible et démontrable en l'état, mais **ne doit pas être dép
 publiquement** avant que `content/pricing.ts` et `content/benchmarks.ts` aient été
 confirmés. C'est un risque de communication produit, pas un risque technique.
 
-**`apps/sightline-cloud` est un dépôt git imbriqué** dans l'arbre de travail sans être
+**`apps/cloud` est un dépôt git imbriqué** dans l'arbre de travail sans être
 déclaré comme sous-module — `git status` le voit comme une entrée modifiée opaque. Ce
 sous-projet n'y touche pas, mais il faudra trancher avant le sous-projet C.
 

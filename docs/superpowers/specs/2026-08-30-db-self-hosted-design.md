@@ -16,7 +16,7 @@ stable. Le modèle de données du domaine ne bougera plus, ce qui rend le moment
 pour le figer en base.
 
 Ce document couvre **uniquement le self-hosted**. La console Cloud
-(`apps/sightline-cloud`) a un modèle sans rapport — organisation, projets, environnements,
+(`apps/cloud`) a un modèle sans rapport — organisation, projets, environnements,
 quotas, minutes-participant, factures, audit log — et garde une base séparée. Les mélanger
 imposerait au self-hosted des colonnes `org_id` qui n'y veulent rien dire.
 
@@ -100,7 +100,7 @@ question pour le média et l'a documentée. Si Postgres met 3 s par transaction,
 entre perdre des échantillons et perdre de la vidéo.
 
 **4.10 — Aucune métrique rapportée par le navigateur.** Le `freeze` et la qualité perçue
-sortent du périmètre. Sightline mesure depuis le chemin média, pas depuis un SDK client :
+sortent du périmètre. Lumyx mesure depuis le chemin média, pas depuis un SDK client :
 c'est ce qui le distingue. Extension naturelle le jour où un SDK client authentifié
 existera.
 
@@ -116,10 +116,10 @@ Une base, deux schémas, **un seul écrivain chacun**.
 La frontière est tenue par les droits Postgres, pas par la discipline :
 
 ```sql
-grant usage on schema telemetry to sightline_dashboard;
-grant select on all tables in schema telemetry to sightline_dashboard;
-grant usage on schema app to sightline_sfu;
-grant select on app.alert_rules to sightline_sfu;
+grant usage on schema telemetry to lumyx_dashboard;
+grant select on all tables in schema telemetry to lumyx_dashboard;
+grant usage on schema app to lumyx_sfu;
+grant select on app.alert_rules to lumyx_sfu;
 ```
 
 Le SFU applique ses migrations au démarrage parce que c'est le bon comportement
@@ -395,7 +395,7 @@ préserve la règle d'un écrivain par schéma (4.8).
 
 ## 11. Live
 
-Le SFU émet `NOTIFY sightline_live` après chaque lot écrit, avec une charge utile minimale
+Le SFU émet `NOTIFY lumyx_live` après chaque lot écrit, avec une charge utile minimale
 (les `room_id` touchés). Le dashboard `LISTEN` et invalide son cache.
 
 Les valeurs seconde par seconde continuent d'arriver au navigateur par le flux WebSocket du
@@ -471,7 +471,7 @@ démarrage crée l'heure courante avant que la tâche d'écriture ne démarre.
 un troisième track par peer et donc 50 % de volume. La fenêtre brute étant configurable,
 c'est un réglage, pas une refonte.
 
-**`apps/sightline-cloud` est un dépôt git imbriqué** non déclaré comme sous-module, et il
+**`apps/cloud` est un dépôt git imbriqué** non déclaré comme sous-module, et il
 apparaît modifié dans `git status` depuis le début. Ce document n'y touche pas, mais il
 faudra trancher avant le sous-projet C.
 
