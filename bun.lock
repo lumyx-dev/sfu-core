@@ -63,7 +63,7 @@
       },
     },
     "apps/landing": {
-      "name": "@lumyx/web",
+      "name": "@lumyx/landing",
       "version": "0.1.0",
       "dependencies": {
         "@lumyx/ui": "workspace:*",
@@ -396,9 +396,9 @@
 
     "@lumyx/env": ["@lumyx/env@workspace:packages/env"],
 
-    "@lumyx/ui": ["@lumyx/ui@workspace:packages/ui"],
+    "@lumyx/landing": ["@lumyx/landing@workspace:apps/landing"],
 
-    "@lumyx/web": ["@lumyx/web@workspace:apps/landing"],
+    "@lumyx/ui": ["@lumyx/ui@workspace:packages/ui"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.3", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.4", "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.4" } }, "sha512-UMduMbqO5s5zF2NkNacMT/yK5Y5QiKvWr2+50bzIIxFDwVJ2h49b+oyjaCGPhJxd2/gC2x39EHv/gHVuu36x2Q=="],
 
