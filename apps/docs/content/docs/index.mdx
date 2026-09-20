@@ -1,25 +1,58 @@
 ---
-title: Skin probe
-description: Throwaway page that exercises every element the token bridge has to cover.
+title: Introduction
+description: Lumyx is a WebRTC SFU with observability built into the media path — one binary carries signaling, forwarding and the dashboard, and the collector reads the six metrics below off RTCP as packets pass through.
 ---
 
-{/* Throwaway skin probe. Task 5 replaces this file with the real landing page of the docs. */}
+import { REPO, VERSION } from '@/lib/site-data';
 
-## Heading level two
+## What Lumyx is
 
-Body copy at the Lumyx density, with an [internal link](/) and `inline code`.
+Lumyx is a selective forwarding unit (SFU) for real-time video and audio: it terminates ICE, DTLS and SRTP
+from every peer in a room and forwards each publisher's tracks to the subscribers who need them,
+without transcoding. Clients drive it over a WebSocket with Lumyx's own JSON signaling protocol,
+specified in the <a href={REPO}>repository README</a>.
 
-### Heading level three
+What sets it apart is the second job it does on the same packets: a metrics collector sits in the media
+path itself, so packet loss, RTT, jitter, NACK ratio, freeze ratio and bitrate are measured directly
+rather than sampled from a separate exporter. Every peer gets default thresholds and alerting from the
+moment it connects.
 
-- First list item
-- Second list item
+## How it's put together
 
-| Field | Unit | Threshold |
-| --- | --- | --- |
-| `packet_loss_ratio` | ratio | > 2% |
+Signaling, forwarding, the metrics collector and the dashboard all run inside one Rust binary — no Redis,
+no separate signaling service, no sidecar to scrape. It starts with no config file and no external store;
+you add a Postgres or object storage backend only when you need retention past the in-memory window.
 
-> A blockquote, to check the border token.
-
-```json
-{ "packet_loss_ratio": 0.079, "packets_lost": 412, "enabled": true }
 ```
+peer ──ICE/DTLS/SRTP──▶ lumyx (signaling · forwarding · collector · dashboard)
+                                │
+                                ├─▶ RTCP read in the media path → 6 metrics
+                                ├─▶ thresholds + 30s debounce → alerts
+                                └─▶ /metrics (Prometheus) · dashboard :3000
+```
+
+## Open source vs. Cloud
+
+Nothing is held back from the MIT repo: the SFU, all six metrics, default thresholds and the dashboard are
+all there. Lumyx Cloud ({VERSION}) sells operation on top of the same binary — regions, quotas, retention
+and per-environment keys — not extra features. Moving from Cloud back to self-hosted is a URL change; the
+signaling protocol and token grants don't differ.
+
+<a href={REPO}>{REPO.replace('https://', '')} ↗</a>
+
+## Where to go next
+
+<DocCards>
+  <DocCard href="/quickstart" title="Quickstart">
+    Run the SFU locally and connect a client in a couple of minutes.
+  </DocCard>
+  <DocCard href="/self-hosting" title="Self-hosting">
+    Deploy the binary in production — Docker, from source, or behind your own proxy.
+  </DocCard>
+  <DocCard href="/cloud" title="Lumyx Cloud">
+    Same SFU, hosted. Regions, retention and alerting wired in.
+  </DocCard>
+  <DocCard href="/metrics-reference" title="Metrics reference">
+    The six metrics the collector reads off RTCP, and what each threshold breach means.
+  </DocCard>
+</DocCards>

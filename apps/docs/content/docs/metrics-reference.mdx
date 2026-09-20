@@ -1,0 +1,24 @@
+---
+title: Metrics reference
+description: Six metrics, read from RTCP as the media passes through the SFU. Each one is armed by default with the threshold below and a 30s debounce, per peer and — where the scope says so — per room.
+---
+
+## Default thresholds
+
+<MetricsThresholds />
+
+## The six metrics
+
+<MetricsReference />
+
+## Overriding a threshold
+
+Thresholds live per project and per environment since v0.4.0. Set one and it applies to every room in that
+environment; alerts still debounce for 30s before firing.
+
+```http
+PATCH /v1/projects/live-classroom/thresholds
+
+{ "packet_loss_ratio": 0.03,
+  "rtt_ms": 250 }
+```

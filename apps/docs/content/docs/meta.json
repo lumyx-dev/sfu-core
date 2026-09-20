@@ -1,0 +1,24 @@
+{
+  "pages": [
+    "---Getting started---",
+    "index",
+    "quickstart",
+    "self-hosting",
+    "cloud",
+    "---Core concepts---",
+    "rooms",
+    "peers",
+    "signaling",
+    "forwarding",
+    "---Observability---",
+    "metrics-reference",
+    "alerting",
+    "topology",
+    "replay",
+    "prometheus",
+    "---Reference---",
+    "api",
+    "config",
+    "errors"
+  ]
+}
