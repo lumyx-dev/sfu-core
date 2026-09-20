@@ -626,7 +626,7 @@ Monte l'app et valide le skin **avant** d'y verser du contenu. Verser seize page
   "dependencies": {
     "@lumyx/ui": "workspace:*",
     "fumadocs-core": "^16",
-    "fumadocs-mdx": "^12",
+    "fumadocs-mdx": "^15",
     "fumadocs-ui": "^16",
     "geist": "^1.3.1",
     "lucide-react": "^0.487.0",
@@ -740,12 +740,14 @@ for (const f of files) {
 Run: `rtk proxy bun install`
 Expected: installation réussie depuis la racine. `apps/docs/node_modules` ne doit **pas** apparaître — les liens vivent dans `node_modules/` à la racine.
 
-Vérifie les versions réellement installées, parce que les plages `^16`/`^12` du `package.json` doivent correspondre à Fumadocs v16 :
+Vérifie les versions réellement installées :
 
 ```bash
 rtk proxy bun pm ls | rtk proxy grep fumadocs
 ```
-Expected: `fumadocs-core` et `fumadocs-ui` en 16.x, `fumadocs-mdx` en 12.x. Si les majeures diffèrent, vérifier les notes de version avant de poursuivre — l'API de ce plan est celle de v16.
+Expected: `fumadocs-core` et `fumadocs-ui` en **16.x** (16.15.12 au moment de la rédaction), `fumadocs-mdx` en **15.x** (15.4.2). Les numéros de majeure ne sont pas alignés entre les trois paquets — c'est normal, `fumadocs-mdx` suit son propre cycle et sa 15.4.2 déclare `fumadocs-core: ^16.15.3` en pair. Si `fumadocs-core` ou `fumadocs-ui` sort en 17.x, s'arrêter et relire les notes de version : l'API de ce plan est celle de v16.
+
+Tous les peers de ces trois paquets sont optionnels (`next`, `react`, `vite`, `takumi-js`, `satteri`, `rolldown`, `@types/*`, `mdast-util-directive`), donc aucun avertissement de pair manquant ne doit apparaître comme bloquant.
 
 - [ ] **Step 4: Écrire le pont de tokens**
 
