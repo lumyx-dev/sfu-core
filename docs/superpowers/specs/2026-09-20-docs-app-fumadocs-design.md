@@ -72,10 +72,15 @@ de version.
 3. pas de `dangerouslySetInnerHTML` ;
 4. aucun fichier `.css` autre que `globals.css`.
 
-Fumadocs viole par défaut les règles 1 et 2 via la coloration Shiki. La §4 résout les deux
-sans contourner le script. Les règles 3 et 4 ne sont pas menacées : le MDX compilé par
-`fumadocs-mdx` produit des composants React, pas du HTML injecté, et les feuilles
-`fumadocs-ui/css/*.css` vivent dans `node_modules`, hors des répertoires scannés.
+Fumadocs viole par défaut les règles 1 et 2 via la coloration Shiki : elle émet du style inline
+portant des valeurs hexadécimales, en police monospace. La §5 résout les deux sans contourner
+le script.
+
+La règle 3 est frôlée sur un point précis : l'option `icon` de `rehypeCodeOptions`, active par
+défaut, pose sur le `<pre>` un attribut contenant une chaîne HTML de logo de langage, destinée
+à `dangerouslySetInnerHTML`. Le rendu se fait dans `fumadocs-ui`, hors des répertoires scannés,
+donc le script ne la verrait pas — mais `icon: false` est retenu de toute façon (§5.1). La
+règle 4 n'est pas menacée : les feuilles `fumadocs-ui/css/*.css` vivent dans `node_modules`.
 
 **Le workspace imbriqué d'`apps/landing` est un piège actif.** `apps/landing/package.json`
 déclare `workspaces: ["packages/*"]` et le dossier `apps/landing/packages/ui/` existe — une
@@ -96,14 +101,18 @@ repo : pas de workspace imbriqué, pas de dépôt git interne, pas de `bun.lock`
 ```
 apps/docs/
   package.json            @lumyx/docs
-  next.config.ts          withMDX() + transpilePackages: ['@lumyx/ui']
-  source.config.ts        defineDocs + defineConfig({ mdxOptions })
+  next.config.mjs         withMDX() + transpilePackages: ['@lumyx/ui']
+  source.config.ts        defineConfig({ mdxOptions: { rehypeCodeOptions } })
   postcss.config.mjs      @tailwindcss/postcss
   tsconfig.json           paths @/*
-  mdx-components.tsx      mapping des composants MDX
+  eslint.config.mjs       copie de celui de la landing
   scripts/verify-ds.mjs   variante docs
+  components/
+    mdx.tsx               getMDXComponents() — mapping des composants MDX
+    metrics-reference.tsx <MetricsReference />
   lib/
-    source.ts             loader() sur le page tree
+    source.ts             defineDocs (macro) + loader(), baseUrl '/'
+    layout.shared.tsx     baseOptions() — nav partagee
     metrics-data.ts       METRICS, repris de apps/landing/lib/docs-data.ts
   app/
     layout.tsx            RootProvider + GeistSans + GeistMono + globals.css
@@ -112,16 +121,39 @@ apps/docs/
     robots.ts
     api/search/route.ts
     (docs)/
-      layout.tsx          DocsLayout, tree = source.pageTree
+      layout.tsx          DocsLayout, tree = source.getPageTree()
       [[...slug]]/page.tsx
-  content/docs/           le MDX (§5)
+  content/docs/           le MDX (§6)
 ```
+
+Quatre contraintes de l'API réelle de Fumadocs v16, vérifiées contre les exemples du dépôt
+`fuma-nama/fumadocs` (`examples/next-min`, `examples/next`) :
+
+1. **`next.config.mjs`, pas `.ts`.** `fumadocs-mdx` est ESM-only et sa documentation
+   recommande explicitement `.mjs` pour une résolution ESM correcte ; un `next.config.ts`
+   exigerait le résolveur TypeScript natif de Node. C'est la seule app du repo qui divergera
+   de `next.config.ts` — divergence assumée et commentée dans le fichier.
+2. **Deux fichiers de configuration, pas un.** `lib/source.ts` déclare les collections via
+   `defineDocs` de `fumadocs-mdx/macro` ; `source.config.ts` porte les options globales via
+   `defineConfig` de `fumadocs-mdx/config`, et c'est là que vit `rehypeCodeOptions` (§5).
+3. **`source.getPageTree()`**, méthode, et non une propriété `source.pageTree`.
+4. **Routes typées Next 16.** `LayoutProps<'/'>` et `PageProps<'/[[...slug]]'>` sont des types
+   globaux générés par `next typegen`. `check-types` doit donc être
+   `next typegen && tsc --noEmit`, sinon la vérification de types échoue sur des types absents.
+
+`baseUrl` vaut `'/'` : sur `docs.lumyx.dev` la documentation est à la racine du domaine. Les
+slugs de page sont préservés (`/quickstart`, `/self-hosting`, `/cloud`,
+`/metrics-reference`), le préfixe `/docs` disparaît avec le changement de domaine.
 
 ### 3.1 `package.json`
 
 Nom `@lumyx/docs`, `private: true`. React et React-DOM par `catalog:` comme les autres apps.
 Dépendances ajoutées : `fumadocs-core`, `fumadocs-ui`, `fumadocs-mdx`, plus `@lumyx/ui`
-(`workspace:*`), `geist`, `next`, `next-themes`.
+(`workspace:*`), `geist`, `next`. En `devDependencies`, `@types/mdx` s'ajoute à la liste
+standard — `fumadocs-mdx` en dépend pour typer `MDXComponents`.
+
+`next-themes` n'est **pas** une dépendance directe : `RootProvider` de `fumadocs-ui` l'embarque
+déjà. L'ajouter créerait deux instances du provider.
 
 Scripts, calqués sur `apps/dashboard` :
 
@@ -130,9 +162,8 @@ Scripts, calqués sur `apps/dashboard` :
 "build": "next build",
 "start": "next start",
 "lint": "eslint",
-"check-types": "tsc --noEmit",
-"verify:ds": "node scripts/verify-ds.mjs",
-"postinstall": "fumadocs-mdx"
+"check-types": "next typegen && tsc --noEmit",
+"verify:ds": "node scripts/verify-ds.mjs"
 ```
 
 Le port 3003 est libre : landing 3000, dashboard 3001, cloud 3002.
@@ -230,44 +261,81 @@ de mise à jour contre du contrôle.
 
 ### 5.1 Mapping Shiki → tokens Lumyx
 
-Le thème Shiki `css-variables` émet `style="color: var(--shiki-token-…)"` plutôt que des
-valeurs littérales. Son jeu de rôles recouvre la map `ROLE_COLOR` déjà écrite dans
-`apps/landing/lib/highlight.ts` :
+**Correction d'une hypothèse initiale.** Ce design visait d'abord le thème Shiki
+`css-variables`. Vérification faite contre `@shikijs/themes@4.4.3` : ce thème **n'existe plus
+parmi les 134 thèmes fournis**. Il survit sous forme de fabrique,
+`createCssVariablesTheme()`, non enregistrée par défaut — et la documentation de Shiki la
+déconseille elle-même, la qualifiant de « beaucoup moins granulaire que la plupart des autres
+thèmes », au profit de deux mécanismes alternatifs.
 
-| Variable Shiki | Token Lumyx | Rôle dans `highlight.ts` |
+Le mécanisme retenu est le premier des deux, **Arbitrary Color Values** : depuis Shiki 0.9.15,
+un objet de thème accepte des valeurs de couleur non hexadécimales — dont des variables CSS —
+Shiki substituant en interne un marqueur le temps de la tokenisation. On écrit donc un thème
+TextMate complet dont chaque `foreground` est un token Lumyx :
+
+```ts
+{
+  name: 'lumyx',
+  bg: 'var(--code-bg)',
+  fg: 'var(--code-fg)',
+  settings: [
+    { scope: ['comment'], settings: { foreground: 'var(--code-comment)' } },
+    { scope: ['string'],  settings: { foreground: 'var(--code-string)'  } },
+    // …
+  ],
+}
+```
+
+C'est strictement meilleur que l'hypothèse de départ sur trois plans : granularité complète des
+scopes TextMate au lieu d'un jeu de rôles réduit, un seul thème au lieu de deux, et aucun
+enregistrement de fabrique. Le résultat visé est inchangé — couleurs Lumyx, zéro hex, mode
+sombre gratuit.
+
+Les tokens `--code-*`, définis dans `packages/ui/src/styles.css`, reprennent exactement la map
+`ROLE_COLOR` de `apps/landing/lib/highlight.ts` :
+
+| Token de code | Token Lumyx | Rôle dans `highlight.ts` |
 | --- | --- | --- |
-| `--shiki-foreground` | `--text-body` | `plain` |
-| `--shiki-background` | `--surface-sunken` | fond du bloc |
-| `--shiki-token-comment` | `--text-faint` | `comment` |
-| `--shiki-token-string` | `--ok` | `str` |
-| `--shiki-token-string-expression` | `--ok` | `str` |
-| `--shiki-token-constant` | `--accent-2` | `num` |
-| `--shiki-token-keyword` | `--accent-text` | `kw` |
-| `--shiki-token-function` | `--info` | `fn` |
-| `--shiki-token-parameter` | `--text-strong` | `key` |
-| `--shiki-token-punctuation` | `--text-faint` | `punct` |
-| `--shiki-token-link` | `--accent-text` | — |
+| `--code-bg` | `--surface-sunken` | fond du bloc |
+| `--code-fg` | `--text-body` | `plain` |
+| `--code-comment` | `--text-faint` | `comment` |
+| `--code-string` | `--ok` | `str` |
+| `--code-number` | `--accent-2` | `num` |
+| `--code-keyword` | `--accent-text` | `kw` |
+| `--code-function` | `--info` | `fn` |
+| `--code-property` | `--text-strong` | `key` |
+| `--code-punct` | `--text-faint` | `punct` |
 
 Deux conséquences :
 
 - **Les couleurs de code de la doc sont identiques à celles de la landing**, pas approchantes :
   elles sortent des mêmes tokens.
 - **Le mode sombre ne demande aucune configuration.** `--ok`, `--accent-2`, `--info` et
-  `--text-faint` basculent déjà sous `.dark`. Aucun thème Shiki dual, aucun
-  `defaultColor: false`, aucun hex dans le HTML produit.
+  `--text-faint` basculent déjà sous `.dark`. Un seul thème Shiki, aucun `defaultColor: false`,
+  aucun hex dans le HTML produit.
 
-Repli si la granularité de `css-variables` s'avère trop grossière à l'usage : deux objets de
-thème Shiki (`lumyx-light`, `lumyx-dark`) portant les valeurs de la palette, placés dans
-`packages/ui` où les valeurs littérales sont légitimes, avec `defaultColor: false`. Ce repli
-coûte une seconde source de vérité pour ces huit couleurs — d'où son statut de repli.
+Réserve documentée par Shiki : un thème à valeurs arbitraires « diverge de la compatibilité
+TextMate » et devient inutilisable hors web (`shiki-cli`, `shiki-monaco`). Sans effet ici — le
+thème ne sert qu'au rendu web.
+
+Repli si le thème à valeurs arbitraires pose problème : le second mécanisme recommandé par
+Shiki, `colorReplacements`, qui repeint un thème existant couleur par couleur.
+
+**`icon: false`** est passé dans `rehypeCodeOptions`. Par défaut Fumadocs ajoute au `<pre>` un
+attribut `icon` contenant une chaîne HTML de logo de langage, destinée à être rendue via
+`dangerouslySetInnerHTML`. Le système Lumyx ne met pas de logo dans un bloc de code, et
+l'option évite au passage toute injection de HTML.
 
 ### 5.2 Ajouts à `packages/ui/src/styles.css`
 
 1. `--font-mono` dans `@theme inline`, sur `var(--font-geist-mono)`. `geist/font/mono` est déjà
    présent — la landing et le dashboard dépendent de `geist` et n'en utilisent que `sans`.
    Aucune dépendance de police à ajouter.
-2. Le bloc `--shiki-*` du tableau ci-dessus, **hors** de `@theme` : ces variables sont
-   consommées par du style inline, pas par des utilitaires Tailwind.
+2. Le bloc `--code-*` du tableau ci-dessus, **hors** de `@theme` : ces variables sont
+   consommées par du style inline émis par Shiki, pas par des utilitaires Tailwind. Elles sont
+   déclarées dans `:root` et redéclarées sous `.dark` uniquement là où le token sous-jacent ne
+   bascule pas déjà de lui-même — en pratique nulle part, puisque les neuf pointent sur des
+   alias sémantiques qui basculent.
 3. `--text-code: 12.5px` — la valeur que `CodeBlock` et les blocs inline de la landing portent
    aujourd'hui en littéral.
 4. Un commentaire énonçant la règle d'emploi, à côté de `--font-mono` :
@@ -325,10 +393,11 @@ consolidation, décision séparée.
 
 ### 6.1 Arborescence plate, sections par `meta.json`
 
-Les slugs actuels sont préservés à l'identique : on change de domaine, pas de chemins. Les
-quatre sections de `DOC_NAV` sont rendues par les séparateurs de `meta.json` plutôt que par des
-dossiers, pour ne pas renommer d'URL au service de la cosmétique de nav. Des dossiers si et
-quand l'arbre grossit.
+Les slugs de page sont préservés à l'identique ; seul le préfixe `/docs` disparaît, remplacé
+par le sous-domaine. `lumyx.dev/docs/quickstart` devient `docs.lumyx.dev/quickstart`, et les
+redirections de la §7.4 assurent la continuité. Les quatre sections de `DOC_NAV` sont rendues
+par les séparateurs de `meta.json` plutôt que par des dossiers, pour ne pas enfoncer les slugs
+d'un niveau au service de la cosmétique de nav. Des dossiers si et quand l'arbre grossit.
 
 ```
 content/docs/
@@ -362,14 +431,15 @@ Les entrées grisées non cliquables disparaissent également, les onze pages de
 
 `DocSection` rend un `h2` précédé de `border-t border-hairline pt-8` — c'est le rythme visuel
 de la doc actuelle. Il devient un simple `## Titre` en MDX, la bordure étant portée par
-l'override de `h2` dans `mdx-components.tsx` : zéro balisage par page, rendu identique.
+l'override de `h2` dans `components/mdx.tsx` : zéro balisage par page, rendu identique.
 
 `METRICS` (six métriques × sept champs, `apps/landing/lib/docs-data.ts`) pilote
 `metrics-reference`. Elle est déplacée dans `apps/docs/lib/metrics-data.ts` et rendue par un
 composant `<MetricsReference />` exposé au MDX. Six objets structurés ne sont pas aplatis en
 prose Markdown.
 
-`mdx-components.tsx` mappe :
+`components/mdx.tsx` expose `getMDXComponents()` — la convention Fumadocs v16, qui étend
+`defaultMdxComponents` de `fumadocs-ui/mdx` plutôt que de le remplacer. Il mappe :
 
 - `Card`, `CardContent` depuis `@lumyx/ui` ;
 - `Callout`, `Tabs`, `Steps` depuis `fumadocs-ui` ;
@@ -429,9 +499,10 @@ liens vers la doc.
 
 ### 7.4 Continuité SEO
 
-- `apps/landing/next.config.ts` : ajout d'un `redirects()` mappant `/docs/:path*` vers
-  `https://docs.lumyx.dev/:path*` en permanent, afin que les liens existants et l'entrée de
-  sitemap survivent.
+- `apps/landing/next.config.ts` : ajout d'un `redirects()` en permanent, avec **deux règles** —
+  `/docs/:path*` vers `https://docs.lumyx.dev/:path*`, et `/docs` vers
+  `https://docs.lumyx.dev`. La première ne capture pas `/docs` nu ; l'omettre laisserait un 404
+  sur l'URL la plus liée des deux.
 - `apps/landing/app/sitemap.ts` : suppression de l'entrée `/docs`.
 - `apps/docs/app/sitemap.ts` et `robots.ts` : créés sur le modèle exact de ceux de la landing,
   avec `NEXT_PUBLIC_DOCS_URL` pour base.
