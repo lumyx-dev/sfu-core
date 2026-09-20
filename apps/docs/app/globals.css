@@ -128,19 +128,23 @@
      (#7c68f829 / #eeecfe). Une selection au clavier devient alors indiscernable d'un simple
      survol.
 
-     Specificite, dans la meme couche `utilities` que l'utilitaire concurrent :
-     `[role='dialog'] button[aria-selected='true']` fait (0,2,1) contre (0,1,0) pour
-     `.bg-fd-accent` — la specificite tranche, l'ordre d'emission de Tailwind ne joue pas.
+     Specificite, dans la meme couche `utilities` que l'utilitaire concurrent : le selecteur fait
+     (0,3,1) contre (0,1,0) pour `.bg-fd-accent` — la specificite tranche, l'ordre d'emission de
+     Tailwind ne joue pas (il va d'ailleurs aussi dans notre sens, la regle etant emise apres).
 
-     Portee : accroche sur `role=dialog` parce que Fumadocs v16 ne donne au dialog de recherche
-     qu'un `id` genere par Radix (`radix-_R_...`), instable entre les rendus. Le descendant
-     `button[aria-selected]` suffit a isoler la liste de resultats : c'est le seul widget de l'app
-     qui en porte (la sidebar mobile, elle aussi un dialog Radix, n'a que des <a> et des <button>
-     sans `aria-selected`).
+     Portee : `data-empty` plutot que le seul `role=dialog`. Le dialog de recherche n'a qu'un `id`
+     genere par Radix, instable entre les rendus, mais le composant de liste de resultats de
+     Fumadocs (`components/dialog/search.js`) rend toujours `data-empty` sur son conteneur, que la
+     liste soit vide ou non — c'est le crochet stable, et il coute la meme chose. Ne pas s'arreter
+     a `[role='dialog'] button[aria-selected]` : aujourd'hui la liste de recherche est le seul
+     widget de l'app a porter `aria-selected`, mais `@lumyx/ui` expose des Tabs et un Select Radix
+     dont les declencheurs et options en acquierent un au runtime. Un Tabs pose un jour dans un
+     dialog de cette app serait repeint a la teinte d'accent sans que personne ne comprenne
+     pourquoi.
 
      La couleur de texte reste celle de Fumadocs (`text-fd-accent-foreground`, mesure a
      `--text-strong` dans les deux themes) : elle contraste deja sur la teinte. */
-  [role='dialog'] button[aria-selected='true'] {
+  [role='dialog'] [data-empty] button[aria-selected='true'] {
     background-color: var(--accent-tint);
   }
 }

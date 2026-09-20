@@ -17,13 +17,9 @@ export function baseOptions(): BaseLayoutProps {
       { text: 'Home', url: SITE_URL, external: true },
       { text: 'GitHub', url: REPO, external: true },
     ],
-    // `enabled: true` est deja le defaut de Fumadocs v16 — mesure dans
-    // node_modules/fumadocs-ui/dist/layouts/shared/client.js:62,
-    // `themeSwitch: { enabled: themeSwitchEnabled = true, ... } = {}`. L'option est ecrite malgre
-    // tout parce que la bascule n'est pas optionnelle ici : localStorage etant cloisonne par
-    // origine, un visiteur passe en clair sur lumyx.dev arrive en sombre sur docs.lumyx.dev
-    // (`defaultTheme: 'dark'` dans app/layout.tsx) et n'a que ce bouton pour repasser en clair.
-    // La ligne rend donc l'exigence visible au lieu de la laisser dependre d'un defaut amont.
+    // Deja le defaut de Fumadocs v16 : ecrit quand meme parce que la bascule est une exigence ici
+    // — localStorage etant cloisonne par origine, c'est le seul moyen de repasser en clair depuis
+    // la doc — et non un defaut amont dont on herite.
     themeSwitch: { enabled: true },
   };
 }
