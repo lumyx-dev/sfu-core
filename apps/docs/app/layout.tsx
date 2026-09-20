@@ -4,10 +4,10 @@ import { GeistMono } from 'geist/font/mono';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import './globals.css';
 
-const SITE_URL = process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.lumyx.dev';
+const DOCS_URL = process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.lumyx.dev';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  metadataBase: new URL(DOCS_URL),
   title: {
     default: 'Lumyx documentation',
     template: '%s — Lumyx docs',

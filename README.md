@@ -271,6 +271,7 @@ The full architecture write-up, including the known-issues list, lives in
 apps/
   sfu/          🦀 The SFU — this is the interesting part
   dashboard/    ▲  Next.js 16 dashboard (scaffold)
+  docs/         ▲  Next.js 16 + Fumadocs documentation, deployed to docs.lumyx.dev
 packages/
   auth/ config/ db/ env/ ui/   Shared TS packages (scaffolds)
 ```

@@ -1,8 +1,13 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 import { Wordmark } from '@lumyx/ui';
+// `REPO` vit dans lib/site-data.ts, qui est aussi la source des liens du MDX : une seconde
+// declaration ici aurait pu diverger sans qu'aucun build ne le voie.
+import { REPO } from './site-data';
 
+// Ici `SITE_URL` veut bien dire lumyx.dev — c'est la seule des quatre constantes d'URL de cette app
+// a le meriter ; app/layout.tsx, app/sitemap.ts et app/robots.ts lisent NEXT_PUBLIC_DOCS_URL et
+// s'appellent donc `DOCS_URL`.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lumyx.dev';
-const REPO = 'https://github.com/FrekiManagarm/lumyx';
 
 export function baseOptions(): BaseLayoutProps {
   return {

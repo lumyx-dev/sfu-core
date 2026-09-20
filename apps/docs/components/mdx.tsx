@@ -37,19 +37,32 @@ export function getMDXComponents(components?: MDXComponents) {
     // doc. Porte ici, il s'obtient avec un simple `## Titre` en MDX.
     // `cn(props.className, …)` et non un `className=` pose apres le spread : ce dernier ecrasait
     // en silence une classe passee par l'auteur du MDX.
+    //
+    // La TAILLE ne passe pas par `className`, pour la meme raison que `DocsTitle` et
+    // `DocsDescription` (voir le bloc `[data-sl-tier]` de app/globals.css) : `Heading` fusionne
+    // la classe recue avec le `cn` de Fumadocs, un tailwind-merge SANS l'extension d'echelle
+    // Lumyx. Ce tailwind-merge classe `text-26` en COULEUR de texte, et le `text-strong` qui
+    // suit dans la meme chaine l'evince. Mesure : le DOM rendu ne porte aucun `text-26` (il ne
+    // survit que dans le payload flight de RSC, ce qui fait qu'un grep du HTML renvoie un faux
+    // positif par titre), `.text-26{font-size:26px}` est bien emis mais aucune regle ne matche
+    // l'element, et `getComputedStyle` lisait 21px sur les quatre <h2> de /quickstart —
+    // `.prose :where(h2){font-size:1.5em}`. Le data-attribut est le point d'accroche de la
+    // regle CSS qui pose le palier.
     h2: (props: HeadingProps) => (
       <FdH2
         {...props}
+        data-sl-tier="h2"
         className={cn(
           props.className,
-          'mt-8 border-t border-hairline pt-8 text-26 font-semibold tracking-[-0.02em] text-strong'
+          'mt-8 border-t border-hairline pt-8 font-semibold tracking-[-0.02em] text-strong'
         )}
       />
     ),
     h3: (props: HeadingProps) => (
       <FdH3
         {...props}
-        className={cn(props.className, 'mt-6 text-20 font-semibold tracking-[-0.02em] text-strong')}
+        data-sl-tier="h3"
+        className={cn(props.className, 'mt-6 font-semibold tracking-[-0.02em] text-strong')}
       />
     ),
     p: (props: React.ComponentProps<'p'>) => (

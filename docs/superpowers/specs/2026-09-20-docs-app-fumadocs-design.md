@@ -464,10 +464,22 @@ La règle 2 passe de « zéro monospace » à « **aucune pile de polices monosp
 - devient permis : l'utilitaire `font-mono`, qui résout sur `--font-mono`.
 
 L'esprit de la règle est conservé — une seule source de vérité pour les polices — et le palier
-s'ouvre. L'amendement est appliqué aux deux copies du script,
-`packages/ui/scripts/verify-ds.mjs` et `apps/landing/scripts/verify-ds.mjs`, et la copie
-d'`apps/docs` en hérite. Permettre le monospace n'oblige pas la landing à en user : elle
-n'utilise `font-mono` nulle part et n'en utilisera pas davantage après ce chantier.
+s'ouvre.
+
+**Correction : l'amendement n'a été appliqué qu'à deux scripts sur trois, et « hériter » n'a
+aucun sens ici.** Les trois copies du script sont des fichiers indépendants ; aucune n'importe
+les autres. L'état réel après ce chantier :
+
+| Script | Règle 2 |
+| --- | --- |
+| `packages/ui/scripts/verify-ds.mjs` | amendée — le palier y est déclaré |
+| `apps/docs/scripts/verify-ds.mjs` | amendée, écrite directement dans le fichier |
+| `apps/landing/scripts/verify-ds.mjs` | **inchangée, stricte** — `font-mono` y reste interdit |
+
+La landing est laissée stricte délibérément : elle n'utilise `font-mono` nulle part, la §5.4
+assume que ses snippets restent en sans-serif, et une règle stricte est ce qui garde cette
+décision vérifiable. Quiconque lirait la version précédente de ce paragraphe croirait
+`font-mono` légal sur la landing ; il ne l'est pas, et `verify:ds` y échoue si on l'y écrit.
 
 ### 5.4 Écart assumé entre landing et docs
 
@@ -666,10 +678,14 @@ vérification passent par `rtk proxy`.
 
 ## 8. Ordre d'implémentation
 
-1. `packages/ui` : palier monospace, variables `--shiki-*`, `--text-code`, commentaire de
+1. `packages/ui` : palier monospace, variables `--code-*`, `--text-code`, commentaire de
    règle, amendement de `verify:ds`.
-2. `apps/landing` : correctif `@source`, suppression du workspace imbriqué et du symlink
-   périmé, amendement de `verify:ds`. Vérifier que la landing est inchangée à l'écran.
+2. **`apps/landing` n'est pas touchée à cette étape.** La §3.2 retire le « correctif ciblé »
+   qu'une première rédaction prévoyait ici : le montage de la landing — `@source`, workspace
+   imbriqué, `packages/` vendoré — est un correctif de déploiement délibéré (§2), et le défaire
+   casse son build Vercel sur trois points à la fois. Son `verify:ds` reste strict (§5.3). La
+   seule modification qu'elle reçoit dans ce chantier est celle de l'étape 7, dans son propre
+   dépôt.
 3. `apps/docs` : scaffold, pont de tokens, les six écarts de la §4.2. Vérifier sur une page
    d'essai, dans les deux thèmes, avant d'y verser du contenu.
 4. Migration des cinq pages en MDX + `meta.json` + `mdx-components.tsx` + `MetricsReference`.

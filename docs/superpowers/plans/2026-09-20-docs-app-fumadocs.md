@@ -89,7 +89,7 @@ Ces contraintes s'appliquent à **toutes** les tâches. Chaque tâche les inclut
 | `components/metrics-reference.tsx` | `<MetricsReference />` | 5 |
 | `components/doc-cards.tsx` | `<DocCards>` / `<DocCard>` — grille de liens sur primitives Lumyx | 5 |
 | `content/docs/*.mdx`, `content/docs/meta.json` | Le contenu | 5, 6 |
-| `app/api/search/route.ts` | Recherche statique | 7 |
+| `app/api/search/route.ts` | Recherche integree Fumadocs (index bati en memoire, route dynamique) | 7 |
 | `app/sitemap.ts`, `app/robots.ts` | SEO | 7 |
 
 **Modifiés à la racine :**
@@ -1787,7 +1787,8 @@ Crée `apps/docs/app/api/search/route.ts` :
 import { createFromSource } from 'fumadocs-core/search/server';
 import { source } from '@/lib/source';
 
-// Recherche statique, indexee au build. A seize pages, un service heberge ajouterait une cle a
+// Recherche integree de Fumadocs : l'index est bati en memoire a la premiere requete, pas au
+// build — la route est rendue dynamique. A seize pages, un service heberge ajouterait une cle a
 // gerer pour un gain nul.
 export const { GET } = createFromSource(source, {
   language: 'english',
@@ -1925,9 +1926,10 @@ rtk proxy bun run --filter=@lumyx/docs lint
 rtk proxy bun run --filter=@lumyx/docs build
 rtk git add apps/docs/app apps/docs/lib/layout.shared.tsx turbo.json
 rtk git commit -m "$(cat <<'EOF'
-feat(docs): recherche statique, sitemap, robots et chrome de nav
+feat(docs): recherche, sitemap, robots et chrome de nav
 
-Recherche indexee au build via createFromSource, sans service externe.
+Recherche integree via createFromSource, sans service externe. L'index est bati
+en memoire a la premiere requete, la route est dynamique.
 Le sitemap derive du page tree plutot que d'une liste tenue a la main.
 La nav porte le Wordmark, les liens de retour vers lumyx.dev et le depot,
 et garde la bascule de theme visible — localStorage etant cloisonne par

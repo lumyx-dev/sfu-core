@@ -5,9 +5,10 @@ import { defineConfig } from 'fumadocs-mdx/config';
 // `@lumyx/ui` (`src/index.ts`) fait `export * from './lib/utils'` (sans extension), ce que le
 // resolveur ESM natif de Node refuse (`ERR_MODULE_NOT_FOUND`). `code-theme.ts` n'a aucun import
 // interne, donc ce sous-chemin se resout nativement sans toucher au reste du barrel. Ce sous-chemin
-// est execute par le Node natif de la machine : rien ne l'exprime dans un engines, voir
-// packages/ui/package.json et apps/docs/package.json (Node >=22.18 requis pour le type-stripping
-// non flagge).
+// est execute par le Node natif de la machine, d'ou le `engines: { node: '>=22.18' }` declare a la
+// fois par packages/ui/package.json — le paquet qui EXPOSE le `.ts` brut — et par
+// apps/docs/package.json : c'est la version a partir de laquelle le type-stripping n'est plus
+// derriere un drapeau.
 import { lumyxCodeTheme } from '@lumyx/ui/code-theme';
 
 // Fumadocs fusionne nos options par-dessus ses defauts avec un spread superficiel

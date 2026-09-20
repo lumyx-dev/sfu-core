@@ -3,7 +3,14 @@ import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const SCANNED = ['app', 'components', 'lib'].map((d) => join(ROOT, d));
+// `content` fait partie du perimetre : les seize `.mdx` portent du vrai balisage de design system
+// (cloud.mdx a une vingtaine d'attributs `className`, index.mdx ecrit un `<a>` a la main), et
+// Tailwind les scanne deja. La liste venait telle quelle de la variante dashboard, ou aucun
+// dossier de contenu n'existe — l'omission etait un heritage, pas une decision.
+// Consequence acceptee : la regle 2 rejettera le mot « monospace » ecrit dans la prose d'une page.
+// C'est un mot d'une ligne a reformuler le jour ou ca arrive, contre une garde permanente sur
+// seize fichiers d'interface.
+const SCANNED = ['app', 'components', 'lib', 'content'].map((d) => join(ROOT, d));
 
 // Seul fichier autorisé à porter une valeur de couleur littérale — c'est là que vivrait une
 // valeur marketing-locale si jamais une apparaît. En pratique il n'y en a aucune.
