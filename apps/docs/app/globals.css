@@ -1,0 +1,61 @@
+/* L'ordre des imports porte le sens du skin : Lumyx pose les valeurs du contrat shadcn,
+   shadcn.css de Fumadocs les consomme pour alimenter son propre contrat --color-fd-*, et
+   preset.css les applique a ses composants. Inverser l'ordre casse le remappage. */
+@import 'tailwindcss';
+@import '@lumyx/ui/styles.css';
+@import 'fumadocs-ui/css/shadcn.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* Tailwind v4 n'emet que les classes qu'il voit : ni le design system local ni les composants
+   compiles de Fumadocs ne sont dans l'arbre de cette app. */
+@source '../../../packages/ui/src';
+/* Chemin remonte a la racine du monorepo : bun hisse les dependances dans node_modules/ a la
+   racine, apps/docs/node_modules n'existe pas. Un @source vers un dossier absent est ignore
+   en silence par Tailwind — le build reste vert et les classes manquent. */
+@source '../../../node_modules/fumadocs-ui/dist';
+
+/* ── Les quatre ecarts que le pont de tokens ne couvre pas ── */
+:root {
+  /* Fumadocs v16 defaut : 97rem (1552px). Lumyx tient sa grille a 1360. */
+  --fd-layout-width: var(--content-max);
+
+  /* Sixieme ecart, trouve a l'oeil a l'etape 8. shadcn.css fait
+     `--color-fd-accent: var(--accent)`, mais les deux contrats ne parlent pas de la meme
+     chose : chez shadcn `--accent` est la surface de survol discrete, chez Lumyx c'est la
+     couleur d'accent (l'equivalent shadcn s'appelle `--accent-bg`). Sans ce remappage,
+     `hover:bg-fd-accent` repeint chaque bouton d'icone en indigo plein. Le bloc `#nd-sidebar`
+     de shadcn.css garde sa propre valeur : sa specificite est plus forte. */
+  --color-fd-accent: var(--surface-hover);
+}
+
+/* Ces deux regles sont hors @layer, et non dans `components` : le plugin typography de
+   Fumadocs emet `.prose { font-size }` dans @layer utilities, et la sidebar porte `text-sm`,
+   donc une regle en couche `components` perd malgre une specificite superieure. Du CSS non
+   layere gagne sur toutes les couches. Constate au navigateur (cascade CDP). */
+
+/* Les titres de section de la sidebar portent le seul manierisme typographique du systeme.
+   Selecteur trouve par inspection : Fumadocs v16 rend SidebarSeparator en <p> nu, sans
+   classe ni data-attribut (dist/components/sidebar/base.js). Les items sont des <a> et les
+   dossiers des <button>, donc le seul <p> de la sidebar est bien un titre de section. */
+#nd-sidebar p,
+#nd-sidebar-mobile p {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Echelle de type Lumyx sur le corps de doc : dense la ou Fumadocs suit l'echelle Tailwind.
+   `.fd-prose` de la spec n'existe pas dans Fumadocs v16 : la classe reelle est `.prose`. */
+#nd-docs-layout .prose {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Cinquieme ecart, trouve a l'oeil a l'etape 8 : Fumadocs enveloppe le texte de chaque titre
+   dans un <a> d'ancrage sans classe, que la regle de base `a { color: var(--accent-text) }`
+   du design system repeint en indigo. Un titre n'est pas un lien. */
+#nd-docs-layout .prose :is(h1, h2, h3, h4, h5, h6) > a {
+  color: inherit;
+}

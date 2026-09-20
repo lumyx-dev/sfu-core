@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# TypeScript
+*.tsbuildinfo
+# Genere par `next typegen` / `next dev`, comme dans apps/dashboard.
+next-env.d.ts
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Turborepo
+.turbo/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# gstack
+.gstack/
+
+# Fumadocs MDX
+.source
+.map.ts
