@@ -50,18 +50,19 @@ Ces contraintes s'appliquent à **toutes** les tâches. Chaque tâche les inclut
 | `packages/ui/scripts/verify-ds.mjs` | Règle 2 amendée. |
 | `packages/ui/package.json` | Script `test`. |
 
-**Modifiés dans `apps/landing` (tâche 2, puis 8) :**
+**Modifiés dans `apps/landing` (tâche 8 uniquement) :**
+
+`apps/landing` est un dépôt git indépendant (`lumyx_landing`), exclu du dépôt racine par `.gitignore`. Ces changements se commitent avec `rtk git -C apps/landing …` ; un `git add` depuis la racine serait un no-op. Ni son `@source`, ni sa clé `workspaces`, ni sa copie vendorée de `packages/ui` ne sont touchés — ils sont nécessaires à son build Vercel (cf. tâche 2, retirée).
 
 | Fichier | Changement |
 | --- | --- |
-| `apps/landing/app/globals.css` | `@source` repointé sur `packages/ui` à la racine. |
-| `apps/landing/package.json` | Suppression de la clé `workspaces`. |
-| `apps/landing/scripts/verify-ds.mjs` | Règle 2 amendée, identique à celle de `packages/ui`. |
-| `apps/landing/next.config.ts` | Tâche 8 : `redirects()` vers `docs.lumyx.dev`. |
-| `apps/landing/app/sitemap.ts` | Tâche 8 : suppression de l'entrée `/docs`. |
-| `apps/landing/lib/docs-data.ts` | Tâche 8 : suppression de `METRICS`, `DOC_NAV`, `DocNavItem`, `DocNavSection`. `RELEASES` conservé. |
+| `apps/landing/next.config.ts` | `redirects()` vers `docs.lumyx.dev`, deux règles. |
+| `apps/landing/app/sitemap.ts` | Suppression de l'entrée `/docs`. |
+| `apps/landing/lib/site-data.ts` | Ajout de `DOCS_URL`. |
+| `apps/landing/lib/docs-data.ts` | Suppression de `METRICS`, `DOC_NAV`, `DocNavItem`, `DocNavSection`. `RELEASES` conservé. |
+| `apps/landing/components/site/chrome.tsx` | Liens `/docs` repointés sur le sous-domaine. |
 
-**Supprimés (tâche 8) :** `apps/landing/app/docs/` (5 pages), `apps/landing/components/site/docs-layout.tsx`, `apps/landing/packages/` (tâche 2).
+**Supprimés (tâche 8) :** `apps/landing/app/docs/` (5 pages), `apps/landing/components/site/docs-layout.tsx`.
 
 **Créés dans `apps/docs` :**
 
@@ -479,128 +480,23 @@ EOF
 
 ---
 
-## Task 2: Désenclaver `apps/landing` du design system dupliqué
+## Task 2: RETIRÉE — ne pas exécuter
 
-`apps/landing` déclare un workspace imbriqué et contient une copie de `packages/ui`, aujourd'hui identique à l'originale. Tailwind scanne la copie ; les modules résolvent l'originale. La tâche 1 vient de modifier l'originale, donc la landing n'émettrait pas les nouvelles classes. Cette tâche supprime la copie.
+La tâche 2 visait à « désenclaver `apps/landing` du design system dupliqué » : repointer son `@source` sur `packages/ui` à la racine, supprimer `apps/landing/packages/` et la clé `workspaces`.
 
-**Files:**
-- Modify: `apps/landing/app/globals.css`
-- Modify: `apps/landing/package.json`
-- Modify: `apps/landing/scripts/verify-ds.mjs`
-- Delete: `apps/landing/packages/` (répertoire entier)
+**Elle est retirée. Ne l'exécutez pas.** Elle reposait sur une lecture fausse du dépôt.
 
-**Interfaces:**
-- Consumes: `packages/ui/scripts/verify-ds.mjs` de la tâche 1 (la règle 2 amendée y est copiée telle quelle).
-- Produces: rien que les tâches suivantes consomment. Tâche indépendante et réversible.
+`apps/landing` n'est pas dans le dépôt racine : `.gitignore` lignes 19-21 l'excluent, avec `apps/cloud`, sous le commentaire `# Private — jamais pushé`. C'est un dépôt git indépendant, `github.com/FrekiManagarm/lumyx_landing`, et `git ls-files apps/landing` depuis la racine renvoie zéro fichier.
 
-- [ ] **Step 1: Confirmer que la copie est bien identique avant de la supprimer**
+Son commit `095c714`, « fix(deploy): vendorer @lumyx/ui pour que Vercel puisse installer », établit que les trois éléments que la tâche voulait supprimer sont **volontaires et nécessaires** :
 
-Run:
-```bash
-rtk proxy diff -r packages/ui/src apps/landing/packages/ui/src && echo "IDENTIQUE"
-```
-Expected: `IDENTIQUE`.
+- `apps/landing/packages/ui` est un vendoring assumé, 44 fichiers suivis dans ce dépôt — le dépôt ne contient ni racine de workspace ni paquet frère, donc rien à résoudre sans lui ;
+- `workspaces: ["packages/*"]` existe précisément pour que `@lumyx/ui: workspace:*` résolve ;
+- `@source '../packages/ui/src'` vise la copie vendorée exprès, « sinon Tailwind n'émet pas les classes du design system et les composants sortent sans style ».
 
-Si la commande signale des différences, **arrêter** : la copie a divergé et contient du travail non reporté. Le rapporter plutôt que de supprimer.
+Les trois changements auraient cassé le build Vercel de la landing, et l'étape de contrôle de la tâche (`diff -r` attendant « IDENTIQUE ») serait passée au vert juste avant.
 
-- [ ] **Step 2: Repointer le `@source` de Tailwind**
-
-Dans `apps/landing/app/globals.css`, remplace :
-
-```css
-@source '../packages/ui/src';
-```
-
-par :
-
-```css
-@source '../../../packages/ui/src';
-```
-
-Le commentaire au-dessus reste valable et n'est pas modifié. Le chemin est désormais identique à celui d'`apps/dashboard/app/globals.css`.
-
-- [ ] **Step 3: Supprimer la copie et la déclaration de workspace**
-
-```bash
-rtk proxy rm -rf apps/landing/packages
-```
-
-Dans `apps/landing/package.json`, supprime les trois lignes :
-
-```json
-  "workspaces": [
-    "packages/*"
-  ],
-```
-
-- [ ] **Step 3b: Supprimer le lien symbolique périmé `@lumyx/web`**
-
-`node_modules/@lumyx/` porte deux liens vers le même répertoire : `landing` et `web`, ce dernier étant un vestige du renommage `@lumyx/web` → `@lumyx/landing`. Vérifie-le puis supprime :
-
-```bash
-rtk proxy ls -la node_modules/@lumyx/ | rtk proxy grep -E "landing|web"
-```
-Expected: deux lignes pointant toutes deux vers `../../apps/landing`.
-
-```bash
-rtk proxy rm node_modules/@lumyx/web
-```
-
-Le lien est dans `node_modules`, donc non versionné — la suppression ne produit aucun diff. Elle évite qu'un `import … from '@lumyx/web'` continue de résoudre et masque une référence morte. Le `bun install` de l'étape 5 ne doit pas le recréer ; s'il le recrée, c'est qu'un `package.json` déclare encore une dépendance `@lumyx/web` — la chercher plutôt que de resupprimer le lien.
-
-- [ ] **Step 4: Amender la règle 2 de `verify:ds`**
-
-Dans `apps/landing/scripts/verify-ds.mjs`, applique **exactement** le même remplacement que l'étape 7 de la tâche 1 : le bloc `// 2. Zéro monospace …` devient le bloc `// 2. Monospace par token uniquement …`. Les deux fichiers doivent rester identiques sur cette règle.
-
-Vérifie-le :
-
-```bash
-rtk proxy diff <(rtk proxy sed -n '/2\. Monospace par token/,/^}/p' packages/ui/scripts/verify-ds.mjs) \
-               <(rtk proxy sed -n '/2\. Monospace par token/,/^}/p' apps/landing/scripts/verify-ds.mjs) \
-  && echo "REGLE IDENTIQUE"
-```
-Expected: `REGLE IDENTIQUE`.
-
-- [ ] **Step 5: Réinstaller et vérifier que la landing est intacte**
-
-```bash
-rtk proxy bun install
-rtk proxy bun run --filter=@lumyx/landing verify:ds
-rtk proxy bun run --filter=@lumyx/landing check-types
-rtk proxy bun run --filter=@lumyx/landing lint
-rtk proxy bun run --filter=@lumyx/landing build
-```
-Expected: les quatre au vert. Le build doit produire les mêmes routes qu'avant.
-
-- [ ] **Step 6: Vérifier visuellement que la landing n'a pas bougé**
-
-C'est le point de la tâche : le `@source` a changé, donc l'ensemble des classes émises a changé. Un build vert ne prouve pas que le CSS est complet.
-
-Lance `rtk proxy bun run --filter=@lumyx/landing dev` puis, avec le skill `/browse`, ouvre `http://localhost:3000` et `http://localhost:3000/docs` dans les deux thèmes. Compare avec l'état avant la tâche.
-
-Expected: aucun écart visuel. Un écart signifie une classe non émise — vérifier le chemin `@source` plutôt que d'ajouter la classe à la main.
-
-- [ ] **Step 7: Commit**
-
-```bash
-rtk git add apps/landing/app/globals.css apps/landing/package.json \
-  apps/landing/scripts/verify-ds.mjs bun.lock
-rtk git add -A apps/landing/packages
-rtk git commit -m "$(cat <<'EOF'
-fix(landing): scanner le design system de la racine, pas une copie morte
-
-apps/landing declarait un workspace imbriqué et portait une copie de
-packages/ui. La resolution des modules utilisait l'originale, mais le
-@source de Tailwind pointait sur la copie : toute modification de
-packages/ui n'etait donc pas emise en classes pour la landing.
-
-Repointe @source sur la racine (comme apps/dashboard), supprime la copie
-et la cle workspaces, et aligne la regle 2 de verify:ds sur packages/ui.
-
-Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
-EOF
-)"
-```
+**Conséquence pour les autres tâches :** la numérotation est conservée pour préserver les renvois croisés du document. La tâche 8 modifie `apps/landing` et doit donc commiter dans le dépôt `lumyx_landing` (`rtk git -C apps/landing …`) — un `git add` depuis la racine serait un no-op. La landing ne reçoit ni le palier mono ni l'amendement de `verify:ds` : sa copie vendorée divergera de la racine sur ce point, divergence acceptée puisqu'elle n'utilise pas `font-mono` (spec §5.4).
 
 ---
 
@@ -1923,10 +1819,21 @@ EOF
 
 Dernière tâche : la landing cesse de servir la doc. À faire seulement quand la tâche 5 a confirmé visuellement les cinq pages — c'est le point de non-retour.
 
+**⚠️ Cette tâche opère dans un autre dépôt git.** `apps/landing` est `github.com/FrekiManagarm/lumyx_landing`, exclu du dépôt racine par `.gitignore`. Toutes les commandes git de cette tâche prennent `-C apps/landing`. Avant de commencer, crée-y une branche :
+
+```bash
+rtk git -C apps/landing status --short          # doit etre propre
+rtk git -C apps/landing checkout -b feat/docs-subdomain-redirect
+```
+
+Ne touche ni `apps/landing/packages/`, ni sa clé `workspaces`, ni son `@source` : ils sont nécessaires à son build Vercel (cf. tâche 2, retirée).
+
 **Files:**
 - Delete: `apps/landing/app/docs/` (5 pages)
 - Delete: `apps/landing/components/site/docs-layout.tsx`
 - Modify: `apps/landing/lib/docs-data.ts`
+- Modify: `apps/landing/lib/site-data.ts`
+- Modify: `apps/landing/components/site/chrome.tsx`
 - Modify: `apps/landing/next.config.ts`
 - Modify: `apps/landing/app/sitemap.ts`
 - Create: `apps/landing/next.config.test.ts`
@@ -2087,9 +1994,11 @@ Les deux défauts à chercher spécifiquement, parce qu'aucune commande ne les a
 
 - [ ] **Step 10: Commit**
 
+`apps/landing` est un dépôt indépendant : le commit s'y fait avec `-C`, et non depuis la racine où le chemin est ignoré.
+
 ```bash
-rtk git add -A apps/landing
-rtk git commit -m "$(cat <<'EOF'
+rtk git -C apps/landing add -A
+rtk git -C apps/landing commit -m "$(cat <<'EOF'
 refactor(landing): retirer la documentation, redirigee vers docs.lumyx.dev
 
 Supprime les cinq pages de app/docs, le shell docs-layout, et les exports

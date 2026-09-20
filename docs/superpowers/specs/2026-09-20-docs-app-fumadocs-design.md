@@ -40,7 +40,8 @@ le design system Lumyx, ainsi que la migration du contenu existant vers elle.
 | Recherche statique intégrée | Recherche hébergée (Orama Cloud) |
 | Suppression d'`apps/landing/app/docs/` | Refonte du contenu rédactionnel des 5 pages |
 | Redirections et continuité SEO | i18n |
-| Correctif du `@source` de la landing | |
+| | Montage de vendoring de la landing |
+| | Resynchronisation de la copie vendorée de `packages/ui` |
 
 ### Décisions préalables validées
 
@@ -82,14 +83,47 @@ défaut, pose sur le `<pre>` un attribut contenant une chaîne HTML de logo de l
 donc le script ne la verrait pas — mais `icon: false` est retenu de toute façon (§5.1). La
 règle 4 n'est pas menacée : les feuilles `fumadocs-ui/css/*.css` vivent dans `node_modules`.
 
-**Le workspace imbriqué d'`apps/landing` est un piège actif.** `apps/landing/package.json`
-déclare `workspaces: ["packages/*"]` et le dossier `apps/landing/packages/ui/` existe — une
-copie aujourd'hui byte-identique de `packages/ui/`. La résolution des modules ignore cette
-copie (`node_modules/@lumyx/ui` est un lien vers `packages/ui` à la racine), mais
-`apps/landing/app/globals.css` contient `@source '../packages/ui/src'`, donc **Tailwind
-scanne la copie morte**. Rien ne casse tant que les deux sont identiques ; dès qu'on modifie
-`packages/ui` — ce que la §4 fait — les classes correspondantes ne sont plus émises pour la
-landing.
+**Correction : le monorepo n'est pas un seul dépôt git.** Une première rédaction de ce
+document qualifiait le workspace imbriqué d'`apps/landing` de « piège actif » et proposait
+de le supprimer. C'était faux, et dangereux.
+
+`.gitignore` à la racine, lignes 19-21 :
+
+```
+# Private — jamais pushé
+apps/cloud/
+apps/landing/
+```
+
+Trois dépôts indépendants coexistent donc dans l'arborescence :
+
+| Chemin | Dépôt | Suivi par la racine |
+| --- | --- | --- |
+| racine, `packages/*`, `apps/dashboard`, `apps/sfu`, `apps/docs` | `FrekiManagarm/lumyx` (public) | oui |
+| `apps/landing` | `FrekiManagarm/lumyx_landing` | non |
+| `apps/cloud` | `FrekiManagarm/lumyx-cloud` | non |
+
+`git ls-files apps/landing` depuis la racine renvoie zéro fichier.
+
+Le commit `095c714` de `lumyx_landing`, « fix(deploy): vendorer @lumyx/ui pour que Vercel
+puisse installer », établit que le montage de la landing est **délibéré et nécessaire** :
+`apps/landing/packages/ui` est un vendoring assumé (44 fichiers suivis dans ce dépôt, qui ne
+contient ni racine de workspace ni paquet frère), `workspaces: ["packages/*"]` existe pour
+que `workspace:*` résolve, et `@source '../packages/ui/src'` vise la copie vendorée exprès —
+« sinon Tailwind n'émet pas les classes du design system et les composants sortent sans
+style ».
+
+**Conséquences pour ce design :**
+
+- `apps/docs` vit dans le dépôt racine public, comme `apps/dashboard`. `@lumyx/ui` y résout
+  par le workspace racine et son `@source` pointe sur `packages/ui` — aucun vendoring.
+- Les modifications d'`apps/landing` (§7.4) se commitent dans `lumyx_landing`.
+- La copie vendorée de la landing divergera de la racine sur le palier code de la §5. La
+  landing n'utilise pas `font-mono` (§5.4), donc c'est sans effet sur son rendu ; c'est une
+  dette de synchronisation, pas un défaut.
+- Aucun worktree du dépôt racine ne peut servir ce chantier : `bun.lock` est suivi et
+  référence `apps/landing` et `apps/cloud`, absents d'un worktree parce qu'ignorés. Un
+  `bun install` y réécrirait le lockfile suivi en supprimant ces membres.
 
 ---
 
@@ -171,19 +205,18 @@ Le port 3003 est libre : landing 3000, dashboard 3001, cloud 3002.
 Aucune modification de `turbo.json` n'est nécessaire — les tâches `build`, `dev`, `lint`,
 `check-types` et `verify:ds` y sont déjà définies et s'appliquent par convention de nom.
 
-### 3.2 Correctif ciblé sur `apps/landing`
+### 3.2 Pas de correctif sur `apps/landing`
 
-Parce que la §4 modifie `packages/ui/src/styles.css` et que la landing scanne une copie morte,
-trois changements sont inclus dans ce chantier :
+Une première rédaction prévoyait ici un « correctif ciblé » sur le montage de la landing. Il
+est retiré : la §2 établit que ce montage est un correctif de déploiement délibéré, et le
+défaire casserait son build Vercel sur trois points à la fois.
 
-1. `apps/landing/app/globals.css` : `@source '../packages/ui/src'` devient
-   `@source '../../../packages/ui/src'` ;
-2. suppression du dossier `apps/landing/packages/` et de la clé `workspaces` d'
-   `apps/landing/package.json` ;
-3. suppression du lien symbolique périmé `node_modules/@lumyx/web` (doublon de `landing`,
-   vestige du renommage `@lumyx/web` → `@lumyx/landing`).
+`apps/landing` n'est touchée que par la §7.4 — redirections et retrait de l'ancienne
+implantation — et ces changements se commitent dans son propre dépôt.
 
-`apps/docs/app/globals.css` utilisera d'emblée `@source '../../../packages/ui/src'`.
+`apps/docs/app/globals.css` utilise `@source '../../../packages/ui/src'`, comme
+`apps/dashboard`, puisqu'elle vit dans le dépôt racine et lit le design system par le
+workspace.
 
 ---
 
