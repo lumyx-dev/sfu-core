@@ -63,15 +63,31 @@ Fumadocs v16 exige Next ≥ 16 avec `fumadocs-ui` (Next utilise son propre canal
 React), React ≥ 19.2.0, et Tailwind v4 exclusivement. Les trois sont satisfaits sans montée
 de version.
 
-**Le design system est verrouillé par un script.** `apps/landing/scripts/verify-ds.mjs`
-(tâche Turbo `verify:ds`, présente aussi dans `packages/ui/`) scanne `app/`, `components/`,
-`lib/` et fait échouer le build sur quatre règles :
+**Le design system est verrouillé par un script, et il en existe deux familles.** La tâche
+`verify:ds` de Turbo exécute un `verify-ds.mjs` différent selon le paquet :
 
-1. aucune couleur littérale (hex ou `rgb()`) hors `globals.css` ;
+| | version *app* (`apps/landing`, `apps/dashboard`) | version *package* (`packages/ui`) |
+| --- | --- | --- |
+| Scanne | `app/`, `components/`, `lib/` | `src/` |
+| Exempte | `app/globals.css` | `src/styles.css` |
+| Règles | 4 | 6 |
+
+Les quatre règles communes :
+
+1. aucune couleur littérale (hex ou `rgb()`) hors du fichier exempté ;
 2. zéro monospace — toute mention de `font-mono`, `ui-monospace`, `'SF Mono'`, `Menlo`,
    `Consolas` ;
 3. pas de `dangerouslySetInnerHTML` ;
-4. aucun fichier `.css` autre que `globals.css`.
+4. aucun fichier `.css` autre que celui exempté.
+
+La version *package* en ajoute deux : la 5 interdit les imports par alias `@/` dans
+`packages/ui`, et la 6 (`cn-font-scale`, `cn-keeps-size-and-color`) vérifie que chaque palier
+`--text-<nombre>` de `styles.css` figure dans `FONT_SIZES` de `src/lib/utils.ts`, puis prouve
+via `tailwind-merge` qu'une classe de taille n'avale jamais une couleur de texte.
+
+Cette règle 6 a une conséquence directe sur la §5 : le palier `--text-code` n'a pas de suffixe
+numérique, donc il échappe à sa regex et doit être déclaré à la main dans `FONT_SIZES`, sans
+quoi `cn("text-muted text-code")` perd une des deux classes.
 
 Fumadocs viole par défaut les règles 1 et 2 via la coloration Shiki : elle émet du style inline
 portant des valeurs hexadécimales, en police monospace. La §5 résout les deux sans contourner
@@ -251,34 +267,96 @@ les applique. Les deux directives `@source` sont nécessaires — Tailwind v4 n'
 classes qu'il voit, et ni `packages/ui/src` ni les composants compilés de `fumadocs-ui` ne
 sont dans l'arbre de `apps/docs`.
 
-### 4.2 Les quatre écarts que le pont ne couvre pas
+**Le chemin du second `@source` remonte à la racine du monorepo**, pas au dossier local :
+bun hisse les dépendances dans `node_modules/` à la racine, `apps/docs/node_modules` n'existe
+pas, et Tailwind ignore silencieusement un `@source` pointant sur un dossier absent — le build
+reste vert et les classes manquent. Constaté à l'implémentation : corriger le chemin fait
+passer la feuille compilée de 106 523 à 115 855 octets.
 
-À traiter dans un bloc explicite de `globals.css`, après les imports :
+**Une exception au pont de tokens, trouvée à l'implémentation.** L'affirmation « le contrat est
+déjà défini, donc le remappage est gratuit » est vraie pour quinze des seize variables, et
+fausse pour une : `shadcn.css` fait `--color-fd-accent: var(--accent)`, mais les deux contrats
+ne désignent pas la même chose sous ce nom.
 
-| Écart | Défaut Fumadocs | Valeur Lumyx |
+| | rôle de `--accent` |
+| --- | --- |
+| shadcn | la surface de survol discrète |
+| Lumyx | la couleur d'accent elle-même (`var(--indigo-500)`, `styles.css:49`) |
+
+L'équivalent Lumyx de la surface shadcn s'appelle `--accent-bg` (`styles.css:89`, sur
+`var(--surface-hover)`) — renommé précisément pour ne pas entrer en collision avec `--accent`.
+Sans remappage, `hover:bg-fd-accent` repeint chaque bouton d'icône en indigo plein sur du
+texte quasi noir. Le correctif est une redéclaration dans `:root` :
+
+```css
+--color-fd-accent: var(--accent-bg);
+```
+
+Elle gagne sur `shadcn.css` par ordre de source à spécificité égale, dans les deux thèmes, et
+le bloc `#nd-sidebar` de `shadcn.css` garde sa propre valeur par spécificité plus forte.
+
+La leçon générale : un contrat partagé par nom n'est pas un contrat partagé par sémantique.
+Toute variable dont les deux systèmes se disputent le *sens* — et non la valeur — doit être
+vérifiée à l'œil, parce qu'aucun build ne la signalera.
+
+### 4.2 Les écarts que le pont ne couvre pas
+
+À traiter dans un bloc explicite de `globals.css`, après les imports. La rédaction initiale en
+prévoyait quatre ; l'implémentation en a dénombré **six**, les deux derniers n'ayant été
+visibles qu'à l'œil.
+
+| Écart | Défaut Fumadocs | Traitement Lumyx |
 | --- | --- | --- |
-| Largeur de layout | `--fd-layout-width: 1600px` | `var(--content-max)` = 1360px |
-| Échelle de type | échelle Tailwind | paliers `--text-11` … `--text-44`, base 13px |
-| Rayons | dérivés de `--radius` | `--radius: 18px` suit seul, sauf valeurs codées en dur |
-| Titres de nav | casse normale | utilitaire `sl-label` (11px, 500, +0.06em, uppercase) |
+| Largeur de layout | `--fd-layout-width: 97rem` (1552px) | `var(--content-max)` = 1360px |
+| Échelle de type | échelle Tailwind (prose à 16px) | 14px sur le corps de doc |
+| Rayons | dérivés de `--radius` | **aucune intervention nécessaire** |
+| Titres de nav | casse normale | `@apply sl-label` |
+| Ancres de titre | repeintes en `--accent-text` | `color: inherit` |
+| `--color-fd-accent` | `var(--accent)` (cf. §4.1) | `var(--accent-bg)` |
 
-Le rayon est le seul cas où le travail est de vérification plutôt que d'écriture : Fumadocs
-dérive `sm`/`md`/`lg` de `--radius`, donc la valeur Lumyx se propage — sauf sur les composants
-qui codent une valeur littérale. Cela se constate à l'écran, pas au build.
+Trois corrections par rapport à la rédaction initiale :
+
+- La largeur par défaut est **97rem (1552px)**, et non 1600px. Cette dernière valeur ne figure
+  que dans `preset-legacy.css`; `preset.css` ne déclare pas la variable.
+- **Les rayons n'ont demandé aucune intervention** — la valeur Lumyx se propage comme prévu.
+- **Les ancres de titre**, écart non anticipé : Fumadocs enveloppe le texte de chaque titre
+  dans un `<a>` sans classe, que la règle de base `a { color: var(--accent-text) }` du design
+  system repeint en indigo. Un titre n'est pas un lien.
 
 `sl-label` sur les titres de section de la sidebar est le seul maniérisme typographique du
 système Lumyx ; le reproduire est ce qui fait que la sidebar Fumadocs se lit comme du Lumyx.
+Il s'obtient par `@apply sl-label` et **jamais en re-tapant ses cinq déclarations** — c'est la
+seule chose du système dont la valeur ne doit pas être recopiée.
 
-### 4.3 Risque assumé : collision de blocs `@theme`
+**Les sélecteurs internes de Fumadocs ne sont pas une API.** `.fd-prose` et
+`[data-sidebar-section-title]`, supposés à la rédaction, n'existent pas en v16. Les sélecteurs
+réels (`#nd-docs-layout .prose`, et `#nd-sidebar p` parce que `SidebarSeparator` rend un `<p>`
+nu) sont à revérifier à chaque montée de version.
 
-`@lumyx/ui/styles.css` et `fumadocs-ui/css/preset.css` déclarent chacun un bloc `@theme`, avec
-des noms qui se recoupent (`--radius`, `--color-primary`, `--color-border`, `--color-muted`).
-L'ordre d'import donne la priorité au dernier déclaré, ce qui n'est pas toujours celui qu'on
-veut.
+### 4.3 Le risque annoncé n'était pas le bon
 
-**Cette collision ne produit aucune erreur de build.** Elle produit un rendu faux. Elle est
-donc traitée comme un point de contrôle visuel explicite en §7, pas comme un détail
-d'implémentation.
+La rédaction initiale désignait comme risque principal une collision de blocs `@theme` :
+`@lumyx/ui/styles.css` et `preset.css` déclarant tous deux `--radius`, `--color-primary`,
+`--color-border`, avec une priorité décidée par l'ordre d'import.
+
+**Cette collision n'a pas eu lieu.** Vérifié à l'implémentation : Fumadocs v16 ne déclare que
+`--color-fd-*` et `--animate-fd-*` dans son `@theme`. Le préfixe `fd-` existe précisément pour
+éviter ce conflit.
+
+Deux autres modes d'échec silencieux se sont produits, qu'on n'avait pas anticipés :
+
+1. **L'ordre des couches de cascade bat la spécificité.** Le plugin typography de Fumadocs émet
+   `.prose { font-size }` dans `@layer utilities`. Une règle de skin placée en `@layer
+   components` est donc perdante malgré une spécificité supérieure — elle est émise et n'a
+   aucun effet. La prose mesurait 16px au lieu de 14.
+2. **Le conflit de sémantique sur `--color-fd-accent`** de la §4.1.
+
+La leçon vaut mieux que la prédiction : **dans ce genre de pontage, les défauts qui comptent ne
+produisent jamais d'erreur de build.** Aucun des trois — couche perdante, `@source` fantôme,
+variable au sens divergent — n'aurait rougi. Les trois se sont vus à l'œil, en lisant les
+styles calculés dans le navigateur. C'est pourquoi la passe visuelle de la §7.5 est le critère
+d'acceptation et non un supplément, et pourquoi elle doit lire des valeurs calculées plutôt que
+regarder une capture.
 
 ### 4.4 Principe de non-éjection
 
@@ -549,11 +627,19 @@ Le critère d'acceptation d'un re-skin n'est pas « le build passe ». Dans l'or
 2. Passe visuelle en **clair et en sombre**, sur les cinq pages migrées plus un squelette,
    comparée au rendu actuel de `/docs`, via le skill `/browse`.
 
-Deux défauts spécifiquement recherchés, parce que le build ne les attrapera pas :
+Défauts spécifiquement recherchés, parce que le build ne les attrapera pas — la liste est tirée
+de ce qui s'est réellement produit (§4.3), pas de ce qu'on redoutait :
 
-- la collision de blocs `@theme` de la §4.3 — elle se manifeste comme un rayon, une couleur ou
-  une taille faux, jamais comme une erreur ;
-- une variable `--shiki-token-*` non définie, qui rend le token en texte noir silencieusement.
+- **une règle de skin placée dans la mauvaise couche de cascade**, donc émise et sans effet.
+  Se détecte en lisant la valeur calculée, jamais sur une capture ;
+- **une variable partagée par nom mais pas par sens**, comme `--color-fd-accent` ;
+- **un `@source` pointant sur un dossier absent** — Tailwind l'ignore en silence et les classes
+  manquent ;
+- **un sélecteur interne de Fumadocs qui ne matche plus rien** après une montée de version ;
+- **un token `--code-*` non résolu**, qui rend le code en noir pur.
+
+La passe visuelle lit des styles calculés dans le navigateur. Regarder une capture ne suffit
+pas : les cinq défauts ci-dessus produisent une page qui a l'air plausible.
 
 Note d'exécution : `rtk next build` remonte des succès factices dans ce repo. Les builds de
 vérification passent par `rtk proxy`.
@@ -566,7 +652,7 @@ vérification passent par `rtk proxy`.
    règle, amendement de `verify:ds`.
 2. `apps/landing` : correctif `@source`, suppression du workspace imbriqué et du symlink
    périmé, amendement de `verify:ds`. Vérifier que la landing est inchangée à l'écran.
-3. `apps/docs` : scaffold, pont de tokens, les quatre écarts de la §4.2. Vérifier sur une page
+3. `apps/docs` : scaffold, pont de tokens, les six écarts de la §4.2. Vérifier sur une page
    d'essai, dans les deux thèmes, avant d'y verser du contenu.
 4. Migration des cinq pages en MDX + `meta.json` + `mdx-components.tsx` + `MetricsReference`.
 5. Les onze squelettes.

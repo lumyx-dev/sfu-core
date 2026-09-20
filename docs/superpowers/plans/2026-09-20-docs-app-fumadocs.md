@@ -769,7 +769,7 @@ Tous les peers de ces trois paquets sont optionnels (`next`, `react`, `vite`, `t
 
 /* ── Les quatre ecarts que le pont de tokens ne couvre pas ── */
 :root {
-  /* Fumadocs v16 defaut : 1600px. Lumyx tient sa grille a 1360. */
+  /* Fumadocs v16 defaut : 97rem (1552px). Lumyx tient sa grille a 1360. */
   --fd-layout-width: var(--content-max);
 }
 
@@ -1001,7 +1001,7 @@ Avec le skill `/browse`, ouvre `http://localhost:3003` et vérifie, **dans les d
 2. Les cartes et popovers sont `--surface-card`.
 3. L'accent — lien actif de sidebar, anneau de focus — est l'indigo Lumyx (clair `#4f39f6`, sombre `#7c68f8`).
 4. Les rayons sont généreux (18px sur les conteneurs), pas les 8px de Fumadocs.
-5. La largeur de contenu plafonne à 1360px et non 1600px.
+5. La largeur de contenu plafonne à 1360px et non aux 97rem (1552px) par défaut.
 6. Les titres de section de la sidebar sont en petites capitales espacées.
 7. Le `Wordmark` Lumyx est dans la barre de nav et renvoie vers `lumyx.dev`.
 
