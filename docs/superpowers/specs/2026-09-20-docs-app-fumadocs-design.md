@@ -594,10 +594,28 @@ cookie posé sur le domaine parent, hors périmètre.
 
 ### 7.2 Recherche
 
-Recherche statique intégrée de Fumadocs : `createFromSource(source)` exposé par
+Recherche intégrée de Fumadocs : `createFromSource(source)` exposé par
 `app/api/search/route.ts`, avec le dialog et le raccourci clavier fournis par `fumadocs-ui`.
 Pas de service externe. À seize pages, Orama Cloud est surdimensionné et ajoute une clé à
 gérer pour un gain nul.
+
+**Correction : elle n'est pas « statique ».** Une première rédaction annonçait un index
+construit au build. Vérifié à l'implémentation : l'index est bâti **en mémoire à la première
+requête**, et la route est rendue `ƒ Dynamic`. Conséquence pour la §7.3 : `apps/docs` n'est pas
+exportable en statique pur — il lui faut un runtime serveur. C'est le cas sur Vercel par
+défaut, donc sans impact sur le déploiement retenu, mais cela exclut un hébergement de fichiers
+statiques.
+
+Deux options de la première rédaction se sont révélées décoratives, et sont documentées comme
+telles plutôt que retirées en silence :
+
+- `themeSwitch: { enabled: true }` est **déjà le défaut** de `fumadocs-ui`. La bascule de thème
+  n'avait donc jamais besoin d'être demandée, et la justification donnée en §7.1 (« sans elle,
+  un visiteur passé en clair n'a aucun moyen de retrouver le clair ») était fausse : la bascule
+  est là de toute façon. Le reste de la §7.1 — le cloisonnement de `localStorage` par origine —
+  reste exact.
+- `language: 'english'` donne des résultats **identiques** au défaut `multilingual`, mesuré sur
+  six requêtes, sans radicalisation lexicale dans un mode comme dans l'autre.
 
 ### 7.3 Déploiement
 
