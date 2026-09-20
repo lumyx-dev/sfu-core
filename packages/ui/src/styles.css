@@ -153,6 +153,13 @@
 @theme inline {
   --font-sans: var(--font-geist-sans), "Geist", "Geist Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
 
+  /* Palier code. Monospace pour le code de reference (documentation, payloads, /metrics) ;
+     sans-serif pour les accessoires marketing (hero, onglets de la home) — ecart delibere,
+     pas un oubli. Ne pas « harmoniser » sans relire le spec du 2026-09-20. */
+  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+
+  --text-code: 12.5px; --text-code--line-height: 1.55;
+
   --color-page: var(--surface-page);
   --color-card: var(--surface-card);
   --color-sunken: var(--surface-sunken);
@@ -241,6 +248,24 @@
   --ease-in-out: cubic-bezier(.4,0,.2,1);
   --animate-breathe: sl-breathe 2.6s var(--ease-in-out) infinite;
   --animate-shimmer: sl-shimmer 1.6s linear infinite;
+}
+
+/* ============================================================================
+   Roles de coloration syntaxique. Consommes par du style inline emis par Shiki
+   (cf. packages/ui/src/code-theme.ts), donc hors de @theme : ce ne sont pas des
+   utilitaires Tailwind. Ils pointent sur des alias semantiques qui basculent deja
+   sous .dark, d'ou l'absence de redeclaration en mode sombre.
+   ========================================================================== */
+:root {
+  --code-bg:       var(--surface-sunken);
+  --code-fg:       var(--text-body);
+  --code-comment:  var(--text-faint);
+  --code-string:   var(--ok);
+  --code-number:   var(--accent-2);
+  --code-keyword:  var(--accent-text);
+  --code-function: var(--info);
+  --code-property: var(--text-strong);
+  --code-punct:    var(--text-faint);
 }
 
 @keyframes sl-breathe { 0%,100% { opacity: 1 } 50% { opacity: .5 } }

@@ -1,0 +1,11 @@
+# Preload limite a `[test]` et non pose a la racine du fichier : un preload racine s'appliquerait
+# aussi a `bun run dev` / `bun run build`, ou next et son bundler compilent deja la macro eux-memes.
+#
+# Deux consequences a connaitre. D'abord le preload s'execute devant TOUS les tests de cette app,
+# y compris les onze qui ne touchent pas au MDX : un source.config.ts casse les fera donc tous
+# echouer, avec une erreur qui pointe le plugin plutot que la cause. C'est bruyant mais ca echoue
+# fort, jamais en silence. Ensuite bunfig est resolu depuis le cwd et il n'y a pas de bunfig a la
+# racine du monorepo : un `bun test` lance de la racine retombe sur l'erreur de macro. Sans effet
+# aujourd'hui, la tache `test` de turbo s'executant par paquet.
+[test]
+preload = ["./test-setup.ts"]

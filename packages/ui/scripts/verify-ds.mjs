@@ -43,12 +43,22 @@ for (const f of files) {
     });
 }
 
-// 2. Zéro monospace — un vrai font-family/classe, pas une mention en prose.
+// 2. Monospace par token uniquement. `font-mono` et `var(--font-mono)` resolvent sur le palier
+// declare dans styles.css ; une pile litterale contourne le design system et reste interdite.
+// styles.css reste exempte : c'est lui qui porte la pile litterale du token.
+const LITERAL_MONO = /ui-monospace|'SF Mono'|"SF Mono"|\bMenlo\b|\bConsolas\b|\bmonospace\b/i;
+const MONO_TOKEN = /\bfont-mono\b|var\(--font-mono\)/g;
 for (const f of files) {
   if (f === TOKENS_FILE) continue;
-  if (/\bfont-mono\b|ui-monospace|'SF Mono'|Menlo|Consolas/i.test(readFileSync(f, 'utf8'))) {
-    fail('no-monospace', `${rel(f)} contient une font monospace`);
-  }
+  const src = readFileSync(f, 'utf8');
+  src.split('\n').forEach((line, i) => {
+    // Une ligne qui ne fait que referencer le token est conforme, meme si elle contient le mot
+    // `monospace` dans un commentaire adjacent — on ne signale que la pile litterale.
+    const scrubbed = line.replace(MONO_TOKEN, '');
+    if (LITERAL_MONO.test(scrubbed)) {
+      fail('no-literal-monospace', `${rel(f)}:${i + 1} — ${line.trim()}`);
+    }
+  });
 }
 
 // 3. Pas de dangerouslySetInnerHTML — usage reel, pas une mention en commentaire

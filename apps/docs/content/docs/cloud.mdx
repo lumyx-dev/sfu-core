@@ -1,0 +1,88 @@
+---
+title: Lumyx Cloud
+description: Same SFU, same signaling, hosted. Cloud sells operation — regions, quotas, retention and per-environment keys — not features held back from the MIT repo.
+---
+
+## Create a project
+
+```bash
+npx lumyx@latest init live-classroom \
+  --region eu-west-3
+
+# → wss://live-classroom.eu-west-3.lumyx.cloud/ws
+# → sk_live_… (shown once)
+```
+
+Free tier: 10,000 participant-minutes/month, no card required. The URL and key are the only two things
+your client needs — same SDK as [Quickstart](/quickstart).
+
+## Regions
+
+A project pins a home region — `eu-west-3` above, `ap-south-1` is another — and how
+many regions you can run concurrently is set by plan: 2 on Starter, 4 on Scale, dedicated regions on
+Business. Self-hosted has no such limit; it runs wherever you put the binary.
+
+## Plans
+
+{/* Les lignes reprennent PLANS.monthly de apps/landing/lib/site-data.ts. Recopiees en clair ici
+    plutot que dupliquees dans lib/site-data.ts : le brief y limite la duplication a VERSION et
+    REPO, et une grille tarifaire est du contenu, pas de la donnee de rendu. */}
+
+<Card className="overflow-hidden">
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Plan</TableHead>
+        <TableHead>Price</TableHead>
+        <TableHead>Included</TableHead>
+        <TableHead>Who it's for</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      <TableRow>
+        <TableCell className="font-medium text-strong">Self-hosted</TableCell>
+        <TableCell className="sl-num text-body">€0 forever</TableCell>
+        <TableCell className="text-muted">MIT, no metering</TableCell>
+        <TableCell className="text-muted">You run the binary on your own infra.</TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell className="font-medium text-strong">Free</TableCell>
+        <TableCell className="sl-num text-body">€0 /mo</TableCell>
+        <TableCell className="text-muted">10,000 participant-minutes</TableCell>
+        <TableCell className="text-muted">Prototypes, staging, or a first trickle of production traffic.</TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell className="font-medium text-strong">Starter</TableCell>
+        <TableCell className="sl-num text-body">€49 /mo</TableCell>
+        <TableCell className="text-muted">50,000 participant-minutes</TableCell>
+        <TableCell className="text-muted">First production app, one or two environments.</TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell className="font-medium text-strong">
+          Scale
+          <Badge tone="accent" className="ml-2">Popular</Badge>
+        </TableCell>
+        <TableCell className="sl-num text-body">€599 /mo</TableCell>
+        <TableCell className="text-muted">500,000 participant-minutes</TableCell>
+        <TableCell className="text-muted">Video is the product and someone is on call.</TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell className="font-medium text-strong">Business</TableCell>
+        <TableCell className="sl-num text-body">Custom</TableCell>
+        <TableCell className="text-muted">Negotiated volume</TableCell>
+        <TableCell className="text-muted">Contractual commitments and dedicated capacity.</TableCell>
+      </TableRow>
+    </TableBody>
+  </Table>
+</Card>
+
+{/* Renvoi vers /pricing masque avec la route app/_pricing de la landing, et absent du domaine de
+    la doc : la page Pricing n'y existe pas.
+Full feature-by-feature breakdown, including egress, retention and support SLAs, is on
+[Pricing](/pricing). */}
+
+## Moving between Cloud and self-hosted
+
+Signaling and token grants are identical in both, so switching is a URL change — point clients at your own
+host instead of `*.lumyx.cloud`, no client code to rewrite. Metrics history can be exported as
+CSV before you leave, from either the dashboard or the REST API.

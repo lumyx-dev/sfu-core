@@ -1,0 +1,59 @@
+---
+title: Quickstart
+description: One command to run the SFU, one to connect a client. No account, no config file — everything below runs on your machine.
+---
+
+import { REPO } from '@/lib/site-data';
+
+## Run the SFU
+
+The image ships as a single static binary — signaling, forwarding, the collector and the dashboard all
+start together.
+
+```bash
+docker run -p 3000:3000 \
+  ghcr.io/frekimanagarm/lumyx:latest
+
+# signaling  ws://127.0.0.1:3000/ws
+# dashboard  http://127.0.0.1:3000
+```
+
+No Redis, no separate signaling service, no sidecar to scrape. Building from source instead is covered on
+[Self-hosting](/self-hosting).
+
+## Connect a client
+
+A client opens a WebSocket to the signaling endpoint and exchanges offer, answer and ICE candidates as
+JSON. The message names and payloads are specified in the <a href={REPO}>repository README</a>.
+
+```ts
+const room = await connect("ws://127.0.0.1:3000/ws", token);
+
+room.on("quality", (peer, m) => {
+  if (m.packet_loss_ratio > 0.02) {
+    room.setSubscription(peer.id, { video: false });
+  }
+});
+```
+
+Every metric the collector reads off RTCP reaches the client on the same `quality` event —
+nothing extra to wire up.
+
+## Watch the metrics arrive
+
+Open `http://127.0.0.1:3000` once a peer has connected. The dashboard shows the room, its
+peers, and all six metrics updating live — packet loss, RTT, jitter, NACK ratio, freeze ratio and bitrate
+— each already armed with a default threshold and a 30s debounce.
+
+```
+lumyx 0.4.1 · MIT
+listening on :3000 · dashboard on :3000
+metrics collector armed · 6 metrics · 500ms
+0 rooms · 0 peers
+```
+
+## Next steps
+
+- [Metrics reference](/metrics-reference) — what each threshold breach means and how to respond.
+- [Self-hosting](/self-hosting) — run it in production, with a persistent config.
+- [Lumyx Cloud](/cloud) — skip infra entirely and get a project URL in one command.

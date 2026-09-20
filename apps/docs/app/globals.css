@@ -1,0 +1,221 @@
+/* L'ordre des imports porte le sens du skin : Lumyx pose les valeurs du contrat shadcn,
+   shadcn.css de Fumadocs les consomme pour alimenter son propre contrat --color-fd-*, et
+   preset.css les applique a ses composants. Inverser l'ordre casse le remappage. */
+@import 'tailwindcss';
+@import '@lumyx/ui/styles.css';
+@import 'fumadocs-ui/css/shadcn.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* Tailwind v4 n'emet que les classes qu'il voit : ni le design system local ni les composants
+   compiles de Fumadocs ne sont dans l'arbre de cette app. */
+@source '../../../packages/ui/src';
+/* Chemin remonte a la racine du monorepo : bun hisse les dependances dans node_modules/ a la
+   racine, apps/docs/node_modules n'existe pas. Un @source vers un dossier absent est ignore
+   en silence par Tailwind — le build reste vert et les classes manquent. */
+@source '../../../node_modules/fumadocs-ui/dist';
+
+/* ── Les ecarts que le pont de tokens ne couvre pas ── */
+:root {
+  /* Fumadocs v16 defaut : 97rem (1552px). Lumyx tient sa grille a 1360. */
+  --fd-layout-width: var(--content-max);
+
+  /* shadcn.css fait `--color-fd-accent: var(--accent)`, mais les deux contrats ne parlent pas
+     de la meme chose : chez shadcn `--accent` est la surface de survol discrete, chez Lumyx
+     c'est la couleur d'accent. L'alias de contrat equivalent est `--accent-bg`. Sans ce
+     remappage, `hover:bg-fd-accent` repeint chaque bouton d'icone en indigo plein. Le bloc
+     `#nd-sidebar` de shadcn.css garde sa propre valeur : sa specificite est plus forte. */
+  --color-fd-accent: var(--accent-bg);
+}
+
+/* ── La regle de couche, valable pour TOUT ce bloc ──
+   Toutes les regles de skin de ce fichier vivent dans une seule couche, `utilities`, la plus
+   haute de Tailwind. C'est une contrainte, pas une preference : le plugin typography de Fumadocs
+   emet `.prose { font-size }` en `utilities`, et l'ordre des couches prime sur la specificite —
+   mesure a l'appui, la meme regle placee en `components` laissait la prose a 16px alors que son
+   selecteur etait plus specifique. Elle est emise, et sans effet. Le pendant du choix : a
+   l'interieur de la couche, chaque regle doit gagner par SPECIFICITE contre l'utilitaire
+   Fumadocs qu'elle corrige — d'ou l'ancrage systematique sur un ID (`#nd-docs-layout`,
+   `#nd-sidebar`, `#sl-crumb`), qui apporte le (1,_,_) que ne peut pas avoir une classe seule. Chaque regle ci-dessous porte
+   son propre calcul ; une huitieme devra porter le sien. Ne pas sortir de la couche pour
+   trancher un conflit : du CSS hors couche battrait aussi tout ce qui viendra apres.
+   Verifie au navigateur : Tailwind v4 traite un bloc `@layer utilities` ecrit a la main comme
+   une vraie couche en cascade.
+
+   Ce que le bloc contient, dans l'ordre :
+     1. titres de section de la sidebar        → `sl-label`
+     2. corps de doc (`.prose`)                → palier 14
+     3. ancres de titre                        → `color: inherit`
+     4. bloc de code surligne                  → `text-code` + `font-mono`
+     5. paliers `[data-sl-tier]`               → titre 44, chapo 16, `##` 26, `###` 20
+     6. fil d'Ariane (`#sl-crumb`)             → palier 12, `--text-faint`, chiffres tabulaires
+     7. ligne selectionnee du dialog ⌘K        → `--accent-tint` */
+@layer utilities {
+  /* 1. Les titres de section de la sidebar portent le seul manierisme typographique du systeme —
+     un `@utility` du design system, jamais recopie a la main ici.
+     Selecteur trouve par inspection : Fumadocs v16 rend SidebarSeparator en <p> nu, sans
+     classe ni data-attribut (dist/components/sidebar/base.js). Les items sont des <a> et les
+     dossiers des <button>, donc le seul <p> de la sidebar est bien un titre de section.
+     Specificite : (1,0,1) contre le `.text-sm` (0,1,0) porte par le meme element. */
+  #nd-sidebar p,
+  #nd-sidebar-mobile p {
+    @apply sl-label;
+  }
+
+  /* 2. Echelle de type Lumyx sur le corps de doc : dense la ou Fumadocs suit l'echelle Tailwind.
+     `.fd-prose` de la spec n'existe pas dans Fumadocs v16 : la classe reelle est `.prose`.
+     Specificite : (1,1,0) contre le `.prose { font-size }` (0,1,0) du plugin typography, dans la
+     meme couche — c'est la regle qui a motive le choix de couche explique plus haut.
+     `font-size` par le token du palier, pour que la valeur ne soit pas ecrite deux fois dans le
+     repo. La `line-height` reste un litteral et NE prend PAS `--text-14--line-height` : le palier
+     tient 1.4, juste pour une etiquette ou une ligne de tableau, trop serre pour des paragraphes
+     de doc de 680px de large qu'on lit en continu. 1.6 est la valeur que portait l'ancienne
+     coquille. */
+  #nd-docs-layout .prose {
+    font-size: var(--text-14);
+    line-height: 1.6;
+  }
+
+  /* 3. Fumadocs enveloppe le texte de chaque titre dans un <a> d'ancrage sans classe, que la
+     regle de base `a { color: var(--accent-text) }` du design system repeint en indigo.
+     Un titre n'est pas un lien.
+     Specificite : (1,1,0) contre le `.prose :where(a)` (0,1,0) de Fumadocs — `:where()` ne
+     compte pour rien. */
+  #nd-docs-layout .prose :is(h1, h2, h3, h4, h5, h6) > a {
+    color: inherit;
+  }
+
+  /* 4. Le bloc de code surligne porte par defaut la police et la taille de Fumadocs : `text-sm`
+     (14px) sur le <figure class="shiki">, et un `text-[0.8125rem]` (13px) sur un <div> ancetre
+     de <pre>/<code> (fumadocs-ui/dist/components/codeblock.js) dont ces deux-la heritent la
+     taille faute de regle propre. `text-code` est le palier dedie au code de reference (12,5px,
+     Geist Mono) declare par le design system. Sur le <figure> lui-meme, notre regle gagne par
+     specificite face a `.text-sm` (meme element, meme couche `utilities` : l'ID
+     `#nd-docs-layout` conjugue a la classe `.shiki` bat une classe seule). Sur <pre>/<code>, il
+     n'y a pas de concurrence de specificite : `text-[0.8125rem]` s'applique a un ANCETRE et ne
+     leur parvient que par heritage, qu'une declaration directe (la notre) prime toujours,
+     quelle que soit la specificite de la regle qui a pose la valeur heritee.
+     Selecteur qualifie par le tag `figure` et non `.shiki` seul : Fumadocs pose aussi `.shiki`
+     sur un `<code class="shiki">` pour le highlighting inline (`` `x`{:ts} ``, voir
+     `code.shiki:not(.not-fumadocs-code *)` dans fumadocs-ui/css/lib/shiki.css) — un contenu futur
+     qui l'utilise ne doit pas heriter `text-code` sur du code en ligne. */
+  #nd-docs-layout figure.shiki,
+  #nd-docs-layout figure.shiki pre,
+  #nd-docs-layout figure.shiki code {
+    @apply font-mono text-code;
+  }
+
+  /* 5. Les paliers Lumyx, poses par data-attribut plutot que par `className`.
+     `DocsTitle` rend `text-[1.75em]` et `DocsDescription` `text-lg`, la ou l'ancienne coquille
+     tenait `text-44` et `text-16` (apps/landing/components/site/docs-layout.tsx:54-55).
+
+     Pourquoi une regle CSS et pas un `className` passe aux deux composants, qui le fusionnent
+     pourtant : ils le font avec le `cn` de Fumadocs, un tailwind-merge SANS l'extension Lumyx.
+     Ce tailwind-merge-la ne connait pas l'echelle numerique et classe `text-44` / `text-16` en
+     couleur de texte — le piege que packages/ui/src/lib/utils.ts documente deja. Mesure sur le
+     HTML prerendu en passant `text-44 … text-strong` : la sortie etait
+     `text-[1.75em] font-semibold tracking-[-0.02em] text-strong text-pretty`, `text-44` retire
+     par `text-strong` arrive apres lui dans le meme groupe. Idem pour la description :
+     `text-lg mb-8 … text-muted`, `text-16` disparu. Passer la taille seule, sans couleur, ne
+     sauve rien non plus : les deux utilitaires de taille coexisteraient alors dans la classe et
+     c'est l'ordre d'emission de Tailwind qui trancherait, ce qu'on ne controle pas.
+
+     Ordre et specificite, mesures au navigateur (font-size calculee sur les cinq pages, clair et
+     sombre) : `[data-sl-tier]` qualifie par `#nd-docs-layout` fait (1,1,0) contre les (0,1,0) de
+     `.text-[1.75em]` et `.text-lg`, dans la meme couche `utilities` — la specificite tranche et
+     l'ordre d'emission ne joue pas. C'est le meme raisonnement que les trois regles au-dessus.
+     Accroche sur un data-attribut et non sur un tag : cible exactement les deux elements rendus
+     par app/(docs)/[[...slug]]/page.tsx, sans toucher a un `#` ecrit dans du MDX.
+
+     Seule la `font-size` est posee ici (plus la line-height du titre, qu'un `font-size:` nu ne
+     tire pas du palier contrairement a l'utilitaire `text-44`). L'interlettrage du titre reste
+     au `tracking-[-0.02em]` du className et l'interlignage du chapo au `leading-relaxed`, comme
+     dans l'ancienne coquille : les y ecraser d'ici les rendrait muets.
+
+     `letter-spacing` en revanche est pose sur le chapo : un `font-size:` nu ne tire pas non plus
+     `--text-16--letter-spacing` du palier, et l'utilitaire `text-16` de l'ancienne coquille le
+     portait (packages/ui/src/styles.css:228). Mesure avant correctif : `normal`.
+
+     Les memes deux pieges valent pour `##` et `###`, que components/mdx.tsx compose par-dessus le
+     `Heading` de Fumadocs : la classe de taille y etait evincee par le meme tailwind-merge, les
+     deux titres tombant sur `.prose :where(h2){font-size:1.5em}` (21px mesure) et
+     `:where(h3){1.25em}`. Specificite : `#nd-docs-layout [data-sl-tier]` fait (1,1,0) contre le
+     (0,1,0) de `.prose :where(h2)` — `:where()` ne compte pour rien — dans la meme couche.
+     `[data-sl-tier]` et non le tag `h2` : cible exactement les titres rendus par nos overrides,
+     sans toucher a un `<h2>` qu'un composant de Fumadocs poserait ailleurs dans la page. */
+  #nd-docs-layout [data-sl-tier='title'] {
+    font-size: var(--text-44);
+    line-height: var(--text-44--line-height);
+  }
+  #nd-docs-layout [data-sl-tier='description'] {
+    font-size: var(--text-16);
+    letter-spacing: var(--text-16--letter-spacing);
+  }
+  #nd-docs-layout [data-sl-tier='h2'] {
+    font-size: var(--text-26);
+    line-height: var(--text-26--line-height);
+  }
+  #nd-docs-layout [data-sl-tier='h3'] {
+    font-size: var(--text-20);
+    line-height: var(--text-20--line-height);
+  }
+
+  /* 6. Le fil d'Ariane, remis en service par `breadcrumb={{ includeSeparator: true }}` dans
+     app/(docs)/[[...slug]]/page.tsx — il remplace le `crumb` que l'ancienne coquille faisait
+     saisir a la main par page, rendu en `text-12 text-faint` avec chiffres tabulaires.
+     Fumadocs le rend en `text-sm text-fd-muted-foreground`, et pose en plus
+     `text-fd-primary font-medium` sur le dernier item — donc, a un seul item, sur le seul.
+
+     Le crochet est un `id` et non un `data-sl-tier` comme les paliers ci-dessus : le composant
+     n'est pas ecrit ici, il est construit par `DocsPage`, et ses options ne passent que par un
+     objet type `BreadcrumbProps = BreadcrumbOptions & ComponentProps<'div'>`. Un litteral
+     d'objet n'accepte pas `'data-sl-tier'` (@types/react ne declare aucune signature d'index
+     `data-*` — verifie : TS2353), la ou `id` est une prop typee. C'est d'ailleurs la convention
+     du voisinage : Fumadocs s'accroche lui-meme a `#nd-page`, `#nd-sidebar`, `#nd-docs-layout`.
+     Tout est pose ici plutot qu'en `className` pour la meme raison que les paliers : le `cn` de
+     Fumadocs est un tailwind-merge sans l'echelle Lumyx.
+
+     Specificite : un `id` fait (1,0,0) et bat `.text-sm` (0,1,0) des le premier terme ; la regle
+     descendante fait (1,0,1) contre `.text-fd-primary` (0,1,0). `font-weight` est laisse a
+     Fumadocs — l'ancienne coquille ne le declarait pas. */
+  #sl-crumb {
+    font-size: var(--text-12);
+    line-height: var(--text-12--line-height);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+  #sl-crumb :is(a, span) {
+    color: var(--text-faint);
+  }
+
+  /* 7. Ligne selectionnee du dialog de recherche (⌘K) sur `--accent-tint`, la teinte d'accent, et
+     non sur la surface de survol neutre.
+
+     Pourquoi la regle existe : Fumadocs pose `bg-fd-accent` sur le seul resultat dont
+     `aria-selected="true"`, et le remappage `--color-fd-accent: var(--accent-bg)` du bloc `:root`
+     ci-dessus — necessaire pour que les boutons d'icone ne soient pas repeints en indigo plein —
+     fait retomber cette ligne sur la surface de survol. Mesure au navigateur avant la regle :
+     `background-color` du resultat selectionne = rgb(35, 38, 46) en sombre et rgb(245, 246, 248)
+     en clair, soit exactement `--accent-bg` (#23262e / #f5f6f8) au lieu de `--accent-tint`
+     (#7c68f829 / #eeecfe). Une selection au clavier devient alors indiscernable d'un simple
+     survol.
+
+     Specificite, dans la meme couche `utilities` que l'utilitaire concurrent : le selecteur fait
+     (0,3,1) contre (0,1,0) pour `.bg-fd-accent` — la specificite tranche, l'ordre d'emission de
+     Tailwind ne joue pas (il va d'ailleurs aussi dans notre sens, la regle etant emise apres).
+
+     Portee : `data-empty` plutot que le seul `role=dialog`. Le dialog de recherche n'a qu'un `id`
+     genere par Radix, instable entre les rendus, mais le composant de liste de resultats de
+     Fumadocs (`components/dialog/search.js`) rend toujours `data-empty` sur son conteneur, que la
+     liste soit vide ou non — c'est le crochet stable, et il coute la meme chose. Ne pas s'arreter
+     a `[role='dialog'] button[aria-selected]` : aujourd'hui la liste de recherche est le seul
+     widget de l'app a porter `aria-selected`, mais `@lumyx/ui` expose des Tabs et un Select Radix
+     dont les declencheurs et options en acquierent un au runtime. Un Tabs pose un jour dans un
+     dialog de cette app serait repeint a la teinte d'accent sans que personne ne comprenne
+     pourquoi.
+
+     La couleur de texte reste celle de Fumadocs (`text-fd-accent-foreground`, mesure a
+     `--text-strong` dans les deux themes) : elle contraste deja sur la teinte. */
+  [role='dialog'] [data-empty] button[aria-selected='true'] {
+    background-color: var(--accent-tint);
+  }
+}
