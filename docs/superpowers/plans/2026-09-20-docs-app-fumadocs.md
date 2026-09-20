@@ -2095,7 +2095,21 @@ rtk proxy bun run verify:ds
 rtk proxy bun run test
 rtk proxy bun run build
 ```
-Expected: tout au vert sur les six paquets.
+
+Expected: tout au vert, **à une exception pré-existante près**.
+
+`bun run lint` échoue sur `@lumyx/landing`, et c'est antérieur à ce chantier. Référence relevée avant toute modification de la landing, arbre de travail propre :
+
+```
+4 problems (3 errors, 1 warning)
+  2 × Calling setState synchronously within an effect can trigger cascading renders
+  1 × Cannot call impure function during render
+  1 × @typescript-eslint/no-unused-vars
+```
+
+Ces quatre-là concernent des composants de la landing et n'ont aucun rapport avec la doc : `apps/landing` lit sa copie vendorée de `packages/ui`, que ce chantier ne touche pas. Les corriger relève du dépôt `lumyx_landing` et de son propre cycle — hors périmètre ici.
+
+**Le critère est donc : aucune régression, pas un zéro absolu.** Après la tâche 8, `bun run lint` doit encore afficher exactement ces quatre problèmes sur la landing, ni plus ni moins, et zéro sur tous les autres paquets. Un cinquième problème, ou un problème de nature différente, est une régression introduite par ce chantier et doit être traité.
 
 Puis passe visuelle finale avec `/browse`, **dans les deux thèmes** :
 
