@@ -23,6 +23,12 @@ Ces contraintes s'appliquent à **toutes** les tâches. Chaque tâche les inclut
 - **Rayons Lumyx :** `rounded-xs` 8px, `rounded-sm` 12px, `rounded-md` 14px, `rounded-lg` 18px, `rounded-xl` 24px, `rounded-pill` 999px.
 - **Couleurs par utilitaire de token :** `bg-page`, `bg-card`, `bg-sunken`, `bg-inset`, `bg-hover`, `bg-active`, `border-hairline`, `border-stroke`, `border-subtle`, `text-strong`, `text-body`, `text-muted`, `text-faint`, `text-accent`, `text-accent-text`.
 - **Commandes de build et de test :** toujours préfixées par `rtk proxy` dans ce repo. `rtk next build` remonte des succès factices et `rtk`-hooké sert parfois des lectures périmées — `rtk proxy` contourne les deux.
+- **Un `build` vert ne prouve pas qu'une règle CSS a été émise.** Mesuré en tâche 5 : une erreur de syntaxe dans `globals.css` (un `*/` orphelin) fait échouer `next dev` bruyamment sur toutes les routes en 500, mais `next build` **sort en 0 et émet la feuille sans la règle**. Après toute modification de `globals.css`, vérifier que la règle attendue est réellement présente dans la sortie plutôt que se fier au code de retour :
+
+  ```bash
+  rtk proxy grep -c "<selecteur ou propriete attendue>" apps/docs/.next/static/chunks/*.css
+  ```
+- **Une classe de taille numérique Lumyx passée à un composant Fumadocs est mangée.** Mesuré en tâche 5 : `DocsTitle` fusionne son `className` avec le `cn` de Fumadocs, c'est-à-dire une instance de `tailwind-merge` **sans** l'extension d'échelle numérique de Lumyx. Elle classe donc `text-44` en *couleur* de texte, et un `text-strong` qui suit l'évince — exactement le danger que `packages/ui/src/lib/utils.ts` et la règle 6 de `verify-ds` existent pour empêcher, rencontré à l'intérieur de la fusion d'un tiers. **Corollaire : « passer un `className` au composant Fumadocs » n'est pas une stratégie valable pour les paliers de type.** Il faut une règle CSS, dont la spécificité l'emporte sans dépendre de l'ordre d'émission.
 - **Gestionnaire de paquets :** `bun`. Installer depuis la racine du monorepo (`bun install`), jamais depuis `apps/docs`.
 - **Domaine de production :** `docs.lumyx.dev`. Domaine de la landing : `lumyx.dev`.
 - **Port de dev :** 3003 (landing 3000, dashboard 3001, cloud 3002).
@@ -1669,6 +1675,12 @@ EOF
 ## Task 6: Les onze squelettes
 
 Rend la nav complète et navigable. Le corps rédactionnel est hors périmètre ; chaque page annonce son état.
+
+**Trois choses mesurées en tâche 5, à reporter ici :**
+
+1. **Tailwind v4 scanne bien `content/**/*.mdx`** en auto-détection — une classe utilisée uniquement dans un MDX est émise. Vérifié dans le CSS bâti. Attention au piège de vérification : les sélecteurs sont échappés, donc un `grep` sur le nom de classe nu (`max-w-[600px]`) renvoie 0 et se lit à tort comme une classe manquante.
+2. **Ne pas copier le motif de checklist de `self-hosting.mdx`.** Cette page déplie à la main une liste de quatre items en quatre blocs JSX quasi identiques de huit lignes, là où l'original faisait un `.map`. Acceptable une fois ; multiplié par onze pages, c'est 33 lignes de balisage dupliqué par liste. Si un squelette a besoin d'une liste structurée, écrire un petit composant.
+3. **Les titres passent par `defaultMdxComponents`** depuis le correctif de la tâche 5 : un `##` en MDX hérite de `scroll-m-28`, de son ancre et du bouton de copie. Ne pas re-substituer de composant de titre.
 
 **Files:**
 - Create: `apps/docs/content/docs/rooms.mdx`, `peers.mdx`, `signaling.mdx`, `forwarding.mdx`
