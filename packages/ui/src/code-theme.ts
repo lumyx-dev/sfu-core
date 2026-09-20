@@ -11,9 +11,9 @@
  * Contrepartie documentée par Shiki : le thème n'est plus compatible TextMate au sens strict et
  * devient inutilisable hors web (shiki-cli, shiki-monaco). Sans effet ici.
  *
- * Les neuf rôles reprennent la map `ROLE_COLOR` du tokenizer de la landing
- * (`apps/landing/lib/highlight.ts`), pour que la doc et le site marketing colorient le code de
- * façon identique.
+ * Les sept rôles de `settings` (plus `bg`/`fg` pour le fond et le texte de base, neuf couleurs en
+ * tout) reprennent la map `ROLE_COLOR` du tokenizer de la landing (`apps/landing/lib/highlight.ts`),
+ * pour que la doc et le site marketing colorient le code de façon identique.
  */
 
 export type CodeThemeSetting = {

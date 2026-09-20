@@ -62,16 +62,23 @@
     color: inherit;
   }
 
-  /* Le bloc de code surligne (`.shiki`, pose uniquement sur le fence — jamais sur `inline code`,
-     hors perimetre de cette tache) porte par defaut la police et la taille de Fumadocs :
-     `font-mono` generique et `text-[0.8125rem]` (13px), en couche `utilities` toutes les deux
-     (voir `@source inline(...)` de fumadocs-ui/css/generated/shared.css). Notre regle vit dans
-     la meme couche mais gagne par specificite : l'ID `#nd-docs-layout` conjugue a la classe
-     `.shiki` bat une classe seule, quel que soit l'ordre a l'interieur de la couche. `text-code`
-     est le palier dedie au code de reference (12,5px, Geist Mono) declare par le design system. */
-  #nd-docs-layout .shiki,
-  #nd-docs-layout .shiki pre,
-  #nd-docs-layout .shiki code {
+  /* Le bloc de code surligne porte par defaut la police et la taille de Fumadocs : `text-sm`
+     (14px) sur le <figure class="shiki">, et un `text-[0.8125rem]` (13px) sur un <div> ancetre
+     de <pre>/<code> (fumadocs-ui/dist/components/codeblock.js) dont ces deux-la heritent la
+     taille faute de regle propre. `text-code` est le palier dedie au code de reference (12,5px,
+     Geist Mono) declare par le design system. Sur le <figure> lui-meme, notre regle gagne par
+     specificite face a `.text-sm` (meme element, meme couche `utilities` : l'ID
+     `#nd-docs-layout` conjugue a la classe `.shiki` bat une classe seule). Sur <pre>/<code>, il
+     n'y a pas de concurrence de specificite : `text-[0.8125rem]` s'applique a un ANCETRE et ne
+     leur parvient que par heritage, qu'une declaration directe (la notre) prime toujours,
+     quelle que soit la specificite de la regle qui a pose la valeur heritee.
+     Selecteur qualifie par le tag `figure` et non `.shiki` seul : Fumadocs pose aussi `.shiki`
+     sur un `<code class="shiki">` pour le highlighting inline (`` `x`{:ts} ``, voir
+     `code.shiki:not(.not-fumadocs-code *)` dans fumadocs-ui/css/lib/shiki.css) — un contenu futur
+     qui l'utilise ne doit pas heriter `text-code` sur du code en ligne. */
+  #nd-docs-layout figure.shiki,
+  #nd-docs-layout figure.shiki pre,
+  #nd-docs-layout figure.shiki code {
     @apply font-mono text-code;
   }
 }
