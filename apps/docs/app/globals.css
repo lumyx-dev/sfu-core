@@ -115,4 +115,32 @@
   #nd-docs-layout [data-sl-tier='description'] {
     font-size: var(--text-16);
   }
+
+  /* Ligne selectionnee du dialog de recherche (⌘K) sur `--accent-tint`, la teinte d'accent, et
+     non sur la surface de survol neutre.
+
+     Pourquoi la regle existe : Fumadocs pose `bg-fd-accent` sur le seul resultat dont
+     `aria-selected="true"`, et le remappage `--color-fd-accent: var(--accent-bg)` du bloc `:root`
+     ci-dessus — necessaire pour que les boutons d'icone ne soient pas repeints en indigo plein —
+     fait retomber cette ligne sur la surface de survol. Mesure au navigateur avant la regle :
+     `background-color` du resultat selectionne = rgb(35, 38, 46) en sombre et rgb(245, 246, 248)
+     en clair, soit exactement `--accent-bg` (#23262e / #f5f6f8) au lieu de `--accent-tint`
+     (#7c68f829 / #eeecfe). Une selection au clavier devient alors indiscernable d'un simple
+     survol.
+
+     Specificite, dans la meme couche `utilities` que l'utilitaire concurrent :
+     `[role='dialog'] button[aria-selected='true']` fait (0,2,1) contre (0,1,0) pour
+     `.bg-fd-accent` — la specificite tranche, l'ordre d'emission de Tailwind ne joue pas.
+
+     Portee : accroche sur `role=dialog` parce que Fumadocs v16 ne donne au dialog de recherche
+     qu'un `id` genere par Radix (`radix-_R_...`), instable entre les rendus. Le descendant
+     `button[aria-selected]` suffit a isoler la liste de resultats : c'est le seul widget de l'app
+     qui en porte (la sidebar mobile, elle aussi un dialog Radix, n'a que des <a> et des <button>
+     sans `aria-selected`).
+
+     La couleur de texte reste celle de Fumadocs (`text-fd-accent-foreground`, mesure a
+     `--text-strong` dans les deux themes) : elle contraste deja sur la teinte. */
+  [role='dialog'] button[aria-selected='true'] {
+    background-color: var(--accent-tint);
+  }
 }

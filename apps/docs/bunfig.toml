@@ -1,0 +1,4 @@
+# Preload limite a `[test]` et non pose a la racine du fichier : un preload racine s'appliquerait
+# aussi a `bun run dev` / `bun run build`, ou next et son bundler compilent deja la macro eux-memes.
+[test]
+preload = ["./test-setup.ts"]
