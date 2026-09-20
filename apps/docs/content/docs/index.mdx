@@ -38,7 +38,14 @@ all there. Lumyx Cloud ({VERSION}) sells operation on top of the same binary —
 and per-environment keys — not extra features. Moving from Cloud back to self-hosted is a URL change; the
 signaling protocol and token grants don't differ.
 
-<a href={REPO}>{REPO.replace('https://', '')} ↗</a>
+{/* Palier explicite : un JSX litteral en minuscules ne passe pas par la table de composants du
+    MDX, donc ce lien ne recupere rien de l'override `a` et se lirait comme du corps de texte. */}
+<a
+  href={REPO}
+  className="inline-flex w-fit items-center gap-1.5 text-13 font-medium text-accent no-underline hover:no-underline"
+>
+  {REPO.replace('https://', '')} ↗
+</a>
 
 ## Where to go next
 

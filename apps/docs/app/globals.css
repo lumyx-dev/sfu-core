@@ -81,4 +81,38 @@
   #nd-docs-layout figure.shiki code {
     @apply font-mono text-code;
   }
+
+  /* Titre et chapo de page sur les paliers Lumyx. `DocsTitle` rend `text-[1.75em]` et
+     `DocsDescription` `text-lg`, la ou l'ancienne coquille tenait `text-44` et `text-16`
+     (apps/landing/components/site/docs-layout.tsx:54-55).
+
+     Pourquoi une regle CSS et pas un `className` passe aux deux composants, qui le fusionnent
+     pourtant : ils le font avec le `cn` de Fumadocs, un tailwind-merge SANS l'extension Lumyx.
+     Ce tailwind-merge-la ne connait pas l'echelle numerique et classe `text-44` / `text-16` en
+     couleur de texte — le piege que packages/ui/src/lib/utils.ts documente deja. Mesure sur le
+     HTML prerendu en passant `text-44 … text-strong` : la sortie etait
+     `text-[1.75em] font-semibold tracking-[-0.02em] text-strong text-pretty`, `text-44` retire
+     par `text-strong` arrive apres lui dans le meme groupe. Idem pour la description :
+     `text-lg mb-8 … text-muted`, `text-16` disparu. Passer la taille seule, sans couleur, ne
+     sauve rien non plus : les deux utilitaires de taille coexisteraient alors dans la classe et
+     c'est l'ordre d'emission de Tailwind qui trancherait, ce qu'on ne controle pas.
+
+     Ordre et specificite, mesures au navigateur (font-size calculee sur les cinq pages, clair et
+     sombre) : `[data-sl-tier]` qualifie par `#nd-docs-layout` fait (1,1,0) contre les (0,1,0) de
+     `.text-[1.75em]` et `.text-lg`, dans la meme couche `utilities` — la specificite tranche et
+     l'ordre d'emission ne joue pas. C'est le meme raisonnement que les trois regles au-dessus.
+     Accroche sur un data-attribut et non sur un tag : cible exactement les deux elements rendus
+     par app/(docs)/[[...slug]]/page.tsx, sans toucher a un `#` ecrit dans du MDX.
+
+     Seule la `font-size` est posee ici (plus la line-height du titre, qu'un `font-size:` nu ne
+     tire pas du palier contrairement a l'utilitaire `text-44`). L'interlettrage du titre reste
+     au `tracking-[-0.02em]` du className et l'interlignage du chapo au `leading-relaxed`, comme
+     dans l'ancienne coquille : les y ecraser d'ici les rendrait muets. */
+  #nd-docs-layout [data-sl-tier='title'] {
+    font-size: var(--text-44);
+    line-height: var(--text-44--line-height);
+  }
+  #nd-docs-layout [data-sl-tier='description'] {
+    font-size: var(--text-16);
+  }
 }

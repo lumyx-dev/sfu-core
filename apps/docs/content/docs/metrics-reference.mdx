@@ -3,13 +3,36 @@ title: Metrics reference
 description: Six metrics, read from RTCP as the media passes through the SFU. Each one is armed by default with the threshold below and a 30s debounce, per peer and — where the scope says so — per room.
 ---
 
+{/* Les ancres sont epinglees en `[#champ]` plutot que laissees a rehype-slug, qui aurait
+    renomme `#packet_loss_ratio` en `#packet-loss` et casse les liens profonds existants. */}
+
 ## Default thresholds
 
 <MetricsThresholds />
 
-## The six metrics
+## Packet loss [#packet_loss_ratio]
 
-<MetricsReference />
+<MetricDetail field="packet_loss_ratio" />
+
+## Round-trip time [#rtt_ms]
+
+<MetricDetail field="rtt_ms" />
+
+## Jitter [#jitter_ms]
+
+<MetricDetail field="jitter_ms" />
+
+## NACK ratio [#nack_ratio]
+
+<MetricDetail field="nack_ratio" />
+
+## Freeze ratio [#freeze_ratio]
+
+<MetricDetail field="freeze_ratio" />
+
+## Bitrate [#bitrate_kbps]
+
+<MetricDetail field="bitrate_kbps" />
 
 ## Overriding a threshold
 
