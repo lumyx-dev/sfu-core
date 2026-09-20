@@ -14,48 +14,51 @@
    en silence par Tailwind — le build reste vert et les classes manquent. */
 @source '../../../node_modules/fumadocs-ui/dist';
 
-/* ── Les quatre ecarts que le pont de tokens ne couvre pas ── */
+/* ── Les ecarts que le pont de tokens ne couvre pas ── */
 :root {
   /* Fumadocs v16 defaut : 97rem (1552px). Lumyx tient sa grille a 1360. */
   --fd-layout-width: var(--content-max);
 
-  /* Sixieme ecart, trouve a l'oeil a l'etape 8. shadcn.css fait
-     `--color-fd-accent: var(--accent)`, mais les deux contrats ne parlent pas de la meme
-     chose : chez shadcn `--accent` est la surface de survol discrete, chez Lumyx c'est la
-     couleur d'accent (l'equivalent shadcn s'appelle `--accent-bg`). Sans ce remappage,
-     `hover:bg-fd-accent` repeint chaque bouton d'icone en indigo plein. Le bloc `#nd-sidebar`
-     de shadcn.css garde sa propre valeur : sa specificite est plus forte. */
-  --color-fd-accent: var(--surface-hover);
+  /* shadcn.css fait `--color-fd-accent: var(--accent)`, mais les deux contrats ne parlent pas
+     de la meme chose : chez shadcn `--accent` est la surface de survol discrete, chez Lumyx
+     c'est la couleur d'accent. L'alias de contrat equivalent est `--accent-bg`. Sans ce
+     remappage, `hover:bg-fd-accent` repeint chaque bouton d'icone en indigo plein. Le bloc
+     `#nd-sidebar` de shadcn.css garde sa propre valeur : sa specificite est plus forte. */
+  --color-fd-accent: var(--accent-bg);
 }
 
-/* Ces deux regles sont hors @layer, et non dans `components` : le plugin typography de
-   Fumadocs emet `.prose { font-size }` dans @layer utilities, et la sidebar porte `text-sm`,
-   donc une regle en couche `components` perd malgre une specificite superieure. Du CSS non
-   layere gagne sur toutes les couches. Constate au navigateur (cascade CDP). */
+/* Les trois regles de skin vivent dans `utilities`, la couche la plus haute de Tailwind, et
+   chacune bat sa concurrente a la specificite a l'interieur de cette couche : `#nd-sidebar p`
+   (1,0,1) contre `.text-sm`, `#nd-docs-layout .prose` (1,1,0) contre le `.prose` du plugin
+   typography de Fumadocs (0,1,0), et l'ancre de titre contre `.prose :where(a)` (0,1,0).
+   Mesure a l'appui, en couche `components` : la regle de sidebar et celle de l'ancre passent
+   (leurs concurrentes sont respectivement heritee de l'ancetre et en couche `base`), mais
+   `.prose` retombe a 16px — le plugin typography emet en `utilities`, et l'ordre des couches
+   prime sur la specificite. Une seule couche pour les trois, donc, plutot que du CSS hors
+   couche qui battrait tout ce qui viendra apres. Verifie au navigateur : Tailwind v4 laisse
+   passer un bloc `@layer utilities` ecrit a la main comme une vraie couche en cascade. */
+@layer utilities {
+  /* Les titres de section de la sidebar portent le seul manierisme typographique du systeme —
+     un `@utility` du design system, jamais recopie a la main ici.
+     Selecteur trouve par inspection : Fumadocs v16 rend SidebarSeparator en <p> nu, sans
+     classe ni data-attribut (dist/components/sidebar/base.js). Les items sont des <a> et les
+     dossiers des <button>, donc le seul <p> de la sidebar est bien un titre de section. */
+  #nd-sidebar p,
+  #nd-sidebar-mobile p {
+    @apply sl-label;
+  }
 
-/* Les titres de section de la sidebar portent le seul manierisme typographique du systeme.
-   Selecteur trouve par inspection : Fumadocs v16 rend SidebarSeparator en <p> nu, sans
-   classe ni data-attribut (dist/components/sidebar/base.js). Les items sont des <a> et les
-   dossiers des <button>, donc le seul <p> de la sidebar est bien un titre de section. */
-#nd-sidebar p,
-#nd-sidebar-mobile p {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
+  /* Echelle de type Lumyx sur le corps de doc : dense la ou Fumadocs suit l'echelle Tailwind.
+     `.fd-prose` de la spec n'existe pas dans Fumadocs v16 : la classe reelle est `.prose`. */
+  #nd-docs-layout .prose {
+    font-size: 14px;
+    line-height: 1.6;
+  }
 
-/* Echelle de type Lumyx sur le corps de doc : dense la ou Fumadocs suit l'echelle Tailwind.
-   `.fd-prose` de la spec n'existe pas dans Fumadocs v16 : la classe reelle est `.prose`. */
-#nd-docs-layout .prose {
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* Cinquieme ecart, trouve a l'oeil a l'etape 8 : Fumadocs enveloppe le texte de chaque titre
-   dans un <a> d'ancrage sans classe, que la regle de base `a { color: var(--accent-text) }`
-   du design system repeint en indigo. Un titre n'est pas un lien. */
-#nd-docs-layout .prose :is(h1, h2, h3, h4, h5, h6) > a {
-  color: inherit;
+  /* Fumadocs enveloppe le texte de chaque titre dans un <a> d'ancrage sans classe, que la
+     regle de base `a { color: var(--accent-text) }` du design system repeint en indigo.
+     Un titre n'est pas un lien. */
+  #nd-docs-layout .prose :is(h1, h2, h3, h4, h5, h6) > a {
+    color: inherit;
+  }
 }
