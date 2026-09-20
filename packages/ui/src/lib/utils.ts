@@ -7,7 +7,9 @@ import { extendTailwindMerge } from "tailwind-merge";
  * it silently drop `text-on-accent` / `text-white`. Teaching it the scale keeps
  * size and colour in separate conflict groups, so both survive a merge.
  */
-const FONT_SIZES = ["11", "12", "13", "14", "16", "20", "26", "34", "44"];
+// "code" n'est pas sur l'echelle numerique mais c'est bien une taille (12.5px) : sans lui,
+// tailwind-merge classe `text-code` en couleur et cn("text-muted text-code") en perd une.
+const FONT_SIZES = ["11", "12", "13", "14", "16", "20", "26", "34", "44", "code"];
 
 const twMerge = extendTailwindMerge({
   extend: {

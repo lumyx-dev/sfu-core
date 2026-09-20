@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check-types": "tsc --noEmit",
+    "test": "bun test",
     "verify:ds": "node scripts/verify-ds.mjs"
   },
   "exports": {
