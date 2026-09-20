@@ -61,4 +61,17 @@
   #nd-docs-layout .prose :is(h1, h2, h3, h4, h5, h6) > a {
     color: inherit;
   }
+
+  /* Le bloc de code surligne (`.shiki`, pose uniquement sur le fence — jamais sur `inline code`,
+     hors perimetre de cette tache) porte par defaut la police et la taille de Fumadocs :
+     `font-mono` generique et `text-[0.8125rem]` (13px), en couche `utilities` toutes les deux
+     (voir `@source inline(...)` de fumadocs-ui/css/generated/shared.css). Notre regle vit dans
+     la meme couche mais gagne par specificite : l'ID `#nd-docs-layout` conjugue a la classe
+     `.shiki` bat une classe seule, quel que soit l'ordre a l'interieur de la couche. `text-code`
+     est le palier dedie au code de reference (12,5px, Geist Mono) declare par le design system. */
+  #nd-docs-layout .shiki,
+  #nd-docs-layout .shiki pre,
+  #nd-docs-layout .shiki code {
+    @apply font-mono text-code;
+  }
 }
