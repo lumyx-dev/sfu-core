@@ -2050,14 +2050,26 @@ Expected: PASS — 3 tests.
 
 - [ ] **Step 5: Repointer les liens internes de la landing**
 
-Pour chaque occurrence trouvée à l'étape 1, remplace le `href` relatif `/docs…` par l'URL absolue correspondante sur `docs.lumyx.dev`. Dans les composants concernés (`components/site/chrome.tsx` et tout autre listé), introduis une constante plutôt que de répéter l'URL :
+**Inventaire réel, relevé avant l'exécution — il est plus lourd que ce que laissait croire une première rédaction de ce plan.** Dix-huit liens vivants, répartis sur quatre fichiers :
+
+| Fichier | Occurrences | Nature |
+| --- | --- | --- |
+| `app/page.tsx` | 9 | entrée de nav, 5 CTA « Get started » / « Start building now » / `{t.cta}`, 3 liens de section |
+| `lib/site-data.ts` | 5 | liens de pied de page (`Lumyx Cloud`, `Docs`, `Quickstart`, `Self-hosting`, `Metrics reference`) |
+| `components/site/chrome.tsx` | 2 | entrée de nav du header + bouton « Get started » |
+| `components/site/pricing-block.tsx` | 2 | CTA de plan et bouton « Get started » |
+
+À cela s'ajoutent les 5 `href` de `DOC_NAV` dans `lib/docs-data.ts` et l'entrée de `app/sitemap.ts`, qui **disparaissent** aux étapes 6 — ne pas les repointer, les supprimer.
+
+Introduis la constante une fois, dans `apps/landing/lib/site-data.ts` :
 
 ```ts
-// dans apps/landing/lib/site-data.ts
 export const DOCS_URL = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.lumyx.dev";
 ```
 
-Les liens deviennent `<a href={DOCS_URL}>` ou `<a href={`${DOCS_URL}/quickstart`}>`, et non plus `<Link href="/docs">` — ce sont désormais des liens externes, `next/link` n'a plus lieu d'être.
+Les liens deviennent `<a href={DOCS_URL}>` ou `<a href={`${DOCS_URL}/quickstart`}>`, et non plus `<Link href="/docs">` : ce sont désormais des liens **externes**, donc `next/link` n'a plus lieu d'être — son prefetch ne traverse pas une origine et son routage client non plus. Retire l'import `Link` de tout fichier qui n'en garde aucun usage, sinon le lint le signalera.
+
+Ces liens sont les CTA principaux du site marketing. Le critère n'est pas seulement « ça compile » : après l'étape 8, aucun clic depuis la home ne doit traverser une redirection.
 
 - [ ] **Step 6: Supprimer l'ancienne implantation**
 
