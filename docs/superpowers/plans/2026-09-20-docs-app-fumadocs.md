@@ -104,6 +104,7 @@ Ouvre le palier monospace et le thème Shiki dans le design system, et amende la
 - Create: `packages/ui/scripts/verify-ds.test.mjs`
 - Modify: `packages/ui/src/styles.css`
 - Modify: `packages/ui/src/index.ts`
+- Modify: `packages/ui/src/lib/utils.ts` (`FONT_SIZES`)
 - Modify: `packages/ui/scripts/verify-ds.mjs`
 - Modify: `packages/ui/package.json`
 
@@ -312,58 +313,83 @@ Expected: PASS — 5 tests.
 
 - [ ] **Step 5: Écrire le test de la règle 2 amendée de `verify:ds`**
 
-Crée `packages/ui/scripts/verify-ds.test.mjs`. Le test isole la règle en écrivant des fichiers temporaires dans un répertoire scanné puis en exécutant le script :
+Contexte indispensable : **il existe deux familles de `verify-ds.mjs` dans ce repo**, et celle de `packages/ui` n'est pas celle des apps.
+
+| | version *app* (`apps/landing`, `apps/dashboard`) | version *package* (`packages/ui`) |
+| --- | --- | --- |
+| Scanne | `['app','components','lib']` | `src/` |
+| Exempte | `app/globals.css` (`COLOR_EXEMPT`) | `src/styles.css` (`TOKENS_FILE`) |
+| Règles | 4 | **6** |
+| Importe | rien | `tailwind-merge` |
+
+Les deux règles supplémentaires de la version *package* sont la 5 (aucun import par alias `@/` dans `packages/ui`) et la 6 (`cn-font-scale` + `cn-keeps-size-and-color`, qui vérifie que chaque `--text-<nombre>` de `styles.css` figure dans `FONT_SIZES` de `src/lib/utils.ts`, puis que `tailwind-merge` ne laisse pas la taille avaler la couleur).
+
+Le test s'exécute donc **en place**, et non dans un répertoire temporaire : la version *package* importe `tailwind-merge` (non résoluble depuis `/tmp`) et ses règles 5 et 6 lisent `src/styles.css` et `src/lib/utils.ts`. Un script copié seul échouerait sur la résolution de module avant d'atteindre la règle 2.
+
+Crée `packages/ui/scripts/verify-ds.test.mjs` :
 
 ```js
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, cpSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { writeFileSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-const SCRIPT = new URL('./verify-ds.mjs', import.meta.url).pathname;
+const PKG = new URL('..', import.meta.url).pathname;
+const SCRIPT = join(PKG, 'scripts', 'verify-ds.mjs');
+// Le script scanne src/ recursivement : on y depose la sonde, puis on la retire. Prefixe
+// distinctif pour qu'un residu soit reconnaissable dans git status.
+const PROBE = join(PKG, 'src', '__verify-ds-probe.tsx');
 
-/**
- * Le script resout ses repertoires scannes relativement a sa propre position, donc on le copie
- * dans un faux paquet et on y depose le fichier a tester.
- */
-function runWith(fileName, contents) {
-  const root = mkdtempSync(join(tmpdir(), 'verify-ds-'));
-  mkdirSync(join(root, 'scripts'), { recursive: true });
-  mkdirSync(join(root, 'src'), { recursive: true });
-  cpSync(SCRIPT, join(root, 'scripts', 'verify-ds.mjs'));
-  writeFileSync(join(root, 'src', fileName), contents, 'utf8');
-  const proc = Bun.spawnSync(['node', join(root, 'scripts', 'verify-ds.mjs')]);
-  const output = proc.stdout.toString() + proc.stderr.toString();
-  rmSync(root, { recursive: true, force: true });
-  return { code: proc.exitCode, output };
+function runWith(contents) {
+  writeFileSync(PROBE, contents, 'utf8');
+  try {
+    const proc = Bun.spawnSync(['node', SCRIPT], { cwd: PKG });
+    return {
+      code: proc.exitCode,
+      output: proc.stdout.toString() + proc.stderr.toString(),
+    };
+  } finally {
+    rmSync(PROBE, { force: true });
+  }
 }
+
+afterEach(() => {
+  // Ceinture et bretelles : aucun residu meme si une assertion jette.
+  if (existsSync(PROBE)) rmSync(PROBE, { force: true });
+});
 
 describe('verify-ds regle 2 — monospace par token', () => {
   test('accepte l utilitaire font-mono', () => {
-    const { code } = runWith('ok.tsx', 'export const A = () => <pre className="font-mono" />;');
+    const { code, output } = runWith('export const A = () => <pre className="font-mono" />;\n');
+    expect(output).not.toContain('no-literal-monospace');
     expect(code).toBe(0);
   });
 
   test('accepte la variable de token --font-mono', () => {
-    const { code } = runWith('ok2.tsx', 'export const S = { fontFamily: "var(--font-mono)" };');
+    const { code } = runWith('export const S = { fontFamily: "var(--font-mono)" };\n');
     expect(code).toBe(0);
   });
 
   test('refuse une pile monospace litterale', () => {
-    const { code, output } = runWith('bad.tsx', "export const S = { fontFamily: 'Menlo, monospace' };");
+    const { code, output } = runWith("export const S = { fontFamily: 'Menlo, monospace' };\n");
     expect(code).toBe(1);
     expect(output).toContain('no-literal-monospace');
   });
 
   test('refuse ui-monospace', () => {
-    const { code, output } = runWith('bad2.tsx', 'export const S = { fontFamily: "ui-monospace" };');
+    const { code, output } = runWith('export const S = { fontFamily: "ui-monospace" };\n');
     expect(code).toBe(1);
     expect(output).toContain('no-literal-monospace');
   });
 
   test('refuse SF Mono et Consolas', () => {
-    expect(runWith('bad3.tsx', "const f = \"'SF Mono'\";").code).toBe(1);
-    expect(runWith('bad4.tsx', 'const f = "Consolas";').code).toBe(1);
+    expect(runWith('const f = "\'SF Mono\'";\n').code).toBe(1);
+    expect(runWith('const f = "Consolas";\n').code).toBe(1);
+  });
+
+  test('styles.css reste exempte — il porte ui-monospace par conception', () => {
+    // Sans sonde, le script doit passer : styles.css contient la pile litterale du token.
+    const proc = Bun.spawnSync(['node', SCRIPT], { cwd: PKG });
+    expect(proc.exitCode).toBe(0);
   });
 });
 ```
@@ -375,11 +401,12 @@ Expected: FAIL — le premier test échoue avec un code de sortie 1, parce que l
 
 - [ ] **Step 7: Amender la règle 2**
 
-Dans `packages/ui/scripts/verify-ds.mjs`, remplace le bloc de la règle 2 :
+Dans `packages/ui/scripts/verify-ds.mjs`, remplace le bloc de la règle 2. Le bloc actuel est **exactement** celui-ci — noter la ligne d'exemption `TOKENS_FILE`, qu'il faut conserver :
 
 ```js
-// 2. Zéro monospace — un vrai font-family/classe, pas une mention en prose ("no monospace tier").
+// 2. Zéro monospace — un vrai font-family/classe, pas une mention en prose.
 for (const f of files) {
+  if (f === TOKENS_FILE) continue;
   if (/\bfont-mono\b|ui-monospace|'SF Mono'|Menlo|Consolas/i.test(readFileSync(f, 'utf8'))) {
     fail('no-monospace', `${rel(f)} contient une font monospace`);
   }
@@ -391,9 +418,11 @@ par :
 ```js
 // 2. Monospace par token uniquement. `font-mono` et `var(--font-mono)` resolvent sur le palier
 // declare dans styles.css ; une pile litterale contourne le design system et reste interdite.
+// styles.css reste exempte : c'est lui qui porte la pile litterale du token.
 const LITERAL_MONO = /ui-monospace|'SF Mono'|"SF Mono"|\bMenlo\b|\bConsolas\b|\bmonospace\b/i;
-const MONO_TOKEN = /\bfont-mono\b|var\(--font-mono\)/;
+const MONO_TOKEN = /\bfont-mono\b|var\(--font-mono\)/g;
 for (const f of files) {
+  if (f === TOKENS_FILE) continue;
   const src = readFileSync(f, 'utf8');
   src.split('\n').forEach((line, i) => {
     // Une ligne qui ne fait que referencer le token est conforme, meme si elle contient le mot
@@ -406,10 +435,12 @@ for (const f of files) {
 }
 ```
 
+Ne touche à aucune autre règle. La 5 (`no-alias-imports`) et la 6 (`cn-font-scale`, `cn-keeps-size-and-color`) restent inchangées.
+
 - [ ] **Step 8: Relancer les deux suites de tests**
 
 Run: `cd packages/ui && rtk proxy bun test`
-Expected: PASS — 10 tests au total (5 + 5).
+Expected: PASS — 11 tests au total (5 pour le theme, 6 pour verify-ds).
 
 - [ ] **Step 9: Ajouter les tokens CSS**
 
@@ -446,16 +477,59 @@ Puis, **après** la fermeture du bloc `@theme inline` et avant le premier `@keyf
 }
 ```
 
-- [ ] **Step 10: Vérifier que `verify:ds` et les types passent**
+- [ ] **Step 10: Déclarer `text-code` dans `FONT_SIZES`**
+
+`packages/ui/src/lib/utils.ts` apprend à `tailwind-merge` l'échelle typographique, sans quoi il classe `text-13` en *couleur* de texte et laisse `cn()` supprimer `text-on-accent` d'un bouton plein. C'est le bug que documente le commentaire de la règle 6 du vérificateur.
+
+`FONT_SIZES` ne déclare aujourd'hui que des valeurs numériques :
+
+```ts
+const FONT_SIZES = ["11", "12", "13", "14", "16", "20", "26", "34", "44"];
+```
+
+`text-code` subirait exactement le même sort. Ajoute-le :
+
+```ts
+// "code" n'est pas sur l'echelle numerique mais c'est bien une taille (12.5px) : sans lui,
+// tailwind-merge classe `text-code` en couleur et cn("text-muted text-code") en perd une.
+const FONT_SIZES = ["11", "12", "13", "14", "16", "20", "26", "34", "44", "code"];
+```
+
+La règle 6 du vérificateur n'itère que sur les paliers numériques de `styles.css` (sa regex est `/--text-(\d+):/g`), volontairement — `:root` contient aussi `--text-strong`, `--text-body`, `--text-muted`, qui sont des couleurs et n'ont rien à faire dans `FONT_SIZES`. Elle reste donc verte et **ne doit pas être élargie**.
+
+Ajoute le test correspondant à la fin de `packages/ui/src/code-theme.test.ts` :
+
+```ts
+import { cn } from "./lib/utils";
+
+describe("cn() et le palier code", () => {
+  test("ne laisse pas text-code avaler une couleur de texte", () => {
+    const merged = cn("text-muted", "text-code").split(" ");
+    expect(merged).toContain("text-muted");
+    expect(merged).toContain("text-code");
+  });
+
+  test("deux tailles se resolvent toujours a la derniere", () => {
+    expect(cn("text-13", "text-code")).toBe("text-code");
+  });
+});
+```
+
+Run: `cd packages/ui && rtk proxy bun test src/code-theme.test.ts`
+Expected: PASS — 7 tests. Si « ne laisse pas text-code avaler une couleur » échoue, `"code"` n'est pas arrivé dans `FONT_SIZES`.
+
+- [ ] **Step 11: Vérifier que `verify:ds` et les types passent**
 
 Run: `cd packages/ui && rtk proxy bun run verify:ds && rtk proxy bun run check-types`
-Expected: les deux au vert. `styles.css` contient `ui-monospace` et `monospace` mais il n'est pas dans les répertoires scannés (`app`, `components`, `lib`) — si le script le signale, c'est que `SCANNED` diffère de celui de la landing : vérifier et ne pas contourner.
+Expected: les deux au vert.
 
-- [ ] **Step 11: Commit**
+`src/styles.css` **est** scanné (`walk(SRC)` le visite), mais il est exempté comme `TOKENS_FILE` — c'est pour cela qu'il peut porter `ui-monospace` et les valeurs hexadécimales de la palette. Si le script le signale malgré tout, c'est que la ligne `if (f === TOKENS_FILE) continue;` a disparu de la règle 2 à l'étape 7 : la remettre, ne pas contourner.
+
+- [ ] **Step 12: Commit**
 
 ```bash
 rtk git add packages/ui/src/code-theme.ts packages/ui/src/code-theme.test.ts \
-  packages/ui/src/styles.css packages/ui/src/index.ts \
+  packages/ui/src/styles.css packages/ui/src/index.ts packages/ui/src/lib/utils.ts \
   packages/ui/scripts/verify-ds.mjs packages/ui/scripts/verify-ds.test.mjs \
   packages/ui/package.json
 rtk git commit -m "$(cat <<'EOF'
@@ -464,6 +538,10 @@ feat(ui): ouvrir un palier code dans le design system
 Ajoute --font-mono (Geist Mono), --text-code et les neuf roles de
 coloration --code-*, qui pointent sur des alias semantiques et basculent
 donc seuls en mode sombre.
+
+Declare "code" dans FONT_SIZES : sans lui tailwind-merge classe text-code
+en couleur de texte, et cn("text-muted text-code") en perd une — le bug
+que documente la regle 6 du verificateur.
 
 Ajoute le theme Shiki lumyx : un objet TextMate dont chaque couleur est
 une variable CSS, ce qui evite toute valeur litterale dans le HTML rendu
@@ -616,13 +694,46 @@ export default withMDX(config);
 
 - [ ] **Step 2: Copier la garde du design system**
 
-Copie `packages/ui/scripts/verify-ds.mjs` (version amendée par la tâche 1) vers `apps/docs/scripts/verify-ds.mjs`, puis adapte la dernière ligne de succès :
+**Copie depuis `apps/dashboard/scripts/verify-ds.mjs`, pas depuis `packages/ui`.** Il existe deux familles de ce script : la version *app* (`apps/dashboard`, `apps/landing` — identiques à deux chaînes près) scanne `['app','components','lib']` et exempte `app/globals.css` ; la version *package* scanne `src/` et exempte `src/styles.css`. Copier celle de `packages/ui` donnerait un script qui ne scanne rien dans `apps/docs` et passerait au vert à tort — un faux négatif silencieux.
 
+```bash
+rtk proxy mkdir -p apps/docs/scripts
+rtk proxy cp apps/dashboard/scripts/verify-ds.mjs apps/docs/scripts/verify-ds.mjs
+```
+
+Puis adapte les deux chaînes qui nomment l'app :
+
+```js
+// 4. Zéro *.module.css — globals.css est le seul fichier CSS d'apps/docs.
+```
 ```js
 console.log('✓ contraintes du design system respectees (apps/docs)');
 ```
 
-Vérifie que `COLOR_EXEMPT` pointe bien sur `app/globals.css` et que `SCANNED` couvre `['app', 'components', 'lib']` — c'est le cas dans le fichier source.
+Vérifie ensuite que la copie porte bien `SCANNED = ['app', 'components', 'lib']` et `COLOR_EXEMPT = join(ROOT, 'app', 'globals.css')` :
+
+```bash
+rtk proxy grep -n "SCANNED\|COLOR_EXEMPT" apps/docs/scripts/verify-ds.mjs
+```
+Expected: les deux lignes présentes. Si elles manquent, c'est la mauvaise famille qui a été copiée.
+
+**La règle 2 de cette copie reste la version stricte** (« zéro monospace »), héritée du dashboard. Amende-la comme à l'étape 7 de la tâche 1 — `apps/docs` utilisera `font-mono` dès la tâche 4. Attention : la version *app* n'a pas de ligne `if (f === TOKENS_FILE) continue;` ; son exemption s'appelle `COLOR_EXEMPT` et ne s'applique qu'à la règle 1. Le bloc de remplacement est donc celui de la tâche 1 **sans** la ligne d'exemption :
+
+```js
+// 2. Monospace par token uniquement. `font-mono` et `var(--font-mono)` resolvent sur le palier
+// declare dans le design system ; une pile litterale le contourne et reste interdite.
+const LITERAL_MONO = /ui-monospace|'SF Mono'|"SF Mono"|\bMenlo\b|\bConsolas\b|\bmonospace\b/i;
+const MONO_TOKEN = /\bfont-mono\b|var\(--font-mono\)/g;
+for (const f of files) {
+  const src = readFileSync(f, 'utf8');
+  src.split('\n').forEach((line, i) => {
+    const scrubbed = line.replace(MONO_TOKEN, '');
+    if (LITERAL_MONO.test(scrubbed)) {
+      fail('no-literal-monospace', `${rel(f)}:${i + 1} — ${line.trim()}`);
+    }
+  });
+}
+```
 
 - [ ] **Step 3: Installer les dépendances**
 
