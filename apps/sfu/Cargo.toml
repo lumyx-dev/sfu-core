@@ -10,6 +10,9 @@ chrono = { version = "0.4.45", features = ["serde"] }
 dashmap = "6.2.1"
 futures = "0.3.34"
 rand = "0.10.2"
+# Dependance directe pour une seule raison : trancher entre les deux
+# fournisseurs cryptographiques presents dans l'arbre (cf. main.rs).
+rustls = { version = "0.23.43", default-features = false, features = ["aws-lc-rs"] }
 serde = "1.0.229"
 serde_json = "1.0.151"
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "migrate", "macros", "json"] }

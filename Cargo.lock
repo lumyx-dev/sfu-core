@@ -1281,6 +1281,7 @@ dependencies = [
  "dashmap",
  "futures",
  "rand 0.10.2",
+ "rustls",
  "serde",
  "serde_json",
  "sqlx",
