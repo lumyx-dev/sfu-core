@@ -1,0 +1,33 @@
+# Les motifs d'un .dockerignore sont ancres a la racine du contexte : sans le
+# prefixe **/, `node_modules/` ne cache que celui de la racine, et un artefact
+# perime d'une app part dans l'image.
+**/node_modules/
+**/.next/
+**/dist/
+**/target/
+**/out/
+**/*.tsbuildinfo
+
+# Workspaces prives, jamais dans une image publique
+apps/cloud/
+apps/landing/
+
+# Outillage local
+.git/
+**/.turbo/
+.claude/
+.agents/
+.superpowers/
+.kilocode/
+.gstack/
+.rtk/
+
+# Secrets et certificats. Les certificats de dev arrivent par un montage,
+# jamais par une couche d'image.
+**/.env
+**/.env.local
+**/.env.*.local
+**/*.pem
+**/*.key
+
+**/.DS_Store

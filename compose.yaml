@@ -1,0 +1,113 @@
+name: lumyx
+
+# SFU + Dashboard + Postgres, en une commande :
+#
+#     docker compose up
+#
+# Aucune edition prealable n'est necessaire. Les valeurs ci-dessous sont des
+# defauts de developpement local ; chacune se surcharge par une variable
+# d'environnement ou un fichier .env a cote de ce fichier.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: lumyx
+      POSTGRES_DB: lumyx
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumyx}
+    volumes:
+      # Postgres 18 a change de convention : l'image range les donnees dans un
+      # sous-repertoire versionne et veut le montage un cran au-dessus. Monter
+      # sur /var/lib/postgresql/data, comme on le faisait jusqu'en 17, fait
+      # refuser le demarrage.
+      - pgdata:/var/lib/postgresql
+    # Pas de port publie : seul le SFU parle a cette base. Un 5432 ouvert par
+    # defaut serait une mauvaise valeur par defaut pour un outil auto-heberge.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lumyx -d lumyx']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  sfu:
+    build:
+      context: .
+      dockerfile: apps/sfu/Dockerfile
+    depends_on:
+      postgres:
+        # Le SFU n'ecrit encore rien dans Postgres -- son PgWriter n'est pas
+        # branche. Le jour ou il le sera, il appliquera ses migrations au
+        # demarrage et ne devra pas partir avant que la base reponde. L'ordre
+        # est pose maintenant plutot que decouvert ce jour-la.
+        condition: service_healthy
+    environment:
+      SFU_BIND_ADDR: 0.0.0.0:3000
+      # Lue par la config du SFU, sans effet pour l'instant : la persistance
+      # de telemetrie est ecrite et testee mais pas encore cablee.
+      SFU_DATABASE_URL: postgres://lumyx:${POSTGRES_PASSWORD:-lumyx}@postgres:5432/lumyx
+      # L'adresse annoncee dans les candidats ICE. Elle doit etre joignable
+      # par le NAVIGATEUR, pas par le conteneur -- et 127.0.0.1 ne l'est pas
+      # depuis un conteneur : le SFU emet alors par eth0, sa source est
+      # reecrite, et le navigateur jette des paquets dont la source ne
+      # correspond pas au candidat annonce. Mesure faite : avec 127.0.0.1,
+      # zero paquet RTP relaye ; avec l'IP de la machine, le media passe.
+      #
+      #     SFU_ICE_HOST=$(ipconfig getifaddr en0) docker compose up   # macOS
+      #     SFU_ICE_HOST=$(hostname -I | cut -d' ' -f1) docker compose up
+      SFU_ICE_HOST: ${SFU_ICE_HOST:-127.0.0.1}
+      SFU_UDP_PORT_MIN: ${SFU_UDP_PORT_MIN:-40000}
+      SFU_UDP_PORT_MAX: ${SFU_UDP_PORT_MAX:-40063}
+      SFU_LOG: ${SFU_LOG:-info}
+      # Le client de test est la seule facon de voir du media tant que le
+      # dashboard sert des donnees mockees.
+      SFU_SERVE_TEST_CLIENT: 'true'
+    ports:
+      - '${SFU_PORT:-3000}:3000'
+      # Publies en 1:1, et c'est obligatoire : le SFU annonce dans ses
+      # candidats ICE le port qu'il voit localement. Une remise en
+      # correspondance rendrait ces candidats faux et le media ne passerait pas.
+      - '${SFU_UDP_PORT_MIN:-40000}-${SFU_UDP_PORT_MAX:-40063}:${SFU_UDP_PORT_MIN:-40000}-${SFU_UDP_PORT_MAX:-40063}/udp'
+    volumes:
+      # Les certificats mkcert du depot, s'ils existent. Un repertoire, jamais
+      # un fichier : un bind mount sur un fichier absent creerait un dossier.
+      - ./apps/sfu:/mkcert:ro
+      # Le certificat auto-signe genere au premier demarrage y survit aux
+      # redemarrages.
+      - certs:/certs
+    healthcheck:
+      test: ['CMD', 'curl', '-fsk', 'https://localhost:3000/health']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    depends_on:
+      sfu:
+        condition: service_healthy
+    ports:
+      - '${DASHBOARD_PORT:-3001}:3001'
+    healthcheck:
+      # node:alpine n'embarque ni curl ni wget utilisable : le fetch global de
+      # Node 22 fait le meme travail sans paquet supplementaire.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  certs:

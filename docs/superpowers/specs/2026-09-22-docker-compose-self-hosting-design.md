@@ -16,9 +16,9 @@ Le dépôt ne contient aucun fichier Docker aujourd'hui. Trois services doivent 
 
 | Service | État actuel |
 | --- | --- |
-| `apps/sfu` | Rust/axum, HTTPS obligatoire, certificats mkcert non versionnés. Télémétrie Postgres déjà câblée (`SFU_DATABASE_URL`), migrations sqlx embarquées et appliquées au démarrage (`telemetry/pg.rs`) |
+| `apps/sfu` | Rust/axum, HTTPS obligatoire, certificats mkcert non versionnés. La persistance de télémétrie est écrite et testée (`telemetry/pg.rs`, `tests/telemetry_pg.rs`) mais **jamais branchée** : `PgWriter::connect` n'est appelé que depuis les tests, `AppState::new` construit toujours un `NoopSink`, et `SFU_DATABASE_URL` est lu puis ignoré |
 | `apps/dashboard` | Next.js 16, App Router, **données entièrement mockées** (`lib/dashboard-data.ts`). Ne parle ni au SFU ni à Postgres |
-| Postgres | Aucun. Le SFU tombe sur un `NoopSink` quand `SFU_DATABASE_URL` est absente |
+| Postgres | Aucun conteneur aujourd'hui, et aucun écrivain côté SFU (cf. ligne au-dessus) |
 
 ### Périmètre
 
@@ -262,18 +262,19 @@ localement (`ice_host:port`) ; une remise en correspondance rendrait ces candida
 
 Volumes nommés : `lumyx-pgdata` (données) et `lumyx-certs` (certificat généré).
 
-`depends_on` avec `condition: service_healthy` en chaîne. Nécessaire, pas décoratif : le SFU
-applique ses migrations sqlx au démarrage et ne doit pas partir avant que Postgres accepte les
-connexions. Healthchecks : `pg_isready` pour Postgres, `curl -k https://localhost:3000/health`
-pour le SFU, une requête HTTP sur `/` pour le dashboard.
+`depends_on` avec `condition: service_healthy` en chaîne. Le SFU n'écrit encore rien dans
+Postgres, mais il appliquera ses migrations au démarrage le jour où l'écrivain sera branché :
+l'ordre est mis en place maintenant plutôt que découvert ce jour-là. Healthchecks :
+`pg_isready` pour Postgres, `curl -k https://localhost:3000/health` pour le SFU, une requête
+HTTP sur `/` pour le dashboard.
 
 ### Variables et défauts
 
 | Variable | Défaut dans le compose | Remarque |
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` | `lumyx` | Surchargeable. La génération automatique de secrets est hors périmètre (LUM-598, itération suivante) |
-| `SFU_DATABASE_URL` | `postgres://lumyx:…@postgres:5432/lumyx` | Active la persistance de la télémétrie |
-| `SFU_ICE_HOST` | `127.0.0.1` | L'adresse que le navigateur joint. À changer pour un déploiement distant |
+| `SFU_DATABASE_URL` | `postgres://lumyx:…@postgres:5432/lumyx` | Posée maintenant, sans effet tant que l'écrivain n'est pas branché |
+| `SFU_ICE_HOST` | `127.0.0.1` | **Doit nommer une adresse joignable par le navigateur.** Le défaut ne l'est pas depuis un conteneur — voir §7 |
 | `SFU_UDP_PORT_MIN` / `MAX` | `40000` / `40063` | 64 peers simultanés. Publier 64 ports UDP reste rapide ; 10 000 ne le serait pas |
 | `SFU_SERVE_TEST_CLIENT` | `true` | Le client de test est la seule façon de voir du média tant que le dashboard est mocké |
 
@@ -284,12 +285,24 @@ pour le SFU, une requête HTTP sur `/` pour le dashboard.
 1. `cargo test` et `cargo clippy --all-targets` verts, tests d'allocation de ports inclus.
 2. `bun install --frozen-lockfile` réussit sur la sortie de `turbo prune`.
 3. `docker builder prune -af`, puis `docker compose up` — le test « machine vierge » du ticket.
-4. `/health` du SFU à 200 ; les tables de télémétrie créées dans Postgres.
+4. `/health` du SFU à 200. **Pas de table dans Postgres** : c'est le comportement attendu tant
+   que l'écrivain de télémétrie n'est pas branché, pas un échec de la pile.
 5. Les 8 routes du dashboard à 200 avec du HTML, pas seulement un code de retour : Next sert
    200 sur ses propres pages d'erreur.
-6. Le client de test du SFU ouvert dans deux onglets sur `https://localhost:3000`, média dans les
-   deux sens. **C'est la seule preuve que la plage UDP fonctionne** — un `/health` vert ne dit
-   rien du média.
+6. Le client de test du SFU ouvert dans deux onglets, média dans les deux sens, via
+   `apps/sfu/scripts/browser-check.ts`. **C'est la seule preuve que la plage UDP fonctionne** —
+   un `/health` vert ne dit rien du média.
+
+   Mesuré : les peers prennent bien 40000, 40001, 40002, ICE et DTLS aboutissent, et le média
+   passe (2 peers, 640×480 de part et d'autre, 82 paquets RTP relayés) — **à condition que
+   `SFU_ICE_HOST` nomme une adresse joignable par le navigateur**. Avec le défaut `127.0.0.1`,
+   la négociation aboutit et zéro paquet RTP est relayé : str0m nomine une paire dont la
+   destination oblige le conteneur à sortir par `eth0`, sa source est réécrite, et le navigateur
+   jette les paquets dont la source ne correspond pas au candidat annoncé.
+
+   Le bon correctif à terme est que le SFU déduise son `ice_host` de l'adresse sur laquelle le
+   WebSocket de signalisation est arrivé : le navigateur vient de prouver qu'il l'atteint. C'est
+   un changement du comportement ICE, hors périmètre ici — ticket dédié.
 
 ---
 
@@ -302,5 +315,7 @@ pour le SFU, une requête HTTP sur `/` pour le dashboard.
 | Frontière Dashboard OSS / Cloud dans le README | LUM-600 |
 | Port UDP unique mutualisé, démultiplexage par ufrag | à créer |
 | Sortir `apps/cloud` et `apps/landing` du workspace bun (§3.1) | à créer |
+| Brancher `PgWriter` dans `AppState` pour que `SFU_DATABASE_URL` serve à quelque chose | à créer |
+| Déduire `ice_host` de l'adresse de la connexion de signalisation (§7) | à créer |
 | Génération automatique des secrets | à créer |
 | Portage de la galerie `/_ds` sur `@lumyx/ui` | à créer |

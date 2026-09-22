@@ -89,13 +89,47 @@ the encoder emitting an IDR on its own. Both are tracked in
 
 ## Quick start
 
-You need [Rust](https://rustup.rs/) and [mkcert](https://github.com/FiloSottile/mkcert).
-The SFU serves HTTPS because browsers refuse `getUserMedia` and WebRTC on plain HTTP.
-
 ```bash
 git clone git@github.com:FrekiManagarm/lumyx.git
 cd lumyx
+docker compose up
 ```
+
+That is the whole thing: SFU on **https://localhost:3000**, dashboard on
+**http://localhost:3001**, Postgres alongside them. No file to edit first — the TLS certificate
+is generated on the first run if you have none.
+
+Your browser will warn about that self-signed certificate. Accept it once; the context stays
+secure and WebRTC works. To skip the warning, generate the mkcert pair described below before
+starting — the compose file picks it up automatically.
+
+**For media to flow, `SFU_ICE_HOST` must name an address your browser can reach.** The default,
+`127.0.0.1`, is not one of those from inside a container: the SFU then sends its RTP out through
+the container interface, its source address gets rewritten, and the browser drops packets whose
+source does not match the candidate it was given. Measured: zero RTP forwarded with the default,
+media flowing as soon as it names the machine's address.
+
+```bash
+SFU_ICE_HOST=$(ipconfig getifaddr en0) docker compose up            # macOS
+SFU_ICE_HOST=$(hostname -I | cut -d' ' -f1) docker compose up       # Linux
+```
+
+Opening the dashboard and the test client needs no such thing — only the media path does.
+
+Two more caveats worth knowing:
+
+- The dashboard still renders **mock data**. It starts and it is navigable, but nothing in it
+  comes from the SFU yet. The test client on the SFU is where you see real media.
+- Postgres runs and `SFU_DATABASE_URL` points at it, but the SFU does not write to it yet: the
+  telemetry writer is implemented and tested, not wired into the running server. Expect an empty
+  database.
+- The UDP range published for media is `40000-40063`, so 64 simultaneous peers. Raise
+  `SFU_UDP_PORT_MIN` / `SFU_UDP_PORT_MAX` for more.
+
+### Running the SFU directly
+
+You need [Rust](https://rustup.rs/) and [mkcert](https://github.com/FiloSottile/mkcert).
+The SFU serves HTTPS because browsers refuse `getUserMedia` and WebRTC on plain HTTP.
 
 Generate the local certificates the server expects (`localhost+1.pem` / `localhost+1-key.pem`
 in `apps/sfu/`). They are deliberately not versioned — each dev generates their own:
@@ -164,6 +198,14 @@ hardcoded behaviour.
 | `SFU_ICE_HOST` | `127.0.0.1` | Host advertised in local ICE candidates |
 | `SFU_LOG` | `debug` | `tracing-subscriber` filter |
 | `SFU_SERVE_TEST_CLIENT` | `true` | Serve the bundled test client on `/` — turn it off in production |
+| `SFU_UDP_PORT_MIN` | — | First port of the range peer sockets are bound in |
+| `SFU_UDP_PORT_MAX` | — | Last port of that range, inclusive |
+| `SFU_DATABASE_URL` | — | Postgres URL for telemetry. Read, but not acted on yet — the writer is not wired in |
+
+Left unset, `SFU_UDP_PORT_MIN` / `SFU_UDP_PORT_MAX` let the kernel pick an ephemeral port per
+peer — what the server has always done. Setting them bounds the allocation, which is what makes
+the media reachable from a container: only a range known ahead of time can be published. An
+incomplete or inconsistent range is ignored and the server falls back to ephemeral ports.
 
 ```bash
 SFU_LOG=sfu=debug,str0m=info SFU_SERVE_TEST_CLIENT=false cargo run -p sfu --release
