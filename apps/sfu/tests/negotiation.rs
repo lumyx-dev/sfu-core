@@ -11,7 +11,7 @@
 //! into the single one the client had offered — two encodings interleaved into
 //! one decoder.
 
-use lumyx_sfu::transport::PeerConnection;
+use lumyx_sfu::transport::{PeerConnection, PortAllocator};
 use std::sync::Arc;
 use std::time::Instant;
 use str0m::change::{SdpAnswer, SdpOffer};
@@ -65,7 +65,14 @@ async fn sfu_connection(
     mpsc::Receiver<lumyx_sfu::signaling::ServerMessage>,
 ) {
     let (tx, rx) = mpsc::channel(32);
-    let conn = PeerConnection::new(Arc::from(peer_id), tx, "127.0.0.1".to_string()).await;
+    let conn = PeerConnection::new(
+        Arc::from(peer_id),
+        tx,
+        "127.0.0.1".to_string(),
+        &PortAllocator::ephemeral(),
+    )
+    .await
+    .expect("bind éphémère");
     (conn, rx)
 }
 

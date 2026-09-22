@@ -6,8 +6,10 @@
 
 pub mod event_loop;
 pub mod peer_connection;
+pub mod ports;
 pub mod sink;
 
 pub use event_loop::TransportEvent;
 pub use peer_connection::PeerConnection;
+pub use ports::PortAllocator;
 pub use sink::PeerSink;

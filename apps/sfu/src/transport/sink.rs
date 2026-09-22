@@ -2,10 +2,10 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::{RtpPacketData, RtpSink};
-use str0m::media::Mid;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
+use str0m::media::Mid;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{self, error::TrySendError};
 
@@ -180,6 +180,7 @@ impl RtpSink for PeerSink {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transport::PortAllocator;
     use std::time::Instant;
     use str0m::format::{Codec, CodecSpec, PayloadParams};
     use str0m::media::{Frequency, Pt};
@@ -236,7 +237,11 @@ mod tests {
             queue.push("alice", packet(b"frame"));
         }
 
-        assert_eq!(queue.dropped(), 0, "rien ne doit être jeté avant saturation");
+        assert_eq!(
+            queue.dropped(),
+            0,
+            "rien ne doit être jeté avant saturation"
+        );
     }
 
     /// RTP is an ordered protocol: the queue must not reorder what is put into
@@ -272,7 +277,14 @@ mod tests {
     async fn the_sink_reports_the_packets_its_queue_dropped() {
         let (sender, _rx) = mpsc::channel(4);
         let conn = Arc::new(Mutex::new(
-            PeerConnection::new(Arc::from("alice"), sender, "127.0.0.1".to_string()).await,
+            PeerConnection::new(
+                Arc::from("alice"),
+                sender,
+                "127.0.0.1".to_string(),
+                &PortAllocator::ephemeral(),
+            )
+            .await
+            .expect("bind éphémère"),
         ));
         let sink = PeerSink::new(Arc::from("alice"), conn);
 

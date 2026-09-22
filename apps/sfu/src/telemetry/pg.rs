@@ -123,16 +123,23 @@ impl PgWriter {
                 "insert into telemetry.rooms (id, instance_id, name, started_at)
                  values ($1, $2, $3, $4) on conflict (id) do nothing",
             )
-            .bind(id).bind(iid).bind(name).bind(at)
-            .execute(&mut *tx).await?;
+            .bind(id)
+            .bind(iid)
+            .bind(name)
+            .bind(at)
+            .execute(&mut *tx)
+            .await?;
         }
 
         for (id, at, reason) in &batch.rooms_closed {
             sqlx::query(
                 "update telemetry.rooms set ended_at = $2, ended_reason = $3 where id = $1",
             )
-            .bind(id).bind(at).bind(*reason)
-            .execute(&mut *tx).await?;
+            .bind(id)
+            .bind(at)
+            .bind(*reason)
+            .execute(&mut *tx)
+            .await?;
         }
 
         for (id, peer_id, room_id, at) in &batch.peers_joined {
@@ -140,20 +147,30 @@ impl PgWriter {
                 "insert into telemetry.peers (id, instance_id, peer_id, room_id, joined_at)
                  values ($1, $2, $3, $4, $5) on conflict (id) do nothing",
             )
-            .bind(id).bind(iid).bind(peer_id).bind(room_id).bind(at)
-            .execute(&mut *tx).await?;
+            .bind(id)
+            .bind(iid)
+            .bind(peer_id)
+            .bind(room_id)
+            .bind(at)
+            .execute(&mut *tx)
+            .await?;
         }
 
         for (id, at, close_code) in &batch.peers_left {
             sqlx::query("update telemetry.peers set left_at = $2, close_code = $3 where id = $1")
-                .bind(id).bind(at).bind(close_code)
-                .execute(&mut *tx).await?;
+                .bind(id)
+                .bind(at)
+                .bind(close_code)
+                .execute(&mut *tx)
+                .await?;
         }
 
         for (peer_id, state, _at) in &batch.ice_states {
             sqlx::query("update telemetry.peers set ice_state = $2 where id = $1")
-                .bind(peer_id).bind(state)
-                .execute(&mut *tx).await?;
+                .bind(peer_id)
+                .bind(state)
+                .execute(&mut *tx)
+                .await?;
         }
 
         for (id, peer_id, mid, kind, at) in &batch.tracks_published {
@@ -162,20 +179,31 @@ impl PgWriter {
                  values ($1, $2, $3, $4, $5::telemetry.track_kind, $6)
                  on conflict (peer_id, mid) do nothing",
             )
-            .bind(id).bind(iid).bind(peer_id).bind(mid).bind(kind.as_str()).bind(at)
-            .execute(&mut *tx).await?;
+            .bind(id)
+            .bind(iid)
+            .bind(peer_id)
+            .bind(mid)
+            .bind(kind.as_str())
+            .bind(at)
+            .execute(&mut *tx)
+            .await?;
         }
 
         for (id, codec, clock_rate) in &batch.track_codecs {
             sqlx::query("update telemetry.tracks set codec = $2, clock_rate = $3 where id = $1")
-                .bind(id).bind(codec).bind(clock_rate)
-                .execute(&mut *tx).await?;
+                .bind(id)
+                .bind(codec)
+                .bind(clock_rate)
+                .execute(&mut *tx)
+                .await?;
         }
 
         for (id, at) in &batch.tracks_ended {
             sqlx::query("update telemetry.tracks set ended_at = $2 where id = $1")
-                .bind(id).bind(at)
-                .execute(&mut *tx).await?;
+                .bind(id)
+                .bind(at)
+                .execute(&mut *tx)
+                .await?;
         }
 
         for s in &batch.track_samples {
@@ -186,11 +214,19 @@ impl PgWriter {
                  values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
                  on conflict (track_id, at) do nothing",
             )
-            .bind(iid).bind(s.track_id).bind(s.at)
-            .bind(s.bytes).bind(s.packets)
-            .bind(s.nacks).bind(s.plis).bind(s.firs)
-            .bind(s.jitter_ms).bind(s.loss).bind(s.rtt_ms)
-            .execute(&mut *tx).await?;
+            .bind(iid)
+            .bind(s.track_id)
+            .bind(s.at)
+            .bind(s.bytes)
+            .bind(s.packets)
+            .bind(s.nacks)
+            .bind(s.plis)
+            .bind(s.firs)
+            .bind(s.jitter_ms)
+            .bind(s.loss)
+            .bind(s.rtt_ms)
+            .execute(&mut *tx)
+            .await?;
         }
 
         for s in &batch.peer_samples {
@@ -201,11 +237,17 @@ impl PgWriter {
                  values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
                  on conflict (peer_id, at) do nothing",
             )
-            .bind(iid).bind(s.peer_id).bind(s.at)
-            .bind(s.bytes_rx).bind(s.bytes_tx)
-            .bind(s.transport_bytes_rx).bind(s.transport_bytes_tx)
-            .bind(s.egress_loss).bind(s.bwe_bps)
-            .execute(&mut *tx).await?;
+            .bind(iid)
+            .bind(s.peer_id)
+            .bind(s.at)
+            .bind(s.bytes_rx)
+            .bind(s.bytes_tx)
+            .bind(s.transport_bytes_rx)
+            .bind(s.transport_bytes_tx)
+            .bind(s.egress_loss)
+            .bind(s.bwe_bps)
+            .execute(&mut *tx)
+            .await?;
         }
 
         for e in &batch.events {
@@ -214,9 +256,16 @@ impl PgWriter {
                    (instance_id, at, kind, severity, room_id, peer_id, track_id, payload)
                  values ($1,$2,$3::telemetry.event_kind,$4::telemetry.severity,$5,$6,$7,$8)",
             )
-            .bind(iid).bind(e.at).bind(e.kind.as_str()).bind(e.severity.as_str())
-            .bind(e.room_id).bind(e.peer_id).bind(e.track_id).bind(&e.payload)
-            .execute(&mut *tx).await?;
+            .bind(iid)
+            .bind(e.at)
+            .bind(e.kind.as_str())
+            .bind(e.severity.as_str())
+            .bind(e.room_id)
+            .bind(e.peer_id)
+            .bind(e.track_id)
+            .bind(&e.payload)
+            .execute(&mut *tx)
+            .await?;
         }
 
         tx.commit().await

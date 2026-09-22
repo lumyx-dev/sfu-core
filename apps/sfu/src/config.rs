@@ -4,6 +4,7 @@
 //! defaults reproduce the historical hard-coded behaviour.
 
 use std::net::SocketAddr;
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -25,6 +26,12 @@ pub struct Config {
     pub log_filter: String,
     /// Serves `assets/test.html` on `/`. Handy in dev, turn it off in prod.
     pub serve_test_client: bool,
+    /// Range the peer UDP sockets are bound in.
+    ///
+    /// `None` means a kernel-chosen ephemeral port, the historical behaviour.
+    /// A bounded range is what makes the media reachable from a container:
+    /// only a range known in advance can be published by Docker.
+    pub udp_ports: Option<RangeInclusive<u16>>,
     /// Telemetry persistence settings.
     pub telemetry: TelemetryConfig,
 }
@@ -38,6 +45,7 @@ impl Default for Config {
             ice_host: "127.0.0.1".to_string(),
             log_filter: "debug".to_string(),
             serve_test_client: true,
+            udp_ports: None,
             telemetry: TelemetryConfig::default(),
         }
     }
@@ -92,6 +100,20 @@ fn hostname() -> String {
         .unwrap_or_else(|| "lumyx-sfu".to_string())
 }
 
+/// Reads the UDP port range from its two variables.
+///
+/// Tout ce qui n'est pas une plage complète et cohérente vaut absent : une
+/// seule des deux bornes, une borne illisible, un zéro, ou un minimum
+/// au-dessus du maximum. Même règle que partout ailleurs dans ce fichier —
+/// une valeur douteuse retombe sur le défaut plutôt que de refuser de
+/// démarrer, et le défaut ici est le port éphémère.
+fn parse_port_range(min: Option<String>, max: Option<String>) -> Option<RangeInclusive<u16>> {
+    let min = min?.parse::<u16>().ok().filter(|p| *p > 0)?;
+    let max = max?.parse::<u16>().ok().filter(|p| *p > 0)?;
+
+    (min <= max).then_some(min..=max)
+}
+
 /// Reads a duration expressed in seconds, falling back to `default` when the
 /// value is missing, unparseable or zero.
 fn parse_secs(raw: &str, default: Duration) -> Duration {
@@ -125,10 +147,16 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(defaults.serve_test_client),
+            udp_ports: parse_port_range(
+                std::env::var("SFU_UDP_PORT_MIN").ok(),
+                std::env::var("SFU_UDP_PORT_MAX").ok(),
+            ),
             telemetry: TelemetryConfig {
                 // Une chaîne vide vaut absente : `SFU_DATABASE_URL=` dans un .env ne
                 // doit pas activer la persistance sur une URL invalide.
-                database_url: std::env::var("SFU_DATABASE_URL").ok().filter(|v| !v.is_empty()),
+                database_url: std::env::var("SFU_DATABASE_URL")
+                    .ok()
+                    .filter(|v| !v.is_empty()),
                 instance_name: std::env::var("SFU_INSTANCE_NAME").unwrap_or(dt.instance_name),
                 region: std::env::var("SFU_REGION").unwrap_or(dt.region),
                 sample_interval: std::env::var("SFU_SAMPLE_INTERVAL")
@@ -168,11 +196,55 @@ mod tests {
         assert!(c.serve_test_client);
         assert!(c.cert_path.ends_with("localhost+1.pem"));
         assert!(c.key_path.ends_with("localhost+1-key.pem"));
+        assert!(c.udp_ports.is_none());
+    }
+
+    #[test]
+    fn a_complete_udp_range_is_read() {
+        assert_eq!(
+            parse_port_range(Some("40000".into()), Some("40063".into())),
+            Some(40000..=40063)
+        );
+        // Une plage d'un seul port est valide : c'est un SFU à un participant,
+        // pas une erreur de saisie.
+        assert_eq!(
+            parse_port_range(Some("40000".into()), Some("40000".into())),
+            Some(40000..=40000)
+        );
+    }
+
+    #[test]
+    fn an_incomplete_or_inconsistent_udp_range_is_ignored() {
+        let cases = [
+            (None, None),
+            (Some("40000".to_string()), None),
+            (None, Some("40063".to_string())),
+            // Bornes inversées : publier 40063-40000 n'a pas de sens, et
+            // démarrer quand même sur un éphémère vaut mieux que refuser.
+            (Some("40063".to_string()), Some("40000".to_string())),
+            (Some("zero".to_string()), Some("40063".to_string())),
+            // Le port 0 est justement ce qui demande un éphémère au noyau :
+            // le lire comme une borne de plage n'aurait pas de sens.
+            (Some("0".to_string()), Some("40063".to_string())),
+            (Some("40000".to_string()), Some("99999".to_string())),
+        ];
+
+        for (min, max) in cases {
+            assert_eq!(
+                parse_port_range(min.clone(), max.clone()),
+                None,
+                "{min:?} {max:?}"
+            );
+        }
     }
 
     #[test]
     fn test_client_path_points_into_assets() {
-        assert!(Config::default().test_client_path().ends_with("assets/test.html"));
+        assert!(
+            Config::default()
+                .test_client_path()
+                .ends_with("assets/test.html")
+        );
     }
 
     #[test]
@@ -182,7 +254,10 @@ mod tests {
         assert_eq!(c.telemetry.region, "local");
         assert_eq!(c.telemetry.sample_interval, Duration::from_secs(1));
         assert_eq!(c.telemetry.retention_raw, Duration::from_secs(24 * 3600));
-        assert_eq!(c.telemetry.retention_rollup, Duration::from_secs(30 * 24 * 3600));
+        assert_eq!(
+            c.telemetry.retention_rollup,
+            Duration::from_secs(30 * 24 * 3600)
+        );
         assert_eq!(c.telemetry.queue_depth, 256);
     }
 
@@ -190,11 +265,20 @@ mod tests {
     fn durations_are_parsed_as_seconds() {
         // Les durées se lisent en secondes, comme partout ailleurs dans l'écosystème
         // douze-facteurs : `SFU_RETENTION_RAW=3600` vaut une heure.
-        assert_eq!(parse_secs("3600", Duration::from_secs(1)), Duration::from_secs(3600));
+        assert_eq!(
+            parse_secs("3600", Duration::from_secs(1)),
+            Duration::from_secs(3600)
+        );
         // Une valeur illisible retombe sur le défaut plutôt que de refuser de démarrer :
         // c'est la règle déjà appliquée par tout `from_env` de ce fichier.
-        assert_eq!(parse_secs("douze", Duration::from_secs(7)), Duration::from_secs(7));
+        assert_eq!(
+            parse_secs("douze", Duration::from_secs(7)),
+            Duration::from_secs(7)
+        );
         // Zéro est refusé : une rétention nulle purgerait la table à chaque passage.
-        assert_eq!(parse_secs("0", Duration::from_secs(7)), Duration::from_secs(7));
+        assert_eq!(
+            parse_secs("0", Duration::from_secs(7)),
+            Duration::from_secs(7)
+        );
     }
 }

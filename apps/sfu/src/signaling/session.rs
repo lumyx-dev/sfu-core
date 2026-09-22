@@ -38,14 +38,23 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     // client cannot inflate memory.
     let (tx, rx) = mpsc::channel::<ServerMessage>(SIGNALING_CHANNEL_CAPACITY);
 
-    let conn = Arc::new(Mutex::new(
-        PeerConnection::new(
-            Arc::clone(&peer_id),
-            tx.clone(),
-            state.config.ice_host.clone(),
-        )
-        .await,
-    ));
+    let conn = match PeerConnection::new(
+        Arc::clone(&peer_id),
+        tx.clone(),
+        state.config.ice_host.clone(),
+        &state.ports,
+    )
+    .await
+    {
+        Ok(conn) => Arc::new(Mutex::new(conn)),
+        Err(e) => {
+            // Plage UDP saturée. On refuse ce peer et on ferme la session :
+            // une session sans transport ne pourrait rien faire, et paniquer
+            // ici emporterait les participants déjà connectés.
+            tracing::error!("Peer {} — aucun port UDP disponible : {}", peer_id, e);
+            return;
+        }
+    };
 
     // WebRTC loop: emits what it observes on `transport_rx` — the tracks the
     // peer publishes, the media packets it sends, the keyframes it asks for.

@@ -7,6 +7,7 @@ use crate::metrics::Metrics;
 use crate::room::RoomManager;
 use crate::signaling::Negotiator;
 use crate::telemetry::{NoopSink, Telemetry};
+use crate::transport::PortAllocator;
 use axum::{Router, routing::get};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
@@ -22,6 +23,8 @@ pub struct AppState {
     pub negotiator: Arc<Negotiator>,
     pub config: Arc<Config>,
     pub telemetry: Arc<Telemetry>,
+    /// Where each peer's UDP socket takes its port.
+    pub ports: Arc<PortAllocator>,
 }
 
 impl AppState {
@@ -30,6 +33,7 @@ impl AppState {
     /// Must be called from within a Tokio runtime.
     pub fn new(config: Config) -> Self {
         let engine = ForwardingEngine::new();
+        let ports = PortAllocator::from_config(config.udp_ports.clone());
 
         AppState {
             rooms: Arc::new(RoomManager::new()),
@@ -40,6 +44,7 @@ impl AppState {
             // Sans URL, un NoopSink : il n'y a jamais de branche `Option` dans le reste
             // du code, seulement un puits qui avale.
             telemetry: Telemetry::new(Arc::new(NoopSink)),
+            ports: Arc::new(ports),
         }
     }
 }

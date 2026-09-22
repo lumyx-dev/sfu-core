@@ -295,7 +295,10 @@ impl Negotiator {
         match sent {
             Ok(Ok(())) => {}
             Ok(Err(_)) => {
-                tracing::debug!("Peer {} — re-offer non transmise, session fermée", subscriber)
+                tracing::debug!(
+                    "Peer {} — re-offer non transmise, session fermée",
+                    subscriber
+                )
             }
             Err(_) => tracing::error!(
                 "Peer {} — canal de signaling bloqué, re-offer abandonnée",
@@ -324,6 +327,7 @@ fn kind_of(is_video: bool) -> MediaKind {
 mod tests {
     use super::*;
     use crate::media::{RtpPacketData, RtpSink};
+    use crate::transport::PortAllocator;
     use str0m::media::Mid;
 
     /// A sink that swallows everything: these tests are about the negotiation
@@ -363,7 +367,14 @@ mod tests {
             let peer: Arc<str> = Arc::from(format!("peer-{index}").as_str());
             let (tx, rx) = mpsc::channel(64);
             let conn = Arc::new(Mutex::new(
-                PeerConnection::new(Arc::clone(&peer), tx.clone(), "127.0.0.1".into()).await,
+                PeerConnection::new(
+                    Arc::clone(&peer),
+                    tx.clone(),
+                    "127.0.0.1".into(),
+                    &PortAllocator::ephemeral(),
+                )
+                .await
+                .expect("bind éphémère"),
             ));
 
             self.negotiator.register(Arc::clone(&peer), conn, tx);

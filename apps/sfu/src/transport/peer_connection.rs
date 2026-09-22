@@ -3,6 +3,7 @@
 use crate::error::{Result, SfuError};
 use crate::media::{RtpPacketData, TrackKey};
 use crate::signaling::ServerMessage;
+use crate::transport::PortAllocator;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -70,18 +71,22 @@ pub struct PeerConnection {
 }
 
 impl PeerConnection {
+    /// Fails when the configured port range holds no free port — the peer is
+    /// refused, where a panic here would take the whole server down.
     pub async fn new(
         peer_id: Arc<str>,
         sender: mpsc::Sender<ServerMessage>,
         ice_host: String,
-    ) -> PeerConnection {
-        let socket = UdpSocket::bind("0.0.0.0:0")
-            .await
-            .expect("bind UDP éphémère");
-        let local_port = socket.local_addr().expect("adresse locale").port();
+        ports: &PortAllocator,
+    ) -> Result<PeerConnection> {
+        let socket = ports.bind().await?;
+        let local_port = socket
+            .local_addr()
+            .map_err(|e| SfuError::Transport(e.to_string()))?
+            .port();
         tracing::info!("Peer {} — UDP sur port {}", peer_id, local_port);
 
-        PeerConnection {
+        Ok(PeerConnection {
             peer_id,
             rtc: Rtc::builder().build(Instant::now()),
             socket: Arc::new(socket),
@@ -94,7 +99,7 @@ impl PeerConnection {
             allocated: HashMap::new(),
             closing: Vec::new(),
             pending_offer: None,
-        }
+        })
     }
 
     /// Address advertised in the local ICE candidates.
@@ -474,7 +479,14 @@ mod tests {
 
     async fn connection(peer_id: &str) -> PeerConnection {
         let (sender, _rx) = mpsc::channel(8);
-        PeerConnection::new(Arc::from(peer_id), sender, "127.0.0.1".to_string()).await
+        PeerConnection::new(
+            Arc::from(peer_id),
+            sender,
+            "127.0.0.1".to_string(),
+            &PortAllocator::ephemeral(),
+        )
+        .await
+        .expect("bind éphémère")
     }
 
     fn video_track(peer: &str, mid: &str) -> (TrackKey, MediaKind) {
@@ -581,7 +593,10 @@ mod tests {
         conn.queue_subscription(bob, kind);
 
         // Bob leaves before the round trip even started.
-        assert!(conn.drop_source("bob"), "l'abonnement en attente doit tomber");
+        assert!(
+            conn.drop_source("bob"),
+            "l'abonnement en attente doit tomber"
+        );
         assert!(conn.queued.is_empty());
         assert!(
             conn.negotiate().is_none(),

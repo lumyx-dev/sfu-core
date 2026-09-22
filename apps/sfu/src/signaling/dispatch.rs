@@ -51,7 +51,9 @@ pub async fn handle_message(
                     );
                 }
 
-                state.telemetry.set_occupancy(peer_uuid, outcome.peer_session);
+                state
+                    .telemetry
+                    .set_occupancy(peer_uuid, outcome.peer_session);
 
                 if outcome.room_created {
                     state.telemetry.record(Entry::RoomOpened {
@@ -204,6 +206,7 @@ mod tests {
     use crate::config::Config;
     use crate::media::RtpPacketData;
     use crate::telemetry::{Entry, EventKind, MemorySink, Telemetry};
+    use crate::transport::PortAllocator;
     use str0m::media::Mid;
     use uuid::Uuid;
 
@@ -236,7 +239,14 @@ mod tests {
     ) {
         let (tx, rx) = mpsc::channel(16);
         let conn = Arc::new(Mutex::new(
-            PeerConnection::new(Arc::clone(peer_id), tx.clone(), "127.0.0.1".into()).await,
+            PeerConnection::new(
+                Arc::clone(peer_id),
+                tx.clone(),
+                "127.0.0.1".into(),
+                &PortAllocator::ephemeral(),
+            )
+            .await
+            .expect("bind éphémère"),
         ));
         (conn, tx, rx)
     }
@@ -288,9 +298,17 @@ mod tests {
         };
         assert!(matches!(&entries[1], Entry::Event(e) if e.kind == EventKind::RoomCreated));
         match &entries[2] {
-            Entry::PeerJoined { id, peer_id: pid, room_id, .. } => {
+            Entry::PeerJoined {
+                id,
+                peer_id: pid,
+                room_id,
+                ..
+            } => {
                 assert_eq!(*pid, peer_uuid, "peer_id doit être la connexion");
-                assert_ne!(*id, *pid, "id doit être une occupation, distincte de la connexion");
+                assert_ne!(
+                    *id, *pid,
+                    "id doit être une occupation, distincte de la connexion"
+                );
                 assert_eq!(*room_id, room_session);
             }
             other => panic!("attendu PeerJoined en 3e position, reçu {other:?}"),
@@ -308,13 +326,25 @@ mod tests {
         let (bob_conn, bob_tx, _bob_rx) = a_connection(&bob_id).await;
         let rtp_sink: Arc<dyn RtpSink> = Arc::new(NullSink);
 
-        join(&state, &alice_id, &alice_tx, &alice_conn, &rtp_sink, "salon").await;
+        join(
+            &state,
+            &alice_id,
+            &alice_tx,
+            &alice_conn,
+            &rtp_sink,
+            "salon",
+        )
+        .await;
         sink.drain();
 
         join(&state, &bob_id, &bob_tx, &bob_conn, &rtp_sink, "salon").await;
 
         let entries = sink.drain();
-        assert_eq!(entries.len(), 2, "pas de RoomOpened : bob rejoint une room déjà ouverte");
+        assert_eq!(
+            entries.len(),
+            2,
+            "pas de RoomOpened : bob rejoint une room déjà ouverte"
+        );
         assert!(matches!(entries[0], Entry::PeerJoined { .. }));
         assert!(matches!(&entries[1], Entry::Event(e) if e.kind == EventKind::PeerJoined));
     }
@@ -332,7 +362,15 @@ mod tests {
         join(&state, &peer_id, &tx, &conn, &rtp_sink, "salon").await;
         sink.drain();
 
-        handle_message(ClientMessage::Leave, &peer_id, &tx, &state, &conn, &rtp_sink).await;
+        handle_message(
+            ClientMessage::Leave,
+            &peer_id,
+            &tx,
+            &state,
+            &conn,
+            &rtp_sink,
+        )
+        .await;
 
         let entries = sink.drain();
         assert_eq!(entries.len(), 4);
@@ -351,15 +389,34 @@ mod tests {
         let (bob_conn, bob_tx, _bob_rx) = a_connection(&bob_id).await;
         let rtp_sink: Arc<dyn RtpSink> = Arc::new(NullSink);
 
-        join(&state, &alice_id, &alice_tx, &alice_conn, &rtp_sink, "salon").await;
+        join(
+            &state,
+            &alice_id,
+            &alice_tx,
+            &alice_conn,
+            &rtp_sink,
+            "salon",
+        )
+        .await;
         join(&state, &bob_id, &bob_tx, &bob_conn, &rtp_sink, "salon").await;
         sink.drain();
 
-        handle_message(ClientMessage::Leave, &alice_id, &alice_tx, &state, &alice_conn, &rtp_sink)
-            .await;
+        handle_message(
+            ClientMessage::Leave,
+            &alice_id,
+            &alice_tx,
+            &state,
+            &alice_conn,
+            &rtp_sink,
+        )
+        .await;
 
         let entries = sink.drain();
-        assert_eq!(entries.len(), 2, "la room survit grâce à bob : pas de RoomClosed");
+        assert_eq!(
+            entries.len(),
+            2,
+            "la room survit grâce à bob : pas de RoomClosed"
+        );
         assert!(matches!(entries[0], Entry::PeerLeft { .. }));
         assert!(matches!(&entries[1], Entry::Event(e) if e.kind == EventKind::PeerLeft));
     }
@@ -381,11 +438,20 @@ mod tests {
 
         let entries = sink.drain();
         assert_eq!(entries.len(), 8);
-        assert!(matches!(entries[0], Entry::PeerLeft { .. }), "départ de room-a");
+        assert!(
+            matches!(entries[0], Entry::PeerLeft { .. }),
+            "départ de room-a"
+        );
         assert!(matches!(&entries[1], Entry::Event(e) if e.kind == EventKind::PeerLeft));
-        assert!(matches!(entries[2], Entry::RoomClosed { .. }), "room-a se vide");
+        assert!(
+            matches!(entries[2], Entry::RoomClosed { .. }),
+            "room-a se vide"
+        );
         assert!(matches!(&entries[3], Entry::Event(e) if e.kind == EventKind::RoomEnded));
-        assert!(matches!(entries[4], Entry::RoomOpened { .. }), "room-b s'ouvre");
+        assert!(
+            matches!(entries[4], Entry::RoomOpened { .. }),
+            "room-b s'ouvre"
+        );
         assert!(matches!(&entries[5], Entry::Event(e) if e.kind == EventKind::RoomCreated));
         assert!(matches!(entries[6], Entry::PeerJoined { .. }));
         assert!(matches!(&entries[7], Entry::Event(e) if e.kind == EventKind::PeerJoined));

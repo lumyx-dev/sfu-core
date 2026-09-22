@@ -18,7 +18,7 @@
 //! negotiation batching as on the routing.
 
 use lumyx_sfu::media::{ForwardingEngine, RtpPacketData, RtpSink, TrackKey};
-use lumyx_sfu::transport::PeerConnection;
+use lumyx_sfu::transport::{PeerConnection, PortAllocator};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -119,7 +119,14 @@ impl World {
             signaling.push(rx);
 
             let peer: Arc<str> = Arc::from(peer_name(i).as_str());
-            let conn = PeerConnection::new(Arc::clone(&peer), tx, "127.0.0.1".to_string()).await;
+            let conn = PeerConnection::new(
+                Arc::clone(&peer),
+                tx,
+                "127.0.0.1".to_string(),
+                &PortAllocator::ephemeral(),
+            )
+            .await
+            .expect("bind éphémère");
             let addr = conn.local_ice_addr().expect("adresse ICE du SFU");
 
             let sink = Arc::new(QueueSink::default());

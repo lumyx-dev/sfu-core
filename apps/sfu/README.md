@@ -32,6 +32,14 @@ chaque participant voit tous les autres.
 | `SFU_ICE_HOST` | `127.0.0.1` |
 | `SFU_LOG` | `debug` |
 | `SFU_SERVE_TEST_CLIENT` | `true` |
+| `SFU_UDP_PORT_MIN` | — |
+| `SFU_UDP_PORT_MAX` | — |
+
+Sans `SFU_UDP_PORT_MIN` / `SFU_UDP_PORT_MAX`, chaque peer prend un port UDP
+éphémère choisi par le noyau. Les renseigner borne l'allocation à cette plage —
+c'est ce qui rend le média joignable depuis un conteneur, où seuls des ports
+connus à l'avance peuvent être publiés. Une plage incomplète ou incohérente est
+ignorée, et le serveur retombe sur l'éphémère.
 
 ## Tests
 
