@@ -23,3 +23,7 @@ uuid = {version = "1.25.0", features = ["v4"]}
 [[bench]]
 name = "forwarding"
 harness = false
+
+[[bench]]
+name = "sampling"
+harness = false
