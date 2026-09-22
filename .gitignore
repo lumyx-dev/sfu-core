@@ -30,3 +30,6 @@ apps/landing/
 # Certificats TLS locaux (mkcert) — jamais committés, régénérés par chaque dev
 *.pem
 *.key
+
+# Sortie de `turbo prune`
+/out/

@@ -28,7 +28,8 @@ Le dépôt ne contient aucun fichier Docker aujourd'hui. Trois services doivent 
 | Images SFU et Dashboard | Câblage du dashboard sur le SFU ou sur Postgres |
 | Plage de ports UDP configurable dans le SFU | Port UDP unique mutualisé (démultiplexage par ufrag) |
 | Certificat TLS obtenu sans étape préalable | Référence complète des variables d'environnement (LUM-599) |
-| Deux réparations du dépôt qui bloquent le build (§3) | Génération automatique des secrets |
+| La réparation du build du dashboard (§3.2) | Génération automatique des secrets |
+| | Sortie des apps privées du workspace bun (§3.1) |
 
 LUM-598 reste donc ouvert après ce travail : le profil démo et le critère « le dashboard affiche
 des données vivantes » ne sont pas atteignables tant que le dashboard sert des données mockées.
@@ -84,7 +85,27 @@ certificat auto-signé persisté dans un volume.
 
 `postgres:18-alpine` (18.6). La 19 n'existe qu'en `19beta3` au 2026-09-22.
 
-### 2.5 Cache de compilation Rust : montages BuildKit, pas cargo-chef
+### 2.5 L'image du dashboard part d'un `turbo prune`
+
+Le dépôt est un monorepo Turborepo. Plutôt que de recopier les `package.json` un par un dans le
+Dockerfile — une liste qui dérive dès qu'un paquet est ajouté — un premier étage exécute :
+
+```
+bunx turbo prune @lumyx/dashboard --docker
+```
+
+Il produit `out/json/` (les manifestes et un `bun.lock` élagué, pour la couche de dépendances),
+`out/full/` (les sources du sous-ensemble) et réécrit le `package.json` racine avec
+`workspaces: ["apps/dashboard", "packages/ui"]` — les deux seuls workspaces dont la cible dépend.
+
+Mesuré : le `bun.lock` élagué ne contient plus `apps/cloud` ni `apps/landing`, et
+`bun install --frozen-lockfile` y réussit (437 paquets). **C'est ce qui rend le §3.1 sans objet
+pour l'image** : l'élagage résout le problème du lockfile sans toucher au workspace du dépôt.
+
+Le `turbo prune` tourne **dans un étage Docker**, pas sur l'hôte : exiger bun et turbo avant le
+`docker compose up` contredirait le critère « machine vierge ».
+
+### 2.6 Cache de compilation Rust : montages BuildKit, pas cargo-chef
 
 `cargo-chef` demanderait un `cargo install` dans un étage supplémentaire. Deux montages de cache
 BuildKit (`~/.cargo/registry` et `target/`) obtiennent le même effet sur les reconstructions sans
@@ -93,33 +114,30 @@ vierge, qui est le cas mesuré par le ticket.
 
 ---
 
-## 3. Prérequis — deux réparations du dépôt
+## 3. Deux problèmes du dépôt rencontrés en construisant l'image
 
-Découvertes en construisant l'image. Aucune n'est causée par Docker ; les deux bloquent le
-livrable. Chacune fait un commit indépendant : elles réparent le dépôt même si la suite change.
+Aucun n'est causé par Docker. Le premier est contourné par l'élagage et part en ticket dédié ;
+le second bloque le livrable et est corrigé ici, dans son propre commit.
 
-### 3.1 `bun install --frozen-lockfile` échoue sur un clone frais
+### 3.1 `bun.lock` décrit des workspaces absents du dépôt public
 
 `bun.lock` est versionné avec des entrées pour `apps/cloud` et `apps/landing`, deux workspaces
 que `.gitignore` exclut. Sur un dépôt cloné depuis GitHub ils n'existent pas, bun réécrit
 376 lignes et `--frozen-lockfile` refuse.
 
-**La correction propre — sortir les apps privées du workspace — ne tient pas dans ce ticket.**
-Essayée et mesurée : `apps/cloud` perd le protocole `catalog:` (trivial, une version à épingler)
-et surtout `@lumyx/ui`. En `file:`, bun copie le paquet et duplique `@types/react` —
-`check-types` échoue sur « Two different types with this name exist ». En `link:`, bun exige un
-`bun link` manuel préalable. Restent une liaison manuelle par machine, un registre privé, ou la
-sortie des apps privées du dépôt : trois chantiers qui dépassent LUM-598, et dont aucun ne peut
-être testé ici puisque `apps/landing` n'existe pas sur cette machine.
+**L'image ne souffre plus de ce problème** : le `turbo prune` du §2.5 émet un lockfile élagué qui
+ne décrit que `apps/dashboard` et `packages/ui`, et `--frozen-lockfile` y réussit.
 
-**Ce que ça coûte vraiment de s'en passer** : sur un clone frais, les 376 lignes qui bougent sont
-189 résolutions **retirées**, toutes appartenant aux seules apps privées (`better-auth`,
-`drizzle`, `pg`…). Les versions des paquets que le dashboard utilise ne bougent pas — `bun.lock`
-continue de les épingler. On perd le détecteur de dérive, pas les versions.
+**Le dépôt, lui, en souffre toujours** : tout contributeur qui clone et lance `bun install` voit
+`bun.lock` se réécrire, donc un diff parasite permanent. La correction propre — sortir les apps
+privées du workspace — a été essayée et mesurée, et ne tient pas dans ce ticket : `apps/cloud`
+perd le protocole `catalog:` (trivial) et surtout `@lumyx/ui`. En `file:`, bun copie le paquet et
+duplique `@types/react`, `check-types` échoue sur « Two different types with this name exist ».
+En `link:`, bun exige un `bun link` manuel préalable. Restent une liaison manuelle par machine,
+un registre privé, ou la sortie des apps privées du dépôt — trois chantiers plus larges que
+LUM-598, dont aucun n'est testable ici puisque `apps/landing` n'existe pas sur cette machine.
 
-**Retenu** : l'étage `deps` fait `bun install` sans `--frozen-lockfile`, avec un commentaire qui
-dit pourquoi. Un ticket dédié traite la sortie des apps privées du workspace — c'est aussi,
-concrètement, la frontière OSS / privé que LUM-600 demande d'écrire.
+**Retenu** : un ticket dédié. Rien à faire dans ce ticket, l'élagage suffit à l'image.
 
 ### 3.2 `apps/dashboard` ne compile pas sur `main`
 
@@ -208,8 +226,9 @@ Contexte de build : la racine du dépôt, le workspace bun en a besoin.
 
 | Étage | Base | Rôle |
 | --- | --- | --- |
-| `deps` | `oven/bun:1.3.11-alpine` | Les seuls `package.json` + `bun.lock`, puis `bun install` (cf. §3.1 pour l'absence de `--frozen-lockfile`). Copier les manifestes avant les sources garde la couche valide tant que les dépendances ne bougent pas |
-| `build` | `node:22-alpine` | `next build` sur les `node_modules` de l'étage précédent |
+| `pruner` | `oven/bun:1.3.11-alpine` | `turbo prune @lumyx/dashboard --docker` (§2.5) |
+| `deps` | `oven/bun:1.3.11-alpine` | `out/json/` seul, puis `bun install --frozen-lockfile`. Ne contenant que des manifestes, la couche reste valide tant que les dépendances ne bougent pas |
+| `build` | `node:22-alpine` | `out/full/` plus les `node_modules` de l'étage précédent, puis `turbo run build --filter=@lumyx/dashboard` |
 | runtime | `node:22-alpine` | `.next/standalone`, `.next/static`, `public/`. Utilisateur non root |
 
 `next.config.ts` gagne `output: 'standalone'` et `outputFileTracingRoot` pointant la racine du
@@ -263,8 +282,7 @@ pour le SFU, une requête HTTP sur `/` pour le dashboard.
 ## 7. Vérification
 
 1. `cargo test` et `cargo clippy --all-targets` verts, tests d'allocation de ports inclus.
-2. `bun install` réussit sur une arborescence simulant un clone frais, et les versions des
-   paquets du dashboard y sont celles de `bun.lock`.
+2. `bun install --frozen-lockfile` réussit sur la sortie de `turbo prune`.
 3. `docker builder prune -af`, puis `docker compose up` — le test « machine vierge » du ticket.
 4. `/health` du SFU à 200 ; les tables de télémétrie créées dans Postgres.
 5. Les 8 routes du dashboard à 200 avec du HTML, pas seulement un code de retour : Next sert
@@ -283,6 +301,6 @@ pour le SFU, une requête HTTP sur `/` pour le dashboard.
 | Documentation self-hosting et référence des variables | LUM-599 |
 | Frontière Dashboard OSS / Cloud dans le README | LUM-600 |
 | Port UDP unique mutualisé, démultiplexage par ufrag | à créer |
-| Sortir `apps/cloud` et `apps/landing` du workspace bun | à créer |
+| Sortir `apps/cloud` et `apps/landing` du workspace bun (§3.1) | à créer |
 | Génération automatique des secrets | à créer |
 | Portage de la galerie `/_ds` sur `@lumyx/ui` | à créer |
