@@ -363,7 +363,13 @@ mod tests {
             let peer: Arc<str> = Arc::from(format!("peer-{index}").as_str());
             let (tx, rx) = mpsc::channel(64);
             let conn = Arc::new(Mutex::new(
-                PeerConnection::new(Arc::clone(&peer), tx.clone(), "127.0.0.1".into()).await,
+                PeerConnection::new(
+                    Arc::clone(&peer),
+                    tx.clone(),
+                    "127.0.0.1".into(),
+                    std::time::Duration::from_secs(1),
+                )
+                .await,
             ));
 
             self.negotiator.register(Arc::clone(&peer), conn, tx);

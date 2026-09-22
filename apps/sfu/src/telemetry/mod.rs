@@ -7,6 +7,7 @@
 pub mod batch;
 pub mod entry;
 pub mod pg;
+pub mod sampler;
 pub mod sink;
 pub mod tasks;
 

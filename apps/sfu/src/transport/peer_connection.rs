@@ -6,7 +6,7 @@ use crate::signaling::ServerMessage;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use str0m::{
     Candidate, Rtc,
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
@@ -51,6 +51,12 @@ pub struct PeerConnection {
     /// audio or video.
     pub rx_kind: HashMap<Mid, MediaKind>,
 
+    /// Clock rate of each inbound m-line, learned from the first packet.
+    ///
+    /// `MediaAdded` does not carry the codec; only `PayloadParams` does.
+    /// Without this the jitter cannot be converted out of RTP clock units.
+    pub rx_clock_rate: HashMap<Mid, u32>,
+
     /// Sources wanted by this peer, not offered yet.
     queued: Vec<(TrackKey, MediaKind)>,
     /// Sources whose m-line is allocated and offered, awaiting the answer.
@@ -74,6 +80,7 @@ impl PeerConnection {
         peer_id: Arc<str>,
         sender: mpsc::Sender<ServerMessage>,
         ice_host: String,
+        stats_interval: Duration,
     ) -> PeerConnection {
         let socket = UdpSocket::bind("0.0.0.0:0")
             .await
@@ -83,12 +90,19 @@ impl PeerConnection {
 
         PeerConnection {
             peer_id,
-            rtc: Rtc::builder().build(Instant::now()),
+            // Sans `set_stats_interval`, str0m n'émet jamais
+            // MediaIngressStats, MediaEgressStats ni PeerStats : les
+            // statistiques sont désactivées par défaut. C'est la seule raison
+            // pour laquelle jitter, loss et RTT n'existaient pas.
+            rtc: Rtc::builder()
+                .set_stats_interval(Some(stats_interval))
+                .build(Instant::now()),
             socket: Arc::new(socket),
             remote_addr: None,
             sender,
             ice_host,
             rx_kind: HashMap::new(),
+            rx_clock_rate: HashMap::new(),
             queued: Vec::new(),
             offered: Vec::new(),
             allocated: HashMap::new(),
@@ -474,7 +488,13 @@ mod tests {
 
     async fn connection(peer_id: &str) -> PeerConnection {
         let (sender, _rx) = mpsc::channel(8);
-        PeerConnection::new(Arc::from(peer_id), sender, "127.0.0.1".to_string()).await
+        PeerConnection::new(
+            Arc::from(peer_id),
+            sender,
+            "127.0.0.1".to_string(),
+            Duration::from_secs(1),
+        )
+        .await
     }
 
     fn video_track(peer: &str, mid: &str) -> (TrackKey, MediaKind) {

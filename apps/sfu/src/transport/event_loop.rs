@@ -2,10 +2,11 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::RtpPacketData;
+use crate::telemetry::sampler::{IngressReading, PeerReading};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use str0m::{
-    Candidate, Event, Input, Output,
+    Candidate, Event, IceConnectionState, Input, Output,
     media::{MediaKind, Mid},
     net::Receive,
     net::Transmit,
@@ -189,6 +190,22 @@ pub enum TransportEvent {
     /// The SFU has no encoder: the request has to travel on to whoever
     /// publishes that m-line's source.
     KeyframeRequested { peer: Arc<str>, mid: Mid },
+    /// One sampling interval of statistics for an inbound m-line of this peer.
+    TrackStats {
+        peer: Arc<str>,
+        mid: Mid,
+        reading: IngressReading,
+    },
+    /// One sampling interval of transport statistics for this peer.
+    PeerStats {
+        peer: Arc<str>,
+        reading: PeerReading,
+    },
+    /// The peer's ICE connection state changed.
+    IceState {
+        peer: Arc<str>,
+        state: IceConnectionState,
+    },
 }
 
 /// Handles a str0m event.
@@ -204,6 +221,54 @@ fn handle_event(
         }
         Event::IceConnectionStateChange(state) => {
             tracing::info!("Peer {} ICE : {:?}", conn.peer_id, state);
+            let _ = events.try_send(TransportEvent::IceState {
+                peer: Arc::clone(&conn.peer_id),
+                state,
+            });
+        }
+        Event::MediaIngressStats(s) => {
+            // Un clock rate inconnu vaut 0 : `jitter_to_ms` rend alors `None`
+            // plutôt qu'une valeur fausse.
+            let clock_rate = conn.rx_clock_rate.get(&s.mid).copied().unwrap_or(0);
+            let reading = IngressReading {
+                bytes: s.bytes,
+                packets: s.packets,
+                nacks: s.nacks,
+                plis: s.plis,
+                firs: s.firs,
+                jitter: s.jitter,
+                clock_rate,
+                loss: s.loss,
+                rtt_ms: s.rtt.map(|d| d.as_secs_f32() * 1000.0),
+            };
+            // Statistique : la jeter est sans conséquence, contrairement à une
+            // annonce de track. Pas de log par perte.
+            let _ = events.try_send(TransportEvent::TrackStats {
+                peer: Arc::clone(&conn.peer_id),
+                mid: s.mid,
+                reading,
+            });
+        }
+        Event::MediaEgressStats(_) => {
+            // Le sens sortant est celui du subscriber, pas du publisher :
+            // l'attribuer au track ici le compterait deux fois. Le débit
+            // sortant se reconstruit en sommant les deltas entrants des tracks
+            // auxquels un peer est abonné, et `PeerStats` porte déjà le total
+            // transport. Ignoré volontairement.
+        }
+        Event::PeerStats(s) => {
+            let reading = PeerReading {
+                bytes_rx: s.bytes_rx,
+                bytes_tx: s.bytes_tx,
+                transport_bytes_rx: s.peer_bytes_rx,
+                transport_bytes_tx: s.peer_bytes_tx,
+                egress_loss: s.egress_loss_fraction,
+                bwe_bps: s.bwe_tx.map(|b| b.as_u64() as i64),
+            };
+            let _ = events.try_send(TransportEvent::PeerStats {
+                peer: Arc::clone(&conn.peer_id),
+                reading,
+            });
         }
         Event::MediaAdded(media) => {
             tracing::info!(
@@ -234,6 +299,12 @@ fn handle_event(
             let Some(packet) = conn.to_packet(data) else {
                 return;
             };
+            // Le clock rate n'est connu qu'ici : `MediaAdded` ne porte pas le
+            // codec, seul `PayloadParams` le porte. Sans lui, le jitter reste
+            // en unités d'horloge RTP et ne peut pas être converti en ms.
+            conn.rx_clock_rate
+                .entry(packet.mid)
+                .or_insert_with(|| packet.params.spec().clock_rate.get());
             // `Arc::clone`: the peer_id never changes, so sending it per packet
             // no longer has to reallocate it.
             let event = TransportEvent::Media {
