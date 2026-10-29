@@ -167,4 +167,4 @@ scripts/release.sh patch   # or minor / major / X.Y.Z
 
 This runs the CI checks, bumps `Cargo.toml`, commits `chore(release): vX.Y.Z`, tags `vX.Y.Z`
 and pushes. The tag triggers the Release workflow, which publishes a GitHub release with
-generated notes.
+generated notes and pushes the Docker image to `ghcr.io/lumyx-dev/sfu-core:X.Y.Z`.

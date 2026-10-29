@@ -43,6 +43,7 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
             Arc::clone(&peer_id),
             tx.clone(),
             state.config.ice_host.clone(),
+            state.config.udp_ports.clone(),
         )
         .await,
     ));

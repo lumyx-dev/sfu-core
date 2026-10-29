@@ -4,6 +4,7 @@
 //! defaults reproduce the historical hard-coded behaviour.
 
 use std::net::SocketAddr;
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -21,6 +22,13 @@ pub struct Config {
     pub key_path: PathBuf,
     /// Host advertised in the local ICE candidates.
     pub ice_host: String,
+    /// UDP ports the per-peer media sockets bind to. `None` lets the OS pick
+    /// an ephemeral port; a fixed range is what makes the SFU publishable from
+    /// a container.
+    pub udp_ports: Option<RangeInclusive<u16>>,
+    /// Terminate TLS in-process. Off when a reverse proxy (Caddy, nginx…)
+    /// already does it in front of the SFU.
+    pub tls: bool,
     /// `tracing-subscriber` filter.
     pub log_filter: String,
     /// Serves `assets/test.html` on `/`. Handy in dev, turn it off in prod.
@@ -36,6 +44,8 @@ impl Default for Config {
             cert_path: PathBuf::from(format!("{}/localhost+1.pem", MANIFEST_DIR)),
             key_path: PathBuf::from(format!("{}/localhost+1-key.pem", MANIFEST_DIR)),
             ice_host: "127.0.0.1".to_string(),
+            udp_ports: None,
+            tls: true,
             log_filter: "debug".to_string(),
             serve_test_client: true,
             telemetry: TelemetryConfig::default(),
@@ -101,6 +111,14 @@ fn parse_secs(raw: &str, default: Duration) -> Duration {
     }
 }
 
+/// Reads the UDP port range. Both bounds are required and `min <= max`;
+/// anything else falls back to ephemeral ports rather than refusing to start.
+fn parse_port_range(min: Option<&str>, max: Option<&str>) -> Option<RangeInclusive<u16>> {
+    let min = min?.parse::<u16>().ok().filter(|p| *p > 0)?;
+    let max = max?.parse::<u16>().ok()?;
+    (min <= max).then_some(min..=max)
+}
+
 impl Config {
     /// Builds the configuration from the environment, falling back to the
     /// defaults for every variable that is missing or invalid.
@@ -120,6 +138,14 @@ impl Config {
                 .map(PathBuf::from)
                 .unwrap_or(defaults.key_path),
             ice_host: std::env::var("SFU_ICE_HOST").unwrap_or(defaults.ice_host),
+            udp_ports: parse_port_range(
+                std::env::var("SFU_UDP_PORT_MIN").ok().as_deref(),
+                std::env::var("SFU_UDP_PORT_MAX").ok().as_deref(),
+            ),
+            tls: std::env::var("SFU_TLS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(defaults.tls),
             log_filter: std::env::var("SFU_LOG").unwrap_or(defaults.log_filter),
             serve_test_client: std::env::var("SFU_SERVE_TEST_CLIENT")
                 .ok()
@@ -170,6 +196,20 @@ mod tests {
         assert!(c.serve_test_client);
         assert!(c.cert_path.ends_with("localhost+1.pem"));
         assert!(c.key_path.ends_with("localhost+1-key.pem"));
+        assert!(c.tls);
+        assert!(c.udp_ports.is_none());
+    }
+
+    #[test]
+    fn udp_port_range_needs_both_valid_bounds() {
+        assert_eq!(
+            parse_port_range(Some("40000"), Some("40100")),
+            Some(40000..=40100)
+        );
+        assert_eq!(parse_port_range(Some("40000"), None), None);
+        assert_eq!(parse_port_range(Some("40100"), Some("40000")), None);
+        assert_eq!(parse_port_range(Some("0"), Some("40000")), None);
+        assert_eq!(parse_port_range(Some("port"), Some("40000")), None);
     }
 
     #[test]
