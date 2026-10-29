@@ -2,10 +2,10 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::{RtpPacketData, RtpSink};
-use str0m::media::Mid;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
+use str0m::media::Mid;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{self, error::TrySendError};
 
@@ -236,7 +236,11 @@ mod tests {
             queue.push("alice", packet(b"frame"));
         }
 
-        assert_eq!(queue.dropped(), 0, "rien ne doit être jeté avant saturation");
+        assert_eq!(
+            queue.dropped(),
+            0,
+            "rien ne doit être jeté avant saturation"
+        );
     }
 
     /// RTP is an ordered protocol: the queue must not reorder what is put into

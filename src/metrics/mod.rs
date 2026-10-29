@@ -39,7 +39,8 @@ impl Metrics {
     /// Deliberate: a database must never be able to degrade a live call. Same
     /// doctrine as the media queues.
     pub fn record_telemetry_drop(&self) {
-        self.telemetry_entries_dropped.fetch_add(1, Ordering::Relaxed);
+        self.telemetry_entries_dropped
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn snapshot(&self) -> MetricsSnapshot {

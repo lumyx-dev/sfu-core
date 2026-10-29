@@ -295,7 +295,10 @@ impl Negotiator {
         match sent {
             Ok(Ok(())) => {}
             Ok(Err(_)) => {
-                tracing::debug!("Peer {} — re-offer non transmise, session fermée", subscriber)
+                tracing::debug!(
+                    "Peer {} — re-offer non transmise, session fermée",
+                    subscriber
+                )
             }
             Err(_) => tracing::error!(
                 "Peer {} — canal de signaling bloqué, re-offer abandonnée",

@@ -63,7 +63,8 @@ impl ForwardingEngine {
             .clone();
 
         room.insert(Arc::clone(&peer_id), sink);
-        self.peer_rooms.insert(Arc::clone(&peer_id), room_id.clone());
+        self.peer_rooms
+            .insert(Arc::clone(&peer_id), room_id.clone());
 
         tracing::info!(
             "ForwardingEngine — peer {} enregistré dans la room {}",

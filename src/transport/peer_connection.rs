@@ -581,7 +581,10 @@ mod tests {
         conn.queue_subscription(bob, kind);
 
         // Bob leaves before the round trip even started.
-        assert!(conn.drop_source("bob"), "l'abonnement en attente doit tomber");
+        assert!(
+            conn.drop_source("bob"),
+            "l'abonnement en attente doit tomber"
+        );
         assert!(conn.queued.is_empty());
         assert!(
             conn.negotiate().is_none(),

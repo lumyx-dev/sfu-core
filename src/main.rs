@@ -24,7 +24,7 @@ async fn main() {
                 eprintln!("   clé  : {}", config.key_path.display());
                 eprintln!();
                 eprintln!("   Générer les certificats de dev une fois :");
-                eprintln!("     mkcert -install && cd apps/sfu && mkcert localhost 127.0.0.1");
+                eprintln!("     mkcert -install && mkcert localhost 127.0.0.1");
                 eprintln!("   Ou pointer ailleurs avec SFU_CERT_PATH / SFU_KEY_PATH.");
                 std::process::exit(1);
             });

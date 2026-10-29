@@ -451,10 +451,7 @@ mod tests {
         let previous = second
             .previous
             .expect("alice quittait room-a en rejoignant room-b");
-        assert!(
-            !previous.room_dropped,
-            "room-a survit grâce à bob"
-        );
+        assert!(!previous.room_dropped, "room-a survit grâce à bob");
     }
 
     #[test]
