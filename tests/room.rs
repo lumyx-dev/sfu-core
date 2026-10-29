@@ -119,7 +119,8 @@ impl World {
             signaling.push(rx);
 
             let peer: Arc<str> = Arc::from(peer_name(i).as_str());
-            let conn = PeerConnection::new(Arc::clone(&peer), tx, "127.0.0.1".to_string()).await;
+            let conn =
+                PeerConnection::new(Arc::clone(&peer), tx, "127.0.0.1".to_string(), None).await;
             let addr = conn.local_ice_addr().expect("adresse ICE du SFU");
 
             let sink = Arc::new(QueueSink::default());
