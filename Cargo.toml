@@ -2,6 +2,14 @@
 name = "lumyx-sfu"
 version = "0.1.0"
 edition = "2024"
+description = "Open-source WebRTC SFU in Rust with native observability built in."
+license = "AGPL-3.0-only"
+repository = "https://github.com/lumyx-dev/sfu-core"
+homepage = "https://lumyx.dev"
+readme = "README.md"
+keywords = ["webrtc", "sfu", "observability", "rtp", "str0m"]
+categories = ["network-programming", "multimedia"]
+exclude = [".github/", "docs/", "*.pem", "*.key"]
 
 [dependencies]
 axum = {version = "0.8.9", features = ["ws"]}

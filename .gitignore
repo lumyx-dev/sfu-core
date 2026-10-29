@@ -1,0 +1,27 @@
+# Rust
+target/
+*.rs.bk
+
+# Local TLS certificates (mkcert) — generated per developer, never committed
+*.pem
+*.key
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent skills and tooling — kept local, never versioned
+.agents/
+.claude/skills/
+.claude/settings.local.json
+.claude/worktrees/
+.kilocode/
+.gstack/
+.superpowers/
+skills-lock.json
+.rtk/
