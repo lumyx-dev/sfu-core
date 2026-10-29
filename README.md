@@ -161,7 +161,9 @@ hardcoded behaviour.
 | `SFU_BIND_ADDR` | `0.0.0.0:3000` | HTTPS listen address |
 | `SFU_CERT_PATH` | `localhost+1.pem` | TLS certificate (PEM) |
 | `SFU_KEY_PATH` | `localhost+1-key.pem` | TLS private key (PEM) |
-| `SFU_ICE_HOST` | `127.0.0.1` | Host advertised in local ICE candidates |
+| `SFU_ICE_HOST` | `127.0.0.1` | Host advertised in local ICE candidates — the server's public IP in production |
+| `SFU_UDP_PORT_MIN` / `SFU_UDP_PORT_MAX` | *(unset)* | UDP range for media sockets, one port per peer. Unset: ephemeral ports. Required to publish the SFU from a container |
+| `SFU_TLS` | `true` | Terminate TLS in-process. Set to `false` behind a reverse proxy that does it |
 | `SFU_LOG` | `debug` | `tracing-subscriber` filter |
 | `SFU_SERVE_TEST_CLIENT` | `true` | Serve the bundled test client on `/` — turn it off in production |
 | `SFU_DATABASE_URL` | *(unset)* | Postgres URL. When set, telemetry is persisted; when unset, the SFU behaves exactly as without a database |
@@ -347,7 +349,8 @@ pushed live over WebSocket.
 - [ ] Simulcast + bandwidth estimation
 - [ ] Automatic degradation detection & alerting
 - [ ] Session replay
-- [ ] Docker image + Helm chart
+- [x] Docker image (`ghcr.io/lumyx-dev/sfu-core`) — see [lumyx-dev/self-hosted](https://github.com/lumyx-dev/self-hosted)
+- [ ] Helm chart
 
 ---
 

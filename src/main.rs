@@ -13,6 +13,19 @@ async fn main() {
 
     tracing::info!("🚀 Lumyx SFU démarrage...");
 
+    let addr = config.bind_addr;
+
+    if !config.tls {
+        // Derrière un reverse proxy qui termine TLS : HTTP en clair sur le réseau interne.
+        let app = build_router(AppState::new(config));
+        tracing::info!("✅ Serveur HTTP sur http://{} (TLS délégué au proxy)", addr);
+        axum_server::bind(addr)
+            .serve(app.into_make_service())
+            .await
+            .expect("serveur HTTP");
+        return;
+    }
+
     let tls =
         axum_server::tls_rustls::RustlsConfig::from_pem_file(&config.cert_path, &config.key_path)
             .await
@@ -25,11 +38,11 @@ async fn main() {
                 eprintln!();
                 eprintln!("   Générer les certificats de dev une fois :");
                 eprintln!("     mkcert -install && mkcert localhost 127.0.0.1");
-                eprintln!("   Ou pointer ailleurs avec SFU_CERT_PATH / SFU_KEY_PATH.");
+                eprintln!("   Ou pointer ailleurs avec SFU_CERT_PATH / SFU_KEY_PATH,");
+                eprintln!("   ou SFU_TLS=false derrière un reverse proxy.");
                 std::process::exit(1);
             });
 
-    let addr = config.bind_addr;
     let app = build_router(AppState::new(config));
 
     tracing::info!("✅ Serveur HTTPS sur https://{}", addr);

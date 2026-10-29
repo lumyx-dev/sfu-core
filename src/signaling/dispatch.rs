@@ -238,7 +238,7 @@ mod tests {
     ) {
         let (tx, rx) = mpsc::channel(16);
         let conn = Arc::new(Mutex::new(
-            PeerConnection::new(Arc::clone(peer_id), tx.clone(), "127.0.0.1".into()).await,
+            PeerConnection::new(Arc::clone(peer_id), tx.clone(), "127.0.0.1".into(), None).await,
         ));
         (conn, tx, rx)
     }
