@@ -154,3 +154,17 @@ webrtc-internals dump is usually diagnosable in minutes.
 
 Open a [Discussion](https://github.com/lumyx-dev/sfu-core/discussions) for questions, an issue for bugs. Protocol nitpicks, "your SSRC rewrite is wrong because…" and design objections are
 all genuinely welcome — the architecture is young enough to change.
+
+---
+
+## Releasing
+
+Versions follow [SemVer](https://semver.org/) and are cut from an up-to-date `main`:
+
+```sh
+scripts/release.sh patch   # or minor / major / X.Y.Z
+```
+
+This runs the CI checks, bumps `Cargo.toml`, commits `chore(release): vX.Y.Z`, tags `vX.Y.Z`
+and pushes. The tag triggers the Release workflow, which publishes a GitHub release with
+generated notes.
