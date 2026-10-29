@@ -65,7 +65,7 @@ async fn sfu_connection(
     mpsc::Receiver<lumyx_sfu::signaling::ServerMessage>,
 ) {
     let (tx, rx) = mpsc::channel(32);
-    let conn = PeerConnection::new(Arc::from(peer_id), tx, "127.0.0.1".to_string()).await;
+    let conn = PeerConnection::new(Arc::from(peer_id), tx, "127.0.0.1".to_string(), None).await;
     (conn, rx)
 }
 

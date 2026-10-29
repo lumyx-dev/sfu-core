@@ -276,7 +276,7 @@ mod tests {
     async fn the_sink_reports_the_packets_its_queue_dropped() {
         let (sender, _rx) = mpsc::channel(4);
         let conn = Arc::new(Mutex::new(
-            PeerConnection::new(Arc::from("alice"), sender, "127.0.0.1".to_string()).await,
+            PeerConnection::new(Arc::from("alice"), sender, "127.0.0.1".to_string(), None).await,
         ));
         let sink = PeerSink::new(Arc::from("alice"), conn);
 

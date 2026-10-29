@@ -5,6 +5,7 @@ use crate::media::{RtpPacketData, TrackKey};
 use crate::signaling::ServerMessage;
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::time::Instant;
 use str0m::{
@@ -69,15 +70,35 @@ pub struct PeerConnection {
     pending_offer: Option<SdpPendingOffer>,
 }
 
+/// Binds the peer's media socket: on an ephemeral port, or on the first free
+/// port of the configured range.
+async fn bind_udp(ports: Option<RangeInclusive<u16>>) -> UdpSocket {
+    let Some(ports) = ports else {
+        return UdpSocket::bind("0.0.0.0:0")
+            .await
+            .expect("bind UDP éphémère");
+    };
+    for port in ports.clone() {
+        if let Ok(socket) = UdpSocket::bind(("0.0.0.0", port)).await {
+            return socket;
+        }
+    }
+    // Un port par peer : la plage fixe le nombre maximum de participants.
+    panic!(
+        "plage UDP {}-{} épuisée : élargir SFU_UDP_PORT_MIN / SFU_UDP_PORT_MAX",
+        ports.start(),
+        ports.end()
+    );
+}
+
 impl PeerConnection {
     pub async fn new(
         peer_id: Arc<str>,
         sender: mpsc::Sender<ServerMessage>,
         ice_host: String,
+        udp_ports: Option<RangeInclusive<u16>>,
     ) -> PeerConnection {
-        let socket = UdpSocket::bind("0.0.0.0:0")
-            .await
-            .expect("bind UDP éphémère");
+        let socket = bind_udp(udp_ports).await;
         let local_port = socket.local_addr().expect("adresse locale").port();
         tracing::info!("Peer {} — UDP sur port {}", peer_id, local_port);
 
@@ -474,7 +495,7 @@ mod tests {
 
     async fn connection(peer_id: &str) -> PeerConnection {
         let (sender, _rx) = mpsc::channel(8);
-        PeerConnection::new(Arc::from(peer_id), sender, "127.0.0.1".to_string()).await
+        PeerConnection::new(Arc::from(peer_id), sender, "127.0.0.1".to_string(), None).await
     }
 
     fn video_track(peer: &str, mid: &str) -> (TrackKey, MediaKind) {

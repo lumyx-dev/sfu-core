@@ -1,0 +1,10 @@
+target/
+.git/
+.github/
+docs/
+tests/
+scripts/
+*.pem
+*.key
+.env
+.env.*
