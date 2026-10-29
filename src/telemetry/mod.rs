@@ -210,7 +210,11 @@ mod tests {
         t.record_departure(occupancy, room, false, now);
 
         let entries = sink.drain();
-        assert_eq!(entries.len(), 4, "2 tracks + PeerLeft + son Event, pas de RoomClosed");
+        assert_eq!(
+            entries.len(),
+            4,
+            "2 tracks + PeerLeft + son Event, pas de RoomClosed"
+        );
         assert!(matches!(entries[0], Entry::TrackEnded { .. }));
         assert!(matches!(entries[1], Entry::TrackEnded { .. }));
         match &entries[2] {
@@ -241,7 +245,11 @@ mod tests {
         t.record_departure(occupancy, room, true, now);
 
         let entries = sink.drain();
-        assert_eq!(entries.len(), 4, "PeerLeft + son Event + RoomClosed + son Event");
+        assert_eq!(
+            entries.len(),
+            4,
+            "PeerLeft + son Event + RoomClosed + son Event"
+        );
         assert!(matches!(entries[0], Entry::PeerLeft { .. }));
         assert!(matches!(&entries[1], Entry::Event(e) if e.kind == EventKind::PeerLeft));
         match &entries[2] {
@@ -271,7 +279,10 @@ mod tests {
     #[test]
     fn the_same_mid_of_two_peers_are_two_tracks() {
         let t = Telemetry::new(Arc::new(NoopSink));
-        assert_ne!(t.track_id(Uuid::new_v4(), "0"), t.track_id(Uuid::new_v4(), "0"));
+        assert_ne!(
+            t.track_id(Uuid::new_v4(), "0"),
+            t.track_id(Uuid::new_v4(), "0")
+        );
     }
 
     #[test]

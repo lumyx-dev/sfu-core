@@ -32,17 +32,26 @@ impl Batch {
             match entry {
                 Entry::RoomOpened { id, name, at } => b.rooms_opened.push((id, name, at)),
                 Entry::RoomClosed { id, at, reason } => b.rooms_closed.push((id, at, reason)),
-                Entry::PeerJoined { id, peer_id, room_id, at } => {
-                    b.peers_joined.push((id, peer_id, room_id, at))
-                }
+                Entry::PeerJoined {
+                    id,
+                    peer_id,
+                    room_id,
+                    at,
+                } => b.peers_joined.push((id, peer_id, room_id, at)),
                 Entry::PeerLeft { id, at, close_code } => b.peers_left.push((id, at, close_code)),
                 Entry::IceState { peer_id, state, at } => b.ice_states.push((peer_id, state, at)),
-                Entry::TrackPublished { id, peer_id, mid, kind, at } => {
-                    b.tracks_published.push((id, peer_id, mid, kind, at))
-                }
-                Entry::TrackCodec { id, codec, clock_rate } => {
-                    b.track_codecs.push((id, codec, clock_rate))
-                }
+                Entry::TrackPublished {
+                    id,
+                    peer_id,
+                    mid,
+                    kind,
+                    at,
+                } => b.tracks_published.push((id, peer_id, mid, kind, at)),
+                Entry::TrackCodec {
+                    id,
+                    codec,
+                    clock_rate,
+                } => b.track_codecs.push((id, codec, clock_rate)),
                 Entry::TrackEnded { id, at } => b.tracks_ended.push((id, at)),
                 Entry::TrackSample(s) => b.track_samples.push(s),
                 Entry::PeerSample(s) => b.peer_samples.push(s),
@@ -102,8 +111,17 @@ mod tests {
         let now = Utc::now();
 
         let b = Batch::from_entries(vec![
-            Entry::RoomOpened { id: room, name: "test-room".into(), at: now },
-            Entry::PeerJoined { id: peer, peer_id: Uuid::new_v4(), room_id: room, at: now },
+            Entry::RoomOpened {
+                id: room,
+                name: "test-room".into(),
+                at: now,
+            },
+            Entry::PeerJoined {
+                id: peer,
+                peer_id: Uuid::new_v4(),
+                room_id: room,
+                at: now,
+            },
             Entry::Event(EventRecord::new(EventKind::RoomCreated, now).room(room)),
         ]);
 
@@ -138,10 +156,28 @@ mod tests {
         let b_room = Uuid::new_v4();
         let now = Utc::now();
         let batch = Batch::from_entries(vec![
-            Entry::RoomOpened { id: a, name: "a".into(), at: now },
-            Entry::PeerJoined { id: Uuid::new_v4(), peer_id: Uuid::new_v4(), room_id: a, at: now },
-            Entry::PeerJoined { id: Uuid::new_v4(), peer_id: Uuid::new_v4(), room_id: b_room, at: now },
-            Entry::RoomClosed { id: a, at: now, reason: "empty" },
+            Entry::RoomOpened {
+                id: a,
+                name: "a".into(),
+                at: now,
+            },
+            Entry::PeerJoined {
+                id: Uuid::new_v4(),
+                peer_id: Uuid::new_v4(),
+                room_id: a,
+                at: now,
+            },
+            Entry::PeerJoined {
+                id: Uuid::new_v4(),
+                peer_id: Uuid::new_v4(),
+                room_id: b_room,
+                at: now,
+            },
+            Entry::RoomClosed {
+                id: a,
+                at: now,
+                reason: "empty",
+            },
         ]);
 
         let mut touched = batch.touched_rooms();

@@ -128,7 +128,9 @@ impl Config {
             telemetry: TelemetryConfig {
                 // Une chaîne vide vaut absente : `SFU_DATABASE_URL=` dans un .env ne
                 // doit pas activer la persistance sur une URL invalide.
-                database_url: std::env::var("SFU_DATABASE_URL").ok().filter(|v| !v.is_empty()),
+                database_url: std::env::var("SFU_DATABASE_URL")
+                    .ok()
+                    .filter(|v| !v.is_empty()),
                 instance_name: std::env::var("SFU_INSTANCE_NAME").unwrap_or(dt.instance_name),
                 region: std::env::var("SFU_REGION").unwrap_or(dt.region),
                 sample_interval: std::env::var("SFU_SAMPLE_INTERVAL")
@@ -172,7 +174,11 @@ mod tests {
 
     #[test]
     fn test_client_path_points_into_assets() {
-        assert!(Config::default().test_client_path().ends_with("assets/test.html"));
+        assert!(
+            Config::default()
+                .test_client_path()
+                .ends_with("assets/test.html")
+        );
     }
 
     #[test]
@@ -182,7 +188,10 @@ mod tests {
         assert_eq!(c.telemetry.region, "local");
         assert_eq!(c.telemetry.sample_interval, Duration::from_secs(1));
         assert_eq!(c.telemetry.retention_raw, Duration::from_secs(24 * 3600));
-        assert_eq!(c.telemetry.retention_rollup, Duration::from_secs(30 * 24 * 3600));
+        assert_eq!(
+            c.telemetry.retention_rollup,
+            Duration::from_secs(30 * 24 * 3600)
+        );
         assert_eq!(c.telemetry.queue_depth, 256);
     }
 
@@ -190,11 +199,20 @@ mod tests {
     fn durations_are_parsed_as_seconds() {
         // Les durées se lisent en secondes, comme partout ailleurs dans l'écosystème
         // douze-facteurs : `SFU_RETENTION_RAW=3600` vaut une heure.
-        assert_eq!(parse_secs("3600", Duration::from_secs(1)), Duration::from_secs(3600));
+        assert_eq!(
+            parse_secs("3600", Duration::from_secs(1)),
+            Duration::from_secs(3600)
+        );
         // Une valeur illisible retombe sur le défaut plutôt que de refuser de démarrer :
         // c'est la règle déjà appliquée par tout `from_env` de ce fichier.
-        assert_eq!(parse_secs("douze", Duration::from_secs(7)), Duration::from_secs(7));
+        assert_eq!(
+            parse_secs("douze", Duration::from_secs(7)),
+            Duration::from_secs(7)
+        );
         // Zéro est refusé : une rétention nulle purgerait la table à chaque passage.
-        assert_eq!(parse_secs("0", Duration::from_secs(7)), Duration::from_secs(7));
+        assert_eq!(
+            parse_secs("0", Duration::from_secs(7)),
+            Duration::from_secs(7)
+        );
     }
 }
