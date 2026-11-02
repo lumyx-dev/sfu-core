@@ -210,7 +210,7 @@ qui traverse une room est une fuite, pas un bug d'aiguillage.
 
 ```bash
 cargo run                        # https://localhost:3000, client de test sur /
-cargo test                       # 98 tests
+cargo test                       # 148 tests
 cargo clippy --all-targets
 bun scripts/browser-check.ts 5   # QA dans 5 Chrome headless (serveur lancé)
 ```
