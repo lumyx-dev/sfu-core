@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use str0m::{
     Candidate, Rtc,
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
@@ -97,6 +97,7 @@ impl PeerConnection {
         sender: mpsc::Sender<ServerMessage>,
         ice_host: String,
         udp_ports: Option<RangeInclusive<u16>>,
+        stats_interval: Duration,
     ) -> PeerConnection {
         let socket = bind_udp(udp_ports).await;
         let local_port = socket.local_addr().expect("adresse locale").port();
@@ -104,7 +105,11 @@ impl PeerConnection {
 
         PeerConnection {
             peer_id,
-            rtc: Rtc::builder().build(Instant::now()),
+            rtc: Rtc::builder()
+                // Sans cet appel, str0m n'émet jamais MediaIngressStats ni
+                // PeerStats : les statistiques sont désactivées par défaut.
+                .set_stats_interval(Some(stats_interval))
+                .build(Instant::now()),
             socket: Arc::new(socket),
             remote_addr: None,
             sender,
@@ -385,6 +390,20 @@ impl PeerConnection {
     /// outbound side has to ask str0m for the PT that means the same codec on
     /// the subscriber's own m-line. Without them the payload would go out
     /// labelled with whatever codec happens to come first there.
+    /// RTP clock rate of an inbound m-line, in Hz, or `0` if the m-line is
+    /// unknown.
+    ///
+    /// Derived from the media kind, like [`Self::to_packet`] does: every codec
+    /// the SFU negotiates runs video at 90 kHz and Opus at 48 kHz. Needed to
+    /// convert str0m's jitter, which is reported in clock units.
+    pub fn rx_clock_rate(&self, mid: Mid) -> u32 {
+        match self.rx_kind.get(&mid) {
+            Some(MediaKind::Video) => 90_000,
+            Some(MediaKind::Audio) => 48_000,
+            None => 0,
+        }
+    }
+
     pub fn to_packet(&self, data: str0m::media::MediaData) -> Option<RtpPacketData> {
         let mid = data.mid;
         let is_video = self
@@ -495,7 +514,14 @@ mod tests {
 
     async fn connection(peer_id: &str) -> PeerConnection {
         let (sender, _rx) = mpsc::channel(8);
-        PeerConnection::new(Arc::from(peer_id), sender, "127.0.0.1".to_string(), None).await
+        PeerConnection::new(
+            Arc::from(peer_id),
+            sender,
+            "127.0.0.1".to_string(),
+            None,
+            Duration::from_secs(1),
+        )
+        .await
     }
 
     fn video_track(peer: &str, mid: &str) -> (TrackKey, MediaKind) {

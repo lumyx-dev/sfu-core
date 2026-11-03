@@ -6,13 +6,19 @@ use super::negotiation::{NegotiationEvent, Negotiator};
 use crate::app::AppState;
 use crate::media::{ForwardingEngine, RtpSink};
 use crate::metrics::Metrics;
-use crate::telemetry::{Entry, EventKind, EventRecord, Telemetry, TrackKind};
+use crate::telemetry::sampler::Sampler;
+use crate::telemetry::{
+    Entry, EventKind, EventRecord, PeerSample, Telemetry, TrackKind, TrackSample,
+};
 use crate::transport::{PeerConnection, PeerSink, TransportEvent, event_loop};
 use axum::extract::ws::{Message, WebSocket};
 use futures::sink::SinkExt;
 use futures::stream::{SplitSink, StreamExt};
+use std::collections::HashMap;
 use std::sync::Arc;
-use str0m::media::MediaKind;
+use str0m::IceConnectionState;
+use str0m::format::PayloadParams;
+use str0m::media::{MediaKind, Mid};
 use tokio::sync::mpsc::{self, Receiver};
 use tokio::sync::{Mutex, oneshot};
 
@@ -44,6 +50,7 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
             tx.clone(),
             state.config.ice_host.clone(),
             state.config.udp_ports.clone(),
+            state.config.telemetry.sample_interval,
         )
         .await,
     ));
@@ -152,9 +159,24 @@ fn spawn_transport_pump(
     mut events: Receiver<TransportEvent>,
 ) {
     tokio::spawn(async move {
+        // Un échantillonneur par peer, local à cette tâche : sa durée de vie
+        // est celle de la connexion, donc celle des cumuls str0m qu'il
+        // soustrait.
+        let mut sampler = Sampler::new();
+        // Codec de chaque mid publié, appris au premier paquet — `MediaAdded`
+        // ne le porte pas. Il est consigné au tick de statistiques suivant,
+        // pas ici : le chemin des paquets ne fait qu'un lookup par paquet, et
+        // une consignation impossible (track pas encore publié) est retentée
+        // une fois par seconde, pas une fois par paquet.
+        let mut codecs: HashMap<Mid, Codec> = HashMap::new();
+
         while let Some(event) = events.recv().await {
             match event {
                 TransportEvent::Media { peer, packet } => {
+                    codecs.entry(packet.mid).or_insert(Codec {
+                        params: packet.params,
+                        recorded: false,
+                    });
                     let bytes = packet.payload.len() as u64;
                     // The media layer has no access to `Metrics` — it reports
                     // how many writes the fanout cost and the session records
@@ -198,10 +220,112 @@ fn spawn_transport_pump(
                     metrics.record_keyframe();
                     negotiator.notify(NegotiationEvent::KeyframeRequested { peer, mid });
                 }
+                TransportEvent::TrackStats { peer, mid, reading } => {
+                    let mid_str = mid.to_string();
+                    // Le delta se calcule même hors room : sinon le premier
+                    // échantillon après un `join` vaudrait tout ce qui a
+                    // transité avant.
+                    let Some(d) = sampler.ingress(&mid_str, &reading) else {
+                        continue;
+                    };
+                    let Some(track_id) = occupancy(&telemetry, &peer)
+                        .and_then(|o| telemetry.published_track(o, &mid_str))
+                    else {
+                        continue;
+                    };
+                    if let Some(codec) = codecs.get_mut(&mid)
+                        && !codec.recorded
+                    {
+                        record_codec(&telemetry, track_id, &codec.params);
+                        codec.recorded = true;
+                    }
+                    telemetry.record(Entry::TrackSample(TrackSample {
+                        track_id,
+                        at: chrono::Utc::now(),
+                        bytes: d.bytes,
+                        packets: d.packets,
+                        nacks: d.nacks,
+                        plis: d.plis,
+                        firs: d.firs,
+                        jitter_ms: d.jitter_ms,
+                        loss: d.loss,
+                        rtt_ms: d.rtt_ms,
+                    }));
+                }
+                TransportEvent::PeerStats { peer, reading } => {
+                    let Some(d) = sampler.peer(&reading) else {
+                        continue;
+                    };
+                    let Some(occupancy) = occupancy(&telemetry, &peer) else {
+                        continue;
+                    };
+                    telemetry.record(Entry::PeerSample(PeerSample {
+                        peer_id: occupancy,
+                        at: chrono::Utc::now(),
+                        bytes_rx: d.bytes_rx,
+                        bytes_tx: d.bytes_tx,
+                        transport_bytes_rx: d.transport_bytes_rx,
+                        transport_bytes_tx: d.transport_bytes_tx,
+                        egress_loss: d.egress_loss,
+                        bwe_bps: d.bwe_bps,
+                    }));
+                }
+                TransportEvent::IceState { peer, state } => {
+                    if let Some(occupancy) = occupancy(&telemetry, &peer) {
+                        record_ice_state(&telemetry, occupancy, state);
+                    }
+                }
             }
         }
         tracing::debug!("Peer {} — task de transport terminée", peer_id);
     });
+}
+
+/// The occupancy a connection currently holds, if it is in a room.
+///
+/// Telemetry rows are keyed by occupancy, not connection (Task 6 review,
+/// finding 3): outside a room there is nothing to attach a sample to.
+fn occupancy(telemetry: &Telemetry, peer: &str) -> Option<uuid::Uuid> {
+    crate::telemetry::peer_uuid(peer).and_then(|c| telemetry.occupancy_of(c))
+}
+
+/// The codec a publisher sends on one of its m-lines, and whether telemetry
+/// has been told.
+struct Codec {
+    params: PayloadParams,
+    recorded: bool,
+}
+
+/// Records the codec of a published track.
+fn record_codec(telemetry: &Telemetry, track_id: uuid::Uuid, params: &PayloadParams) {
+    let spec = params.spec();
+    telemetry.record(Entry::TrackCodec {
+        id: track_id,
+        // `Display` de str0m : "opus", "VP8", "H264"… le schéma attend des
+        // minuscules.
+        codec: spec.codec.to_string().to_lowercase(),
+        clock_rate: i32::try_from(spec.clock_rate.get()).unwrap_or(i32::MAX),
+    });
+}
+
+/// Records an ICE transition: the peer's last known state, plus an event for
+/// the transitions the dashboard's timeline shows.
+fn record_ice_state(telemetry: &Telemetry, occupancy: uuid::Uuid, state: IceConnectionState) {
+    let now = chrono::Utc::now();
+    telemetry.record(Entry::IceState {
+        peer_id: occupancy,
+        state: format!("{state:?}").to_lowercase(),
+        at: now,
+    });
+    // str0m 0.23 n'a pas d'état `Failed` : son agent ICE ne clôt jamais le
+    // trickle, une connexion peut toujours revenir. `IceFailed` reste donc
+    // sans émetteur. `Completed` suit `Connected` sans rien apprendre de plus.
+    let kind = match state {
+        IceConnectionState::Connected => EventKind::IceConnected,
+        IceConnectionState::Disconnected => EventKind::IceDisconnected,
+        _ => return,
+    };
+    telemetry.record(Entry::Event(EventRecord::new(kind, now).peer(occupancy)));
 }
 
 /// Serializes and pushes signaling messages onto the WebSocket.
