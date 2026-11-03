@@ -55,12 +55,54 @@ impl Telemetry {
         self.sink.record(entry);
     }
 
-    /// The track uuid for `(occupancy, mid)`, minted on first use.
-    pub fn track_id(&self, occupancy: Uuid, mid: &str) -> Uuid {
+    /// The track uuid for `(occupancy, mid)`, minted on first use, without
+    /// recording anything.
+    ///
+    /// Test fixture only: in production a track id must come with its
+    /// `TrackPublished`, or samples would reference a track with no
+    /// `telemetry.tracks` row. Use [`Self::publish_track`].
+    #[cfg(test)]
+    fn track_id(&self, occupancy: Uuid, mid: &str) -> Uuid {
         *self
             .tracks
             .entry((occupancy, mid.to_string()))
             .or_insert_with(Uuid::new_v4)
+    }
+
+    /// Publishes `(occupancy, mid)` — mints its uuid and records
+    /// `TrackPublished` plus its event — unless it already is.
+    ///
+    /// Idempotent on purpose. A track reaches telemetry by two paths: the
+    /// transport pump on `TrackAdded`, and the `join` that republishes what a
+    /// connection already sends into its fresh occupancy (LUM-708). A
+    /// `TrackAdded` still queued when the `join` runs would otherwise publish
+    /// the same track twice. Returns the uuid only when this call published.
+    pub fn publish_track(
+        &self,
+        occupancy: Uuid,
+        mid: &str,
+        kind: TrackKind,
+        at: DateTime<Utc>,
+    ) -> Option<Uuid> {
+        let id = match self.tracks.entry((occupancy, mid.to_string())) {
+            dashmap::Entry::Occupied(_) => return None,
+            dashmap::Entry::Vacant(slot) => *slot.insert(Uuid::new_v4()),
+        };
+        // Le verrou du shard est relâché ici : `record` met en file, mais
+        // rien ne doit tenir une entrée DashMap au-delà du nécessaire.
+        self.record(Entry::TrackPublished {
+            id,
+            peer_id: occupancy,
+            mid: mid.to_string(),
+            kind,
+            at,
+        });
+        self.record(Entry::Event(
+            EventRecord::new(EventKind::TrackPublished, at)
+                .peer(occupancy)
+                .track(id),
+        ));
+        Some(id)
     }
 
     /// The track uuid for `(occupancy, mid)` if that track was published in
@@ -273,6 +315,53 @@ mod tests {
             other => panic!("attendu RoomClosed en 3e position, reçu {other:?}"),
         }
         assert!(matches!(&entries[3], Entry::Event(e) if e.kind == EventKind::RoomEnded));
+    }
+
+    #[test]
+    fn publishing_a_track_twice_records_it_once() {
+        // Le `join` republie les tracks connus de la connexion, et un
+        // `TrackAdded` encore en file peut arriver juste après pour le même
+        // mid (LUM-708). Le second appel ne doit rien émettre : un
+        // `track_published` en double fausserait le journal d'événements.
+        let sink = Arc::new(MemorySink::new());
+        let t = Telemetry::new(sink.clone());
+        let occupancy = Uuid::new_v4();
+        let now = Utc::now();
+
+        let first = t.publish_track(occupancy, "1", TrackKind::Video, now);
+        let second = t.publish_track(occupancy, "1", TrackKind::Video, now);
+
+        assert!(first.is_some(), "le premier appel publie");
+        assert!(second.is_none(), "le second ne republie pas");
+        assert_eq!(t.published_track(occupancy, "1"), first);
+
+        let entries = sink.drain();
+        assert_eq!(
+            entries.len(),
+            2,
+            "TrackPublished + son Event, une seule fois"
+        );
+        match &entries[0] {
+            Entry::TrackPublished {
+                id,
+                peer_id,
+                mid,
+                kind,
+                ..
+            } => {
+                assert_eq!(Some(*id), first);
+                assert_eq!(*peer_id, occupancy);
+                assert_eq!(mid, "1");
+                assert_eq!(*kind, TrackKind::Video);
+            }
+            other => panic!("attendu TrackPublished, reçu {other:?}"),
+        }
+        assert!(matches!(
+            &entries[1],
+            Entry::Event(e) if e.kind == EventKind::TrackPublished
+                && e.peer_id == Some(occupancy)
+                && e.track_id == first
+        ));
     }
 
     #[test]

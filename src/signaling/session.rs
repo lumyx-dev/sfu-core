@@ -7,9 +7,7 @@ use crate::app::AppState;
 use crate::media::{ForwardingEngine, RtpSink};
 use crate::metrics::Metrics;
 use crate::telemetry::sampler::Sampler;
-use crate::telemetry::{
-    Entry, EventKind, EventRecord, PeerSample, Telemetry, TrackKind, TrackSample,
-};
+use crate::telemetry::{Entry, EventKind, EventRecord, PeerSample, Telemetry, TrackSample};
 use crate::transport::{PeerConnection, PeerSink, TransportEvent, event_loop};
 use axum::extract::ws::{Message, WebSocket};
 use futures::sink::SinkExt;
@@ -18,7 +16,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use str0m::IceConnectionState;
 use str0m::format::PayloadParams;
-use str0m::media::{MediaKind, Mid};
+use str0m::media::Mid;
 use tokio::sync::mpsc::{self, Receiver};
 use tokio::sync::{Mutex, oneshot};
 
@@ -189,30 +187,17 @@ fn spawn_transport_pump(
                 }
                 TransportEvent::TrackAdded { peer, mid, kind } => {
                     // La télémétrie clé ses tracks par occupation, pas par
-                    // connexion (Task 6 review, finding 3) : sans occupation
-                    // mirée pour ce connecteur — pas encore dans une room, ou
-                    // qui vient de la quitter — il n'y a rien à publier.
-                    if let Some(peer_uuid) = crate::telemetry::peer_uuid(&peer)
-                        && let Some(occupancy) = telemetry.occupancy_of(peer_uuid)
-                    {
-                        let mid_str = mid.to_string();
-                        let track_id = telemetry.track_id(occupancy, &mid_str);
-                        let now = chrono::Utc::now();
-                        telemetry.record(Entry::TrackPublished {
-                            id: track_id,
-                            peer_id: occupancy,
-                            mid: mid_str,
-                            kind: match kind {
-                                MediaKind::Audio => TrackKind::Audio,
-                                MediaKind::Video => TrackKind::Video,
-                            },
-                            at: now,
-                        });
-                        telemetry.record(Entry::Event(
-                            EventRecord::new(EventKind::TrackPublished, now)
-                                .peer(occupancy)
-                                .track(track_id),
-                        ));
+                    // connexion (Task 6 review, finding 3) : hors room, rien à
+                    // publier ici — le prochain `join` s'en chargera (LUM-708).
+                    // Idempotent : si ce `join` est passé entre-temps, ne
+                    // republie pas.
+                    if let Some(occupancy) = occupancy(&telemetry, &peer) {
+                        telemetry.publish_track(
+                            occupancy,
+                            &mid.to_string(),
+                            kind.into(),
+                            chrono::Utc::now(),
+                        );
                     }
                     negotiator.notify(NegotiationEvent::TrackPublished { peer, mid, kind });
                 }
@@ -351,4 +336,191 @@ fn spawn_signaling_pump(
         }
         tracing::debug!("Peer {} — task de signaling terminée", peer_id);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::telemetry::sampler::IngressReading;
+    use crate::telemetry::{MemorySink, TrackKind};
+    use std::time::Duration;
+    use str0m::media::MediaKind;
+    use tokio::sync::mpsc::Sender;
+    use uuid::Uuid;
+
+    /// A transport pump wired to a drainable telemetry sink, fed by hand.
+    struct Pump {
+        telemetry: Arc<Telemetry>,
+        sink: Arc<MemorySink>,
+        connection: Uuid,
+        peer: Arc<str>,
+        events: Sender<TransportEvent>,
+    }
+
+    impl Pump {
+        fn start() -> Pump {
+            let sink = Arc::new(MemorySink::new());
+            let telemetry = Telemetry::new(sink.clone());
+            let engine = ForwardingEngine::new();
+            let negotiator = Negotiator::new(engine.clone());
+            let connection = Uuid::new_v4();
+            let peer: Arc<str> = Arc::from(connection.to_string().as_str());
+            let (events, rx) = mpsc::channel(16);
+            spawn_transport_pump(
+                engine,
+                negotiator,
+                Metrics::new(),
+                telemetry.clone(),
+                Arc::clone(&peer),
+                rx,
+            );
+            Pump {
+                telemetry,
+                sink,
+                connection,
+                peer,
+                events,
+            }
+        }
+
+        /// Sends one cumulative stats reading for mid 1, `bytes` so far.
+        async fn stats(&self, bytes: u64) {
+            let reading = IngressReading {
+                bytes,
+                packets: bytes / 1000,
+                nacks: 0,
+                plis: 0,
+                firs: 0,
+                jitter: 900,
+                clock_rate: 90_000,
+                loss: None,
+                rtt_ms: None,
+            };
+            self.events
+                .send(TransportEvent::TrackStats {
+                    peer: Arc::clone(&self.peer),
+                    mid: Mid::from("1"),
+                    reading,
+                })
+                .await
+                .unwrap();
+        }
+
+        /// Everything the pump recorded since the last call.
+        ///
+        /// Waits for the pump to catch up: an ICE state change is sent last,
+        /// and since the pump handles its events in order, once its
+        /// `Entry::IceState` shows up everything sent before it has been
+        /// handled. The marker itself is filtered out.
+        async fn recorded(&self) -> Vec<Entry> {
+            self.events
+                .send(TransportEvent::IceState {
+                    peer: Arc::clone(&self.peer),
+                    state: IceConnectionState::Checking,
+                })
+                .await
+                .unwrap();
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+            let mut entries = Vec::new();
+            loop {
+                entries.extend(self.sink.drain());
+                if entries.iter().any(|e| matches!(e, Entry::IceState { .. })) {
+                    break;
+                }
+                assert!(tokio::time::Instant::now() < deadline, "pompe bloquée");
+                tokio::time::sleep(Duration::from_millis(1)).await;
+            }
+            entries.retain(|e| !matches!(e, Entry::IceState { .. }));
+            entries
+        }
+
+        /// The track samples recorded since the last call, as
+        /// `(track_id, bytes)`.
+        async fn samples(&self) -> Vec<(Uuid, i64)> {
+            self.recorded()
+                .await
+                .into_iter()
+                .filter_map(|e| match e {
+                    Entry::TrackSample(s) => Some((s.track_id, s.bytes)),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        fn join(&self, occupancy: Uuid) {
+            self.telemetry.set_occupancy(self.connection, occupancy);
+        }
+
+        fn publish_video(&self, occupancy: Uuid) -> Uuid {
+            self.telemetry
+                .publish_track(occupancy, "1", TrackKind::Video, chrono::Utc::now())
+                .expect("track neuf")
+        }
+    }
+
+    #[tokio::test]
+    async fn samples_follow_the_track_into_its_new_occupancy() {
+        // LUM-708 : après un changement de room, le track republié dans la
+        // nouvelle occupation reçoit les échantillons — et le delta enjambe le
+        // changement, puisque les cumuls str0m sont ceux de la connexion.
+        let pump = Pump::start();
+
+        let room_a = Uuid::new_v4();
+        pump.join(room_a);
+        let track_a = pump.publish_video(room_a);
+        pump.stats(1_000).await;
+        pump.stats(3_000).await;
+        assert_eq!(pump.samples().await, vec![(track_a, 2_000)]);
+
+        let room_b = Uuid::new_v4();
+        pump.telemetry.forget_peer(room_a);
+        pump.join(room_b);
+        let track_b = pump.publish_video(room_b);
+        pump.stats(4_500).await;
+
+        assert_eq!(
+            pump.samples().await,
+            vec![(track_b, 1_500)],
+            "l'échantillon va au track de room-b, avec le delta depuis le dernier relevé"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_track_not_published_in_the_current_occupancy_gets_no_sample() {
+        // Le symptôme de LUM-708, côté pompe : une occupation sans track
+        // publié n'invente pas d'id — pas d'échantillon orphelin.
+        let pump = Pump::start();
+        pump.join(Uuid::new_v4());
+        pump.stats(1_000).await;
+        pump.stats(2_000).await;
+        assert!(pump.samples().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_queued_track_added_after_the_join_does_not_publish_twice() {
+        // La course que l'idempotence de `publish_track` absorbe : le `join` a
+        // republié le track, puis le `TrackAdded` encore en file arrive.
+        let pump = Pump::start();
+        let occupancy = Uuid::new_v4();
+        pump.join(occupancy);
+        pump.publish_video(occupancy);
+        pump.sink.drain();
+
+        pump.events
+            .send(TransportEvent::TrackAdded {
+                peer: Arc::clone(&pump.peer),
+                mid: Mid::from("1"),
+                kind: MediaKind::Video,
+            })
+            .await
+            .unwrap();
+        let entries = pump.recorded().await;
+
+        assert!(
+            !entries
+                .iter()
+                .any(|e| matches!(e, Entry::TrackPublished { .. })),
+            "aucun TrackPublished en double, reçu {entries:?}"
+        );
+    }
 }
