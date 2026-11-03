@@ -6,6 +6,7 @@ Open-source WebRTC SFU in Rust (crate `lumyx-sfu`), AGPL-3.0-only. Single crate,
 - Architecture and known issues: `CONTEXT.md`. Layering rule: `media/` never depends on `transport/`.
 - Code comments and log messages in French; identifiers and public docs in English.
 - Local TLS certs (`*.pem`) are never committed.
+- Commits and PRs never mention Claude: no `Co-Authored-By: Claude` trailer, no "Generated with Claude Code" line, no reference to AI in messages or descriptions.
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
