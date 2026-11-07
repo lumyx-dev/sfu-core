@@ -70,20 +70,19 @@ Be honest with your infra decisions — here is what actually runs today.
 | WebSocket signaling | ✅ Works | JSON protocol, documented below |
 | Room management | ✅ Works | concurrent (`DashMap`), auto-GC of empty rooms |
 | RTP forwarding (audio + video) | ✅ Works | scoped per room; ~3 µs/packet at 50 peers |
-| Test coverage | ✅ 147 tests | routing tested without a network, plus a bench on the hot path |
-| Counter metrics endpoint | ⚠️ Partial | `rooms`, `peers`, connects and disconnects are live; the packet, byte and keyframe counters are defined but never incremented |
-| Keyframe requests (PLI) | ⚠️ No-op | the PLI escalator runs, but `rx_ssrcs` is no longer populated since the move to `Event::MediaData`, so nothing is sent |
-| SSRC / seq / timestamp rewrite | ⚠️ Inert | computed by `DownTrack`, then discarded — str0m's `Writer::write()` regenerates the RTP header. Kept because it is needed again in `rtp_mode` |
-| Public / NAT deployment | ⚠️ Not yet | `SFU_ICE_HOST` sets the advertised host, but there is no STUN client and no srflx discovery |
+| Test coverage | ✅ 148 tests | routing tested without a network, plus a bench on the hot path |
+| Counter metrics endpoint | ✅ Works | `rooms`, `peers`, connects, disconnects, forwarded packets and bytes (one per subscriber write) and keyframe requests are all live |
+| Keyframe requests (PLI) | ✅ Works | addressed by mid: a subscriber's keyframe request reaches the publisher as a PLI on the matching inbound m-line |
+| SSRC / seq / timestamp rewrite | ✅ Not needed | str0m in media mode regenerates the RTP header; `DownTrack` only retargets the packet to the subscriber's m-line |
+| Public / NAT deployment | ⚠️ Not yet | `SFU_ICE_HOST` sets the advertised host and `SFU_UDP_PORT_MIN/MAX` a publishable port range, but there is no STUN client and no srflx discovery |
 | Simulcast, SVC, bandwidth estimation | ❌ Planned | every subscriber gets the publisher's single encoding at full rate |
 | Quality metrics (jitter, loss, RTT, NACK) | ❌ Planned | the whole point of the project — next milestone |
 | Real-time dashboard | ❌ Scaffold | [`lumyx-dev/dashboard`](https://github.com/lumyx-dev/dashboard) is a bare Next.js app |
 | Session replay, alerting | ❌ Planned | |
 
-The ⚠️ rows are worth reading before you benchmark anything: three of the five `/metrics`
-counters are wired to nothing, and video recovery after a subscriber joins currently depends on
-the encoder emitting an IDR on its own. Both are tracked in
-[`CONTEXT.md`](CONTEXT.md).
+The ⚠️ row is worth reading before you deploy anything: without STUN, the SFU only works where
+peers can reach the advertised host directly (same network, or a public IP set with
+`SFU_ICE_HOST`).
 
 ---
 
@@ -338,7 +337,7 @@ flowing through the SFU into per-peer jitter, packet loss and RTT, exposed on `/
 pushed live over WebSocket.
 
 - [x] SFU core: ICE / DTLS / SRTP, RTP forwarding, rooms
-- [x] Layered architecture with a testable media boundary — 147 tests, bench on the hot path
+- [x] Layered architecture with a testable media boundary — 148 tests, bench on the hot path
 - [x] Room-scoped forwarding, bounded media queues, configuration via `SFU_*`
 - [ ] Wire the existing counters to the media path (`record_rtp`, `record_keyframe`, drops)
 - [ ] Restore working keyframe requests — `rx_ssrcs` is no longer populated
