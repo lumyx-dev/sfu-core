@@ -8,6 +8,7 @@ use crate::room::RoomPeer;
 use crate::telemetry::{Entry, EventKind, EventRecord};
 use crate::transport::PeerConnection;
 use std::sync::Arc;
+use str0m::media::{MediaKind, Mid};
 use tokio::sync::{Mutex, mpsc};
 
 /// Applies a message received from the client.
@@ -76,6 +77,29 @@ pub async fn handle_message(
                         .room(outcome.room_session)
                         .peer(outcome.peer_session),
                 ));
+
+                // Les tracks suivent le peer dans sa nouvelle occupation
+                // (LUM-708). `TrackAdded` ne part qu'une fois par connexion,
+                // sur `MediaAdded` : après un changement de room, un `leave`
+                // suivi d'un `join`, ou une offer arrivée avant le premier
+                // `join`, rien d'autre ne publierait ces tracks ici — et sans
+                // track publié, la pompe n'écrit aucun échantillon. Émis après
+                // `PeerJoined`, que `tracks.peer_id` référence.
+                let published: Vec<(Mid, MediaKind)> = conn
+                    .lock()
+                    .await
+                    .rx_kind
+                    .iter()
+                    .map(|(mid, kind)| (*mid, *kind))
+                    .collect();
+                for (mid, kind) in published {
+                    state.telemetry.publish_track(
+                        outcome.peer_session,
+                        &mid.to_string(),
+                        kind.into(),
+                        now,
+                    );
+                }
             }
 
             // Forwarding is scoped to the room: the peer only becomes
@@ -205,8 +229,7 @@ mod tests {
     use crate::app::AppState;
     use crate::config::Config;
     use crate::media::RtpPacketData;
-    use crate::telemetry::{Entry, EventKind, MemorySink, Telemetry};
-    use str0m::media::Mid;
+    use crate::telemetry::{Entry, EventKind, MemorySink, Telemetry, TrackKind};
     use uuid::Uuid;
 
     struct NullSink;
@@ -454,5 +477,151 @@ mod tests {
         assert!(matches!(&entries[5], Entry::Event(e) if e.kind == EventKind::RoomCreated));
         assert!(matches!(entries[6], Entry::PeerJoined { .. }));
         assert!(matches!(&entries[7], Entry::Event(e) if e.kind == EventKind::PeerJoined));
+    }
+
+    // ── LUM-708 : les tracks suivent le peer d'une occupation à l'autre ──────
+
+    /// Simulates a connection that already publishes audio on mid 0 and video
+    /// on mid 1 — what `Event::MediaAdded` leaves in `rx_kind`.
+    async fn publishing(conn: &Arc<Mutex<PeerConnection>>) {
+        let mut c = conn.lock().await;
+        c.rx_kind.insert(Mid::from("0"), MediaKind::Audio);
+        c.rx_kind.insert(Mid::from("1"), MediaKind::Video);
+    }
+
+    /// The `(occupancy, mid, kind)` of every `TrackPublished` in `entries`,
+    /// sorted by mid.
+    fn published(entries: &[Entry]) -> Vec<(Uuid, String, TrackKind)> {
+        let mut out: Vec<_> = entries
+            .iter()
+            .filter_map(|e| match e {
+                Entry::TrackPublished {
+                    peer_id, mid, kind, ..
+                } => Some((*peer_id, mid.clone(), *kind)),
+                _ => None,
+            })
+            .collect();
+        out.sort_by(|a, b| a.1.cmp(&b.1));
+        out
+    }
+
+    fn occupancy_of(entries: &[Entry]) -> Uuid {
+        entries
+            .iter()
+            .find_map(|e| match e {
+                Entry::PeerJoined { id, .. } => Some(*id),
+                _ => None,
+            })
+            .expect("un PeerJoined")
+    }
+
+    #[tokio::test]
+    async fn switching_rooms_republishes_the_tracks_in_the_new_occupancy() {
+        let (state, sink) = state_with_memory_sink();
+        let peer_id = a_peer();
+        let (conn, tx, _rx) = a_connection(&peer_id).await;
+        let rtp_sink: Arc<dyn RtpSink> = Arc::new(NullSink);
+        publishing(&conn).await;
+
+        join(&state, &peer_id, &tx, &conn, &rtp_sink, "room-a").await;
+        let first = occupancy_of(&sink.drain());
+
+        join(&state, &peer_id, &tx, &conn, &rtp_sink, "room-b").await;
+        let entries = sink.drain();
+        let second = occupancy_of(&entries);
+        assert_ne!(first, second);
+
+        assert_eq!(
+            published(&entries),
+            vec![
+                (second, "0".to_string(), TrackKind::Audio),
+                (second, "1".to_string(), TrackKind::Video),
+            ],
+            "les deux tracks sont republiés dans la nouvelle occupation"
+        );
+
+        // `tracks.peer_id` référence `peers.id` : la ligne du peer doit
+        // précéder celles de ses tracks dans le lot.
+        let joined_at = entries
+            .iter()
+            .position(|e| matches!(e, Entry::PeerJoined { .. }))
+            .unwrap();
+        let first_track = entries
+            .iter()
+            .position(|e| matches!(e, Entry::TrackPublished { .. }))
+            .unwrap();
+        assert!(joined_at < first_track, "PeerJoined avant TrackPublished");
+
+        // C'est la condition que la pompe de transport vérifie avant d'écrire
+        // un échantillon : sans elle, aucun `TrackSample` dans room-b.
+        let new_video = state.telemetry.published_track(second, "1");
+        assert!(new_video.is_some());
+        assert_ne!(
+            new_video,
+            state.telemetry.published_track(first, "1"),
+            "un track neuf, pas celui de room-a"
+        );
+        assert!(
+            state.telemetry.published_track(first, "1").is_none(),
+            "les tracks de room-a sont libérés"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_track_published_before_joining_is_recorded_on_join() {
+        // Une offer peut précéder le `join` : `TrackAdded` arrive alors sans
+        // occupation et la pompe ne publie rien. Le `join` doit rattraper.
+        let (state, sink) = state_with_memory_sink();
+        let peer_id = a_peer();
+        let (conn, tx, _rx) = a_connection(&peer_id).await;
+        let rtp_sink: Arc<dyn RtpSink> = Arc::new(NullSink);
+        publishing(&conn).await;
+
+        join(&state, &peer_id, &tx, &conn, &rtp_sink, "salon").await;
+
+        let entries = sink.drain();
+        let occupancy = occupancy_of(&entries);
+        assert_eq!(published(&entries).len(), 2);
+        assert!(published(&entries).iter().all(|(o, _, _)| *o == occupancy));
+    }
+
+    #[tokio::test]
+    async fn leaving_then_joining_again_republishes_the_tracks() {
+        let (state, sink) = state_with_memory_sink();
+        let peer_id = a_peer();
+        let (conn, tx, _rx) = a_connection(&peer_id).await;
+        let rtp_sink: Arc<dyn RtpSink> = Arc::new(NullSink);
+        publishing(&conn).await;
+
+        join(&state, &peer_id, &tx, &conn, &rtp_sink, "salon").await;
+        handle_message(
+            ClientMessage::Leave,
+            &peer_id,
+            &tx,
+            &state,
+            &conn,
+            &rtp_sink,
+        )
+        .await;
+        sink.drain();
+
+        join(&state, &peer_id, &tx, &conn, &rtp_sink, "salon").await;
+
+        let entries = sink.drain();
+        let occupancy = occupancy_of(&entries);
+        assert_eq!(published(&entries).len(), 2);
+        assert!(state.telemetry.published_track(occupancy, "0").is_some());
+    }
+
+    #[tokio::test]
+    async fn a_peer_that_publishes_nothing_gets_no_track() {
+        let (state, sink) = state_with_memory_sink();
+        let peer_id = a_peer();
+        let (conn, tx, _rx) = a_connection(&peer_id).await;
+        let rtp_sink: Arc<dyn RtpSink> = Arc::new(NullSink);
+
+        join(&state, &peer_id, &tx, &conn, &rtp_sink, "salon").await;
+
+        assert!(published(&sink.drain()).is_empty());
     }
 }

@@ -15,6 +15,15 @@ pub enum TrackKind {
     Video,
 }
 
+impl From<str0m::media::MediaKind> for TrackKind {
+    fn from(kind: str0m::media::MediaKind) -> Self {
+        match kind {
+            str0m::media::MediaKind::Audio => TrackKind::Audio,
+            str0m::media::MediaKind::Video => TrackKind::Video,
+        }
+    }
+}
+
 impl TrackKind {
     /// The `telemetry.track_kind` label this maps to.
     pub fn as_str(self) -> &'static str {
