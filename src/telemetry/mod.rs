@@ -7,6 +7,7 @@
 pub mod batch;
 pub mod entry;
 pub mod pg;
+pub mod sampler;
 pub mod sink;
 pub mod tasks;
 
@@ -60,6 +61,18 @@ impl Telemetry {
             .tracks
             .entry((occupancy, mid.to_string()))
             .or_insert_with(Uuid::new_v4)
+    }
+
+    /// The track uuid for `(occupancy, mid)` if that track was published in
+    /// this occupancy. Unlike [`Self::track_id`], never mints one.
+    ///
+    /// For samples and codec updates: they describe a track, they do not
+    /// create it. Minting here would give their rows a `track_id` with no
+    /// `telemetry.tracks` row behind it.
+    pub fn published_track(&self, occupancy: Uuid, mid: &str) -> Option<Uuid> {
+        self.tracks
+            .get(&(occupancy, mid.to_string()))
+            .map(|entry| *entry)
     }
 
     /// Releases an occupancy's tracks and returns them, so the caller can
@@ -260,6 +273,20 @@ mod tests {
             other => panic!("attendu RoomClosed en 3e position, reçu {other:?}"),
         }
         assert!(matches!(&entries[3], Entry::Event(e) if e.kind == EventKind::RoomEnded));
+    }
+
+    #[test]
+    fn looking_up_a_published_track_never_mints_one() {
+        // Un échantillon qui arrive pour un track jamais publié dans cette
+        // occupation ne doit pas créer d'uuid : il n'aurait pas de ligne
+        // `tracks`, et ses échantillons seraient orphelins.
+        let t = Telemetry::new(Arc::new(NoopSink));
+        let occupancy = Uuid::new_v4();
+        assert!(t.published_track(occupancy, "0").is_none());
+        assert!(t.forget_peer(occupancy).is_empty(), "rien n'a été créé");
+
+        let id = t.track_id(occupancy, "0");
+        assert_eq!(t.published_track(occupancy, "0"), Some(id));
     }
 
     #[test]

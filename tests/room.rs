@@ -119,8 +119,14 @@ impl World {
             signaling.push(rx);
 
             let peer: Arc<str> = Arc::from(peer_name(i).as_str());
-            let conn =
-                PeerConnection::new(Arc::clone(&peer), tx, "127.0.0.1".to_string(), None).await;
+            let conn = PeerConnection::new(
+                Arc::clone(&peer),
+                tx,
+                "127.0.0.1".to_string(),
+                None,
+                std::time::Duration::from_secs(1),
+            )
+            .await;
             let addr = conn.local_ice_addr().expect("adresse ICE du SFU");
 
             let sink = Arc::new(QueueSink::default());
@@ -571,6 +577,76 @@ async fn a_publisher_does_not_receive_its_own_stream() -> Result<(), RtcError> {
                 );
             }
         }
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_live_session_yields_a_time_series_of_ingress_deltas() -> Result<(), RtcError> {
+    // LUM-553 : une session de test doit produire une série temporelle, pas un
+    // état instantané. Les stats str0m sont activées à 1 s dans `World::new` ;
+    // on fait tourner ~3 s d'horloge virtuelle avec du média et on vérifie que
+    // la vidéo publiée par p00 produit des deltas exploitables.
+    use lumyx_sfu::telemetry::sampler::{IngressReading, Sampler};
+
+    let mut world = room_of(2).await?;
+    let video = world.browsers[0].video_mid;
+    let t0 = world.now;
+
+    let mut sampler = Sampler::new();
+    let mut deltas = Vec::new();
+    let mut turn = 0usize;
+
+    while world.now - t0 < Duration::from_secs(3) {
+        assert!(turn < 20_000, "l'horloge virtuelle doit avancer");
+        if turn.is_multiple_of(4) {
+            world.write_video(0, b"p00-stats");
+        }
+        turn += 1;
+
+        let events = world.turn()?;
+        let mut rest = Vec::new();
+        for (i, event) in events {
+            match event {
+                Event::MediaIngressStats(s) if i == 0 && s.mid == video => {
+                    let reading = IngressReading {
+                        bytes: s.bytes,
+                        packets: s.packets,
+                        nacks: s.nacks,
+                        plis: s.plis,
+                        firs: s.firs,
+                        jitter: s.jitter,
+                        clock_rate: world.sfus[0].conn.rx_clock_rate(s.mid),
+                        loss: s.loss,
+                        rtt_ms: s.rtt.map(|d| d.as_secs_f32() * 1000.0),
+                    };
+                    assert_eq!(reading.clock_rate, 90_000, "la vidéo est à 90 kHz");
+                    if let Some(d) = sampler.ingress(&s.mid.to_string(), &reading) {
+                        deltas.push(d);
+                    }
+                }
+                other => rest.push((i, other)),
+            }
+        }
+        world.react(rest);
+    }
+
+    assert!(
+        deltas.len() >= 2,
+        "~3 s à 1 échantillon/s doivent donner au moins 2 deltas, reçu {}",
+        deltas.len()
+    );
+    for d in &deltas {
+        assert!(
+            d.packets > 0,
+            "du média a transité sur chaque fenêtre : {d:?}"
+        );
+        assert!(d.bytes > 0, "{d:?}");
+        assert!(
+            d.jitter_ms.is_some(),
+            "un clock rate connu donne toujours un jitter : {d:?}"
+        );
     }
 
     Ok(())

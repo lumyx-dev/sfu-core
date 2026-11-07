@@ -2,10 +2,11 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::RtpPacketData;
+use crate::telemetry::sampler::{IngressReading, PeerReading};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use str0m::{
-    Candidate, Event, Input, Output,
+    Candidate, Event, IceConnectionState, Input, Output,
     media::{MediaKind, Mid},
     net::Receive,
     net::Transmit,
@@ -189,6 +190,25 @@ pub enum TransportEvent {
     /// The SFU has no encoder: the request has to travel on to whoever
     /// publishes that m-line's source.
     KeyframeRequested { peer: Arc<str>, mid: Mid },
+    /// One sampling interval of statistics for an m-line this peer publishes.
+    ///
+    /// The values are str0m's cumulative totals: turning them into deltas is
+    /// the session's job, which owns the previous reading.
+    TrackStats {
+        peer: Arc<str>,
+        mid: Mid,
+        reading: IngressReading,
+    },
+    /// One sampling interval of this peer's transport totals.
+    PeerStats {
+        peer: Arc<str>,
+        reading: PeerReading,
+    },
+    /// The peer's ICE connection changed state.
+    IceState {
+        peer: Arc<str>,
+        state: IceConnectionState,
+    },
 }
 
 /// Handles a str0m event.
@@ -204,7 +224,56 @@ fn handle_event(
         }
         Event::IceConnectionStateChange(state) => {
             tracing::info!("Peer {} ICE : {:?}", conn.peer_id, state);
+            // Rare et utile au diagnostic : perdu, il manquerait une
+            // transition dans la chronologie du peer. On le signale.
+            if let Err(TrySendError::Full(_)) = events.try_send(TransportEvent::IceState {
+                peer: Arc::clone(&conn.peer_id),
+                state,
+            }) {
+                tracing::warn!("Peer {} — état ICE {:?} non remonté", conn.peer_id, state);
+            }
         }
+        Event::MediaIngressStats(s) => {
+            let reading = IngressReading {
+                bytes: s.bytes,
+                packets: s.packets,
+                nacks: s.nacks,
+                plis: s.plis,
+                firs: s.firs,
+                jitter: s.jitter,
+                clock_rate: conn.rx_clock_rate(s.mid),
+                loss: s.loss,
+                rtt_ms: s.rtt.map(|d| d.as_secs_f32() * 1000.0),
+            };
+            // Une statistique perdue coûte un trou d'une seconde dans la série,
+            // pas un track fantôme : contrairement à une annonce, on la jette
+            // sans log, comme un paquet média.
+            let _ = events.try_send(TransportEvent::TrackStats {
+                peer: Arc::clone(&conn.peer_id),
+                mid: s.mid,
+                reading,
+            });
+        }
+        Event::PeerStats(s) => {
+            let reading = PeerReading {
+                bytes_rx: s.bytes_rx,
+                bytes_tx: s.bytes_tx,
+                transport_bytes_rx: s.peer_bytes_rx,
+                transport_bytes_tx: s.peer_bytes_tx,
+                egress_loss: s.egress_loss_fraction,
+                bwe_bps: s
+                    .bwe_tx
+                    .map(|b| i64::try_from(b.as_u64()).unwrap_or(i64::MAX)),
+            };
+            let _ = events.try_send(TransportEvent::PeerStats {
+                peer: Arc::clone(&conn.peer_id),
+                reading,
+            });
+        }
+        // Le sens sortant décrit ce que reçoit un subscriber, pas ce que publie
+        // ce peer : l'attribuer aux tracks de ce peer les compterait deux fois.
+        // `PeerStats` porte déjà le total transport sortant. Ignoré exprès.
+        Event::MediaEgressStats(_) => {}
         Event::MediaAdded(media) => {
             tracing::info!(
                 "✅ Peer {} publie {:?} sur mid={}",
