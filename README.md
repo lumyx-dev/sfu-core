@@ -136,19 +136,18 @@ curl -k https://localhost:3000/metrics
   "rooms": 1,
   "peers": 3,
   "metrics": {
-    "rtp_packets_forwarded": 0,
-    "bytes_forwarded": 0,
-    "keyframe_requests": 0,
+    "rtp_packets_forwarded": 18240,
+    "bytes_forwarded": 15730112,
+    "keyframe_requests": 4,
     "peers_connected": 5,
     "peers_disconnected": 2
   }
 }
 ```
 
-Those three zeros are not a quiet call. `rooms`, `peers`, `peers_connected` and
-`peers_disconnected` are live; `record_rtp` and `record_keyframe` exist but are never called from
-the media path, so their counters stay at zero however much traffic you push. Wiring them up is
-the first half of the metrics milestone.
+`rtp_packets_forwarded` and `bytes_forwarded` count one write per subscriber: a packet fanned out
+to three subscribers counts three times. `keyframe_requests` counts the keyframe requests
+received from subscribers.
 
 ### Configuration
 

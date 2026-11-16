@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question or setup problem
+    url: https://github.com/lumyx-dev/sfu-core/discussions/categories/q-a
+    about: Ask in Q&A rather than opening an issue. Answers there stay searchable for whoever hits the same wall next.
+  - name: Feature idea
+    url: https://github.com/lumyx-dev/sfu-core/discussions/categories/ideas
+    about: Propose and discuss a feature before it becomes an issue.
