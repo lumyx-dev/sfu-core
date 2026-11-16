@@ -132,6 +132,14 @@ pub struct PeerSample {
     pub transport_bytes_tx: i64,
     pub egress_loss: Option<f32>,
     pub bwe_bps: Option<i64>,
+    /// Media packets of this peer the SFU itself discarded on their way in —
+    /// ingress queue full or unknown payload type — over the window.
+    pub dropped_ingress_audio: i32,
+    pub dropped_ingress_video: i32,
+    /// Same, on their way out to this peer — `PeerSink` queue full, no
+    /// payload type on the m-line, or a write str0m refused.
+    pub dropped_egress_audio: i32,
+    pub dropped_egress_video: i32,
 }
 
 #[derive(Debug, Clone)]

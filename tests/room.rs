@@ -651,3 +651,24 @@ async fn a_live_session_yields_a_time_series_of_ingress_deltas() -> Result<(), R
 
     Ok(())
 }
+
+#[tokio::test]
+async fn a_healthy_session_drops_nothing_inside_the_sfu() -> Result<(), RtcError> {
+    // LUM-709 : sans saturation, aucun point de rejet du SFU ne doit bouger.
+    // Ce harnais passe par `to_packet` et `write_rtp` (PT inconnu, absence de
+    // PT, écriture refusée) ; les deux files ont leurs propres tests unitaires.
+    let mut world = room_of(5).await?;
+    exchange(&mut world, 20)?;
+    assert_every_peer_is_separated(&world);
+
+    for sfu in &world.sfus {
+        let drops = sfu.conn.drops.snapshot();
+        assert_eq!(
+            drops.total(),
+            0,
+            "{} : le SFU n'a rien à jeter sur une session saine — {drops:?}",
+            sfu.peer
+        );
+    }
+    Ok(())
+}

@@ -2,6 +2,7 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::RtpPacketData;
+use crate::metrics::drops::{DropPoint, MediaType};
 use crate::telemetry::sampler::{IngressReading, PeerReading};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -19,15 +20,16 @@ use tokio::sync::oneshot;
 /// Size of the UDP receive buffer (a comfortable MTU).
 const RECV_BUFFER_SIZE: usize = 2000;
 
-/// Inbound packets dropped for lack of room in the forwarding engine's queue.
+/// Burst state of the inbound packets dropped for lack of room in the
+/// forwarding engine's queue.
 ///
-/// Logging every drop would drown the logs: a saturated queue produces as many
-/// as the publisher emits packets, i.e. hundreds per second. Only the first
-/// loss of a burst is traced, with the running total; the burst ends as soon as
-/// a packet gets through again.
+/// The count itself lives in the connection's `DropCounters`
+/// ([`DropPoint::IngressQueue`]). Logging every drop would drown the logs: a
+/// saturated queue produces as many as the publisher emits packets, i.e.
+/// hundreds per second. Only the first loss of a burst is traced, with the
+/// running total; the burst ends as soon as a packet gets through again.
 #[derive(Default)]
 struct IngressDrops {
-    total: u64,
     bursting: bool,
 }
 
@@ -303,6 +305,7 @@ fn handle_event(
             let Some(packet) = conn.to_packet(data) else {
                 return;
             };
+            let kind = MediaType::from_is_video(packet.is_video);
             // `Arc::clone`: the peer_id never changes, so sending it per packet
             // no longer has to reallocate it.
             let event = TransportEvent::Media {
@@ -314,13 +317,13 @@ fn handle_event(
                 // Real-time media: the engine is behind, this packet is already
                 // worthless. We drop it rather than wait.
                 Err(TrySendError::Full(_)) => {
-                    drops.total += 1;
+                    let total = conn.drops.record(DropPoint::IngressQueue, kind);
                     if !drops.bursting {
                         drops.bursting = true;
                         tracing::warn!(
                             "Peer {} — file de forwarding pleine, paquet entrant jeté (total {})",
                             conn.peer_id,
-                            drops.total
+                            total
                         );
                     }
                 }
@@ -340,5 +343,50 @@ fn handle_event(
             });
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::transport::peer_connection::fixtures::test_media_data;
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn an_inbound_packet_dropped_on_a_full_queue_is_counted_by_kind() {
+        // LUM-709 : la file vers le moteur jette quand elle est pleine ; le
+        // compteur doit le voir, côté entrée, avec le bon type de média.
+        let (signaling, _rx) = mpsc::channel(4);
+        let mut conn = PeerConnection::new(
+            Arc::from("alice"),
+            signaling,
+            "127.0.0.1".to_string(),
+            None,
+            Duration::from_secs(1),
+        )
+        .await;
+        conn.rx_kind.insert(Mid::from("0"), MediaKind::Audio);
+        // Un PT que la configuration de codecs connaît, pour que `to_packet`
+        // accepte le paquet et que seule la file puisse le perdre.
+        let pt = *conn.rtc.codec_config().params()[0].pt();
+
+        let (events, _events_rx) = mpsc::channel(1);
+        let mut bursts = IngressDrops::default();
+        for _ in 0..3 {
+            handle_event(
+                &mut conn,
+                Event::MediaData(test_media_data("0", pt)),
+                &events,
+                &mut bursts,
+            );
+        }
+
+        let drops = conn.drops.snapshot();
+        assert_eq!(
+            drops.get(DropPoint::IngressQueue, MediaType::Audio),
+            2,
+            "une place dans la file, trois paquets : deux jetés"
+        );
+        assert_eq!(drops.total(), 2);
     }
 }

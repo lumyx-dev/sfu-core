@@ -2,6 +2,7 @@
 
 use crate::error::{Result, SfuError};
 use crate::media::{RtpPacketData, TrackKey};
+use crate::metrics::drops::{DropCounters, DropPoint, MediaType};
 use crate::signaling::ServerMessage;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -51,6 +52,12 @@ pub struct PeerConnection {
     /// added. It picks the RTP clock on the way in and classifies the track as
     /// audio or video.
     pub rx_kind: HashMap<Mid, MediaKind>,
+
+    /// Packets of this connection the SFU discarded, in either direction.
+    ///
+    /// Shared with this peer's event loop and `PeerSink`, which drop on their
+    /// own queues; this struct counts the drops that happen inside it.
+    pub drops: Arc<DropCounters>,
 
     /// Sources wanted by this peer, not offered yet.
     queued: Vec<(TrackKey, MediaKind)>,
@@ -115,6 +122,7 @@ impl PeerConnection {
             sender,
             ice_host,
             rx_kind: HashMap::new(),
+            drops: DropCounters::new(),
             queued: Vec::new(),
             offered: Vec::new(),
             allocated: HashMap::new(),
@@ -347,6 +355,10 @@ impl PeerConnection {
             .match_params(packet.params)
             .or_else(|| writer.payload_params().next().map(|p| p.pt()))
         else {
+            self.drops.record(
+                DropPoint::NoPayloadType,
+                MediaType::from_is_video(packet.is_video),
+            );
             tracing::warn!(
                 "Peer {} — aucun PT disponible pour mid={}",
                 self.peer_id,
@@ -365,12 +377,28 @@ impl PeerConnection {
         // `From<Arc<[u8]>> for Arc<[u8]>` implementation is the identity:
         // handing it a clone of the `Arc` only bumps a refcount. Passing a slice
         // (`&[u8]`) instead would copy the ~1200 bytes per subscriber.
-        let _ = writer.write(
+        if let Err(e) = writer.write(
             pt,
             packet.network_time,
             rtp_time,
             Arc::clone(&packet.payload),
-        );
+        ) {
+            // Une erreur ignorée ici était une perte invisible : le paquet ne
+            // partait pas et rien ne le comptait (LUM-709). Un log par
+            // occurrence suffit, str0m ne refuse une écriture qu'en cas
+            // d'anomalie, pas en régime normal.
+            let total = self.drops.record(
+                DropPoint::WriteFailed,
+                MediaType::from_is_video(packet.is_video),
+            );
+            tracing::warn!(
+                "Peer {} — écriture refusée par str0m sur mid={} : {} (total {})",
+                self.peer_id,
+                packet.mid,
+                e,
+                total
+            );
+        }
 
         Ok(())
     }
@@ -427,6 +455,10 @@ impl PeerConnection {
             .copied();
 
         let Some(params) = params else {
+            self.drops.record(
+                DropPoint::UnknownPayloadType,
+                MediaType::from_is_video(is_video),
+            );
             tracing::warn!(
                 "Peer {} — PT {} absent du codec config, paquet ignoré",
                 self.peer_id,
@@ -468,9 +500,51 @@ impl PeerConnection {
     }
 }
 
+/// Test fixtures shared by the transport's unit tests.
+#[cfg(test)]
+pub(crate) mod fixtures {
+    use std::sync::Arc;
+    use std::time::Instant;
+    use str0m::media::Mid;
+
+    /// An inbound packet as str0m hands it over, on `mid` with payload type
+    /// `pt`.
+    pub(crate) fn test_media_data(mid: &str, pt: u8) -> str0m::media::MediaData {
+        use str0m::format::{Codec, CodecSpec, PayloadParams};
+        use str0m::media::{Frequency, MediaTime, Pt};
+        use str0m::rtp::{ExtensionValues, SeqNo};
+        str0m::media::MediaData {
+            mid: Mid::from(mid),
+            pt: Pt::from(pt),
+            rid: None,
+            params: PayloadParams::new(
+                Pt::from(pt),
+                None,
+                CodecSpec {
+                    codec: Codec::Opus,
+                    clock_rate: Frequency::FORTY_EIGHT_KHZ,
+                    channels: Some(2),
+                    format: Default::default(),
+                },
+            ),
+            time: MediaTime::new(0, Frequency::FORTY_EIGHT_KHZ),
+            network_time: Instant::now(),
+            seq_range: SeqNo::from(1)..=SeqNo::from(1),
+            contiguous: true,
+            data: Arc::from(&b"opus"[..]),
+            ext_vals: ExtensionValues::default(),
+            codec_extra: str0m::format::CodecExtra::None,
+            last_sender_info: None,
+            audio_start_of_talk_spurt: false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::fixtures::test_media_data;
     use super::*;
+    use crate::metrics::drops::{DropPoint, MediaType};
 
     /// Reproduces exactly the signature of `str0m::media::Writer::write` for its
     /// `data` parameter, and returns the `Arc` as str0m sees it after the
@@ -510,6 +584,35 @@ mod tests {
             "passer une tranche recopierait — c'est la régression à éviter"
         );
         assert_eq!(&recopie[..], &payload[..]);
+    }
+
+    #[tokio::test]
+    async fn a_packet_with_an_unknown_payload_type_is_counted_as_dropped() {
+        // LUM-709 : ce rejet n'avait qu'un `warn!`. Le seuil B1b du gate
+        // Phase 0 exige que toute perte ajoutée par le SFU soit comptée.
+        let mut conn = connection("alice").await;
+        conn.rx_kind.insert(Mid::from("0"), MediaKind::Audio);
+
+        // Un PT absent de la configuration de codecs — calculé plutôt que
+        // supposé : str0m en déclare plusieurs par défaut, Opus en 111.
+        let unknown = (96u8..128)
+            .find(|pt| {
+                !conn
+                    .rtc
+                    .codec_config()
+                    .params()
+                    .iter()
+                    .any(|p| *p.pt() == *pt)
+            })
+            .expect("un PT dynamique libre");
+        assert!(conn.to_packet(test_media_data("0", unknown)).is_none());
+
+        let drops = conn.drops.snapshot();
+        assert_eq!(
+            drops.get(DropPoint::UnknownPayloadType, MediaType::Audio),
+            1
+        );
+        assert_eq!(drops.total(), 1);
     }
 
     async fn connection(peer_id: &str) -> PeerConnection {

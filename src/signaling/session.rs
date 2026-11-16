@@ -6,6 +6,7 @@ use super::negotiation::{NegotiationEvent, Negotiator};
 use crate::app::AppState;
 use crate::media::{ForwardingEngine, RtpSink};
 use crate::metrics::Metrics;
+use crate::metrics::drops::{DropCounters, DropCounts, MediaType};
 use crate::telemetry::sampler::Sampler;
 use crate::telemetry::{Entry, EventKind, EventRecord, PeerSample, Telemetry, TrackSample};
 use crate::transport::{PeerConnection, PeerSink, TransportEvent, event_loop};
@@ -70,7 +71,9 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     // running before the first packet — but the engine only learns about it on
     // `Join`: a peer that has joined no room receives nothing and broadcasts
     // nothing. Holding it here keeps it alive for the whole session.
-    let sink: Arc<dyn RtpSink> = PeerSink::new(Arc::clone(&peer_id), conn.clone());
+    let drops = Arc::clone(&conn.lock().await.drops);
+    let sink: Arc<dyn RtpSink> =
+        PeerSink::new(Arc::clone(&peer_id), conn.clone(), Arc::clone(&drops));
 
     // The negotiator has to be able to re-offer to this peer from the moment
     // it exists: a track published elsewhere can reach it before it has said a
@@ -84,6 +87,7 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
         state.negotiator.clone(),
         state.metrics.clone(),
         state.telemetry.clone(),
+        Arc::clone(&drops),
         Arc::clone(&peer_id),
         transport_rx,
     );
@@ -153,6 +157,7 @@ fn spawn_transport_pump(
     negotiator: Arc<Negotiator>,
     metrics: Arc<Metrics>,
     telemetry: Arc<Telemetry>,
+    drops: Arc<DropCounters>,
     peer_id: Arc<str>,
     mut events: Receiver<TransportEvent>,
 ) {
@@ -167,6 +172,9 @@ fn spawn_transport_pump(
         // une consignation impossible (track pas encore publié) est retentée
         // une fois par seconde, pas une fois par paquet.
         let mut codecs: HashMap<Mid, Codec> = HashMap::new();
+        // Pertes déjà repliées dans `/metrics` : chaque tick n'y ajoute que
+        // la différence.
+        let mut drops_seen = DropCounts::default();
 
         while let Some(event) = events.recv().await {
             match event {
@@ -238,6 +246,12 @@ fn spawn_transport_pump(
                     }));
                 }
                 TransportEvent::PeerStats { peer, reading } => {
+                    // Les pertes partent dans `/metrics` à chaque tick, avant
+                    // tout `continue` : hors room ou au premier relevé, elles
+                    // n'ont pas d'échantillon où aller, mais le total serveur
+                    // ne doit rien perdre.
+                    let dropped = drops_since(&drops, &mut drops_seen);
+                    metrics.record_media_drops(&dropped);
                     let Some(d) = sampler.peer(&reading) else {
                         continue;
                     };
@@ -253,6 +267,10 @@ fn spawn_transport_pump(
                         transport_bytes_tx: d.transport_bytes_tx,
                         egress_loss: d.egress_loss,
                         bwe_bps: d.bwe_bps,
+                        dropped_ingress_audio: column(dropped.ingress(MediaType::Audio)),
+                        dropped_ingress_video: column(dropped.ingress(MediaType::Video)),
+                        dropped_egress_audio: column(dropped.egress(MediaType::Audio)),
+                        dropped_egress_video: column(dropped.egress(MediaType::Video)),
                     }));
                 }
                 TransportEvent::IceState { peer, state } => {
@@ -262,8 +280,24 @@ fn spawn_transport_pump(
                 }
             }
         }
+        // Fin de connexion : ce qui a été jeté depuis le dernier tick n'aurait
+        // sinon jamais atteint `/metrics`.
+        metrics.record_media_drops(&drops_since(&drops, &mut drops_seen));
         tracing::debug!("Peer {} — task de transport terminée", peer_id);
     });
+}
+
+/// What `drops` counted since `seen`, which is then moved forward.
+fn drops_since(drops: &DropCounters, seen: &mut DropCounts) -> DropCounts {
+    let now = drops.snapshot();
+    let delta = now.since(seen);
+    *seen = now;
+    delta
+}
+
+/// A per-interval count, for an `integer` column.
+fn column(count: u64) -> i32 {
+    i32::try_from(count).unwrap_or(i32::MAX)
 }
 
 /// The occupancy a connection currently holds, if it is in a room.
@@ -341,7 +375,8 @@ fn spawn_signaling_pump(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::telemetry::sampler::IngressReading;
+    use crate::metrics::drops::{DropPoint, MediaType};
+    use crate::telemetry::sampler::{IngressReading, PeerReading};
     use crate::telemetry::{MemorySink, TrackKind};
     use std::time::Duration;
     use str0m::media::MediaKind;
@@ -351,6 +386,8 @@ mod tests {
     /// A transport pump wired to a drainable telemetry sink, fed by hand.
     struct Pump {
         telemetry: Arc<Telemetry>,
+        metrics: Arc<Metrics>,
+        drops: Arc<DropCounters>,
         sink: Arc<MemorySink>,
         connection: Uuid,
         peer: Arc<str>,
@@ -366,16 +403,21 @@ mod tests {
             let connection = Uuid::new_v4();
             let peer: Arc<str> = Arc::from(connection.to_string().as_str());
             let (events, rx) = mpsc::channel(16);
+            let metrics = Metrics::new();
+            let drops = DropCounters::new();
             spawn_transport_pump(
                 engine,
                 negotiator,
-                Metrics::new(),
+                metrics.clone(),
                 telemetry.clone(),
+                Arc::clone(&drops),
                 Arc::clone(&peer),
                 rx,
             );
             Pump {
                 telemetry,
+                metrics,
+                drops,
                 sink,
                 connection,
                 peer,
@@ -445,6 +487,24 @@ mod tests {
                     _ => None,
                 })
                 .collect()
+        }
+
+        /// Sends one transport stats tick.
+        async fn peer_stats(&self) {
+            self.events
+                .send(TransportEvent::PeerStats {
+                    peer: Arc::clone(&self.peer),
+                    reading: PeerReading {
+                        bytes_rx: 0,
+                        bytes_tx: 0,
+                        transport_bytes_rx: 0,
+                        transport_bytes_tx: 0,
+                        egress_loss: None,
+                        bwe_bps: None,
+                    },
+                })
+                .await
+                .unwrap();
         }
 
         fn join(&self, occupancy: Uuid) {
@@ -522,5 +582,72 @@ mod tests {
                 .any(|e| matches!(e, Entry::TrackPublished { .. })),
             "aucun TrackPublished en double, reçu {entries:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn drops_reach_the_peer_sample_and_metrics_as_per_interval_deltas() {
+        // LUM-709 : les pertes du SFU doivent être relisibles sur la fenêtre
+        // d'une session de test (télémétrie) et sur `/metrics`.
+        let pump = Pump::start();
+        let occupancy = Uuid::new_v4();
+        pump.join(occupancy);
+
+        // Avant le premier tick : str0m n'a pas encore de relevé précédent,
+        // aucun PeerSample ne part — mais `/metrics` ne doit rien perdre.
+        pump.drops.record(DropPoint::IngressQueue, MediaType::Video);
+        pump.peer_stats().await;
+        pump.recorded().await;
+
+        pump.drops.record(DropPoint::EgressQueue, MediaType::Audio);
+        pump.drops
+            .record(DropPoint::NoPayloadType, MediaType::Audio);
+        pump.drops
+            .record(DropPoint::UnknownPayloadType, MediaType::Audio);
+        pump.peer_stats().await;
+
+        let samples: Vec<PeerSample> = pump
+            .recorded()
+            .await
+            .into_iter()
+            .filter_map(|e| match e {
+                Entry::PeerSample(s) => Some(s),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(samples.len(), 1);
+        let s = &samples[0];
+        assert_eq!(s.peer_id, occupancy);
+        assert_eq!(s.dropped_ingress_audio, 1, "PT inconnu");
+        assert_eq!(s.dropped_egress_audio, 2, "file de sortie + pas de PT");
+        assert_eq!(s.dropped_ingress_video, 0, "déjà compté au tick précédent");
+        assert_eq!(s.dropped_egress_video, 0);
+
+        let m = pump.metrics.snapshot().media_packets_dropped;
+        assert_eq!(
+            m.ingress_queue.video, 1,
+            "le premier tick a bien été replié"
+        );
+        assert_eq!(m.egress_queue.audio, 1);
+        assert_eq!(m.no_payload_type.audio, 1);
+        assert_eq!(m.unknown_payload_type.audio, 1);
+    }
+
+    #[tokio::test]
+    async fn drops_since_the_last_tick_reach_metrics_when_the_connection_ends() {
+        let pump = Pump::start();
+        pump.drops.record(DropPoint::WriteFailed, MediaType::Video);
+        let metrics = pump.metrics.clone();
+        // Fermer le canal : c'est ainsi que la boucle de transport signale la
+        // fin de la connexion à la pompe.
+        drop(pump);
+
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+        while metrics.snapshot().media_packets_dropped.write_failed.video == 0 {
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "perte jamais repliée"
+            );
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
     }
 }

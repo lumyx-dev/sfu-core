@@ -2,8 +2,9 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::{RtpPacketData, RtpSink};
+use crate::metrics::drops::{DropCounters, DropPoint, MediaType};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use str0m::media::Mid;
 use tokio::sync::Mutex;
@@ -40,8 +41,9 @@ const RTP_QUEUE_CAPACITY: usize = 128;
 /// queue is full we drop it — but never silently, hence the counter.
 struct RtpQueue {
     tx: mpsc::Sender<RtpPacketData>,
-    /// Packets dropped since the sink was created.
-    dropped: AtomicU64,
+    /// The connection's drop counters; this queue records
+    /// [`DropPoint::EgressQueue`] there.
+    drops: Arc<DropCounters>,
     /// Whether a drop burst is under way.
     ///
     /// A saturated queue drops as many packets as the publishers emit, i.e.
@@ -52,10 +54,10 @@ struct RtpQueue {
 }
 
 impl RtpQueue {
-    fn new(tx: mpsc::Sender<RtpPacketData>) -> Self {
+    fn new(tx: mpsc::Sender<RtpPacketData>, drops: Arc<DropCounters>) -> Self {
         RtpQueue {
             tx,
-            dropped: AtomicU64::new(0),
+            drops,
             bursting: AtomicBool::new(false),
         }
     }
@@ -74,8 +76,11 @@ impl RtpQueue {
                     self.bursting.store(false, Ordering::Relaxed);
                 }
             }
-            Err(TrySendError::Full(_)) => {
-                let total = self.dropped.fetch_add(1, Ordering::Relaxed) + 1;
+            Err(TrySendError::Full(packet)) => {
+                let total = self.drops.record(
+                    DropPoint::EgressQueue,
+                    MediaType::from_is_video(packet.is_video),
+                );
                 if !self.bursting.swap(true, Ordering::Relaxed) {
                     tracing::warn!(
                         "Peer {} — file RTP pleine ({} paquets), paquet jeté (total {})",
@@ -92,7 +97,9 @@ impl RtpQueue {
     }
 
     fn dropped(&self) -> u64 {
-        self.dropped.load(Ordering::Relaxed)
+        let s = self.drops.snapshot();
+        s.get(DropPoint::EgressQueue, MediaType::Audio)
+            + s.get(DropPoint::EgressQueue, MediaType::Video)
     }
 }
 
@@ -114,7 +121,15 @@ pub struct PeerSink {
 
 impl PeerSink {
     /// Creates the sink and starts its writer task.
-    pub fn new(peer_id: Arc<str>, conn: Arc<Mutex<PeerConnection>>) -> Arc<Self> {
+    ///
+    /// `drops` must be the connection's own counters
+    /// ([`PeerConnection::drops`]): the session reads drops from there, for
+    /// every point at once.
+    pub fn new(
+        peer_id: Arc<str>,
+        conn: Arc<Mutex<PeerConnection>>,
+        drops: Arc<DropCounters>,
+    ) -> Arc<Self> {
         let (tx, mut rx) = mpsc::channel::<RtpPacketData>(RTP_QUEUE_CAPACITY);
 
         let pump_conn = conn.clone();
@@ -132,7 +147,7 @@ impl PeerSink {
 
         Arc::new(PeerSink {
             peer_id,
-            queue: RtpQueue::new(tx),
+            queue: RtpQueue::new(tx, drops),
             conn,
         })
     }
@@ -147,10 +162,9 @@ impl PeerSink {
     /// Stays at zero as long as the WebRTC write keeps up with forwarding; a
     /// rising value points at a peer whose output is falling behind.
     ///
-    /// NOTE: this counter is not relayed through `/metrics` yet — the media
-    /// layer has no access to [`crate::metrics::Metrics`], and wiring it there
-    /// would be out of scope. For now it is only readable from here and through
-    /// [`RtpQueue::push`]'s logging.
+    /// The same count, split by kind, is in the connection's
+    /// [`DropCounters`] under [`DropPoint::EgressQueue`], which is what reaches
+    /// `/metrics` and telemetry.
     pub fn dropped_packets(&self) -> u64 {
         self.queue.dropped()
     }
@@ -180,6 +194,7 @@ impl RtpSink for PeerSink {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::metrics::drops::{DropPoint, MediaType};
     use std::time::Instant;
     use str0m::format::{Codec, CodecSpec, PayloadParams};
     use str0m::media::{Frequency, Pt};
@@ -212,7 +227,7 @@ mod tests {
         // The receiver is held but never read: the queue fills up, then
         // saturates at its capacity.
         let (tx, _rx) = mpsc::channel::<RtpPacketData>(4);
-        let queue = RtpQueue::new(tx);
+        let queue = RtpQueue::new(tx, DropCounters::new());
 
         for _ in 0..10 {
             queue.push("alice", packet(b"frame"));
@@ -230,7 +245,7 @@ mod tests {
     #[test]
     fn the_drop_counter_stays_at_zero_while_the_queue_has_room() {
         let (tx, _rx) = mpsc::channel::<RtpPacketData>(4);
-        let queue = RtpQueue::new(tx);
+        let queue = RtpQueue::new(tx, DropCounters::new());
 
         for _ in 0..4 {
             queue.push("alice", packet(b"frame"));
@@ -248,7 +263,7 @@ mod tests {
     #[tokio::test]
     async fn the_queue_preserves_the_order_of_the_packets_it_accepts() {
         let (tx, mut rx) = mpsc::channel::<RtpPacketData>(4);
-        let queue = RtpQueue::new(tx);
+        let queue = RtpQueue::new(tx, DropCounters::new());
 
         // Six sends for two drops: what comes out must be the prefix of the
         // accepted ones, in input order.
@@ -285,7 +300,8 @@ mod tests {
             )
             .await,
         ));
-        let sink = PeerSink::new(Arc::from("alice"), conn);
+        let drops = Arc::clone(&conn.lock().await.drops);
+        let sink = PeerSink::new(Arc::from("alice"), conn.clone(), drops);
 
         for _ in 0..RTP_QUEUE_CAPACITY + 7 {
             sink.write_rtp(packet(b"frame"));
@@ -296,5 +312,10 @@ mod tests {
             7,
             "les paquets au-delà de la capacité doivent être comptés comme jetés"
         );
+        // LUM-709 : ce sont les compteurs de la connexion, que la session
+        // relit à chaque échantillon — par point et par type de média.
+        let seen = conn.lock().await.drops.snapshot();
+        assert_eq!(seen.get(DropPoint::EgressQueue, MediaType::Video), 7);
+        assert_eq!(seen.egress(MediaType::Audio), 0);
     }
 }

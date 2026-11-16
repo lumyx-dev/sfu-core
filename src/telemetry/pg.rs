@@ -233,8 +233,10 @@ impl PgWriter {
             sqlx::query(
                 "insert into telemetry.peer_samples
                    (instance_id, peer_id, at, bytes_rx, bytes_tx,
-                    transport_bytes_rx, transport_bytes_tx, egress_loss, bwe_bps)
-                 values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                    transport_bytes_rx, transport_bytes_tx, egress_loss, bwe_bps,
+                    dropped_ingress_audio, dropped_ingress_video,
+                    dropped_egress_audio, dropped_egress_video)
+                 values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
                  on conflict (peer_id, at) do nothing",
             )
             .bind(iid)
@@ -246,6 +248,10 @@ impl PgWriter {
             .bind(s.transport_bytes_tx)
             .bind(s.egress_loss)
             .bind(s.bwe_bps)
+            .bind(s.dropped_ingress_audio)
+            .bind(s.dropped_ingress_video)
+            .bind(s.dropped_egress_audio)
+            .bind(s.dropped_egress_video)
             .execute(&mut *tx)
             .await?;
         }
