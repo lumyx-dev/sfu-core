@@ -407,6 +407,10 @@ struct PeerSampleRow {
     transport_bytes_tx: i64,
     egress_loss: Option<f32>,
     bwe_bps: Option<i64>,
+    dropped_ingress_audio: i32,
+    dropped_ingress_video: i32,
+    dropped_egress_audio: i32,
+    dropped_egress_video: i32,
 }
 
 #[tokio::test]
@@ -427,12 +431,18 @@ async fn a_peer_sample_round_trips_every_column_without_transposition() {
         transport_bytes_tx: 104,
         egress_loss: Some(0.55),
         bwe_bps: Some(123_456),
+        dropped_ingress_audio: 201,
+        dropped_ingress_video: 202,
+        dropped_egress_audio: 203,
+        dropped_egress_video: 204,
     })]))
     .await
     .expect("échantillon peer");
 
     let row: PeerSampleRow = sqlx::query_as(
-        "select bytes_rx, bytes_tx, transport_bytes_rx, transport_bytes_tx, egress_loss, bwe_bps
+        "select bytes_rx, bytes_tx, transport_bytes_rx, transport_bytes_tx, egress_loss, bwe_bps,
+                dropped_ingress_audio, dropped_ingress_video,
+                dropped_egress_audio, dropped_egress_video
          from telemetry.peer_samples where peer_id = $1 and at = $2",
     )
     .bind(peer)
@@ -449,6 +459,10 @@ async fn a_peer_sample_round_trips_every_column_without_transposition() {
             transport_bytes_tx: 104,
             egress_loss: Some(0.55),
             bwe_bps: Some(123_456),
+            dropped_ingress_audio: 201,
+            dropped_ingress_video: 202,
+            dropped_egress_audio: 203,
+            dropped_egress_video: 204,
         }
     );
 }

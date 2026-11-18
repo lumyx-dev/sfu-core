@@ -1,3 +1,6 @@
+pub mod drops;
+
+use drops::{DropCounters, DropCounts, DropsSnapshot};
 use serde::Serialize;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -10,6 +13,8 @@ pub struct Metrics {
     pub peers_connected: AtomicU64,
     pub peers_disconnected: AtomicU64,
     pub telemetry_entries_dropped: AtomicU64,
+    /// Media packets the SFU discarded, server-wide. See [`drops`].
+    pub media_packets_dropped: DropCounters,
 }
 
 impl Metrics {
@@ -43,6 +48,14 @@ impl Metrics {
             .fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Folds drops counted on one peer into the server-wide total.
+    ///
+    /// The session calls it with each sampling interval's delta, and once
+    /// more with what remains when the connection ends.
+    pub fn record_media_drops(&self, delta: &DropCounts) {
+        self.media_packets_dropped.add(delta);
+    }
+
     pub fn snapshot(&self) -> MetricsSnapshot {
         MetricsSnapshot {
             rtp_packets_forwarded: self.rtp_packets_forwarded.load(Ordering::Relaxed),
@@ -51,6 +64,7 @@ impl Metrics {
             peers_connected: self.peers_connected.load(Ordering::Relaxed),
             peers_disconnected: self.peers_disconnected.load(Ordering::Relaxed),
             telemetry_entries_dropped: self.telemetry_entries_dropped.load(Ordering::Relaxed),
+            media_packets_dropped: DropsSnapshot::from(&self.media_packets_dropped.snapshot()),
         }
     }
 }
@@ -63,6 +77,7 @@ pub struct MetricsSnapshot {
     pub peers_connected: u64,
     pub peers_disconnected: u64,
     pub telemetry_entries_dropped: u64,
+    pub media_packets_dropped: DropsSnapshot,
 }
 
 #[cfg(test)]
@@ -110,6 +125,23 @@ mod tests {
         m.record_connect();
         m.snapshot();
         assert_eq!(m.snapshot().peers_connected, 1);
+    }
+
+    #[test]
+    fn media_drops_accumulate_and_are_reported_by_point_and_kind() {
+        use drops::{DropCounters, DropPoint, MediaType};
+        let m = Metrics::new();
+        let peer = DropCounters::new();
+        peer.record(DropPoint::EgressQueue, MediaType::Audio);
+        peer.record(DropPoint::UnknownPayloadType, MediaType::Video);
+
+        m.record_media_drops(&peer.snapshot());
+        m.record_media_drops(&peer.snapshot());
+
+        let snap = m.snapshot();
+        assert_eq!(snap.media_packets_dropped.egress_queue.audio, 2);
+        assert_eq!(snap.media_packets_dropped.unknown_payload_type.video, 2);
+        assert_eq!(snap.media_packets_dropped.ingress_queue.audio, 0);
     }
 
     #[test]

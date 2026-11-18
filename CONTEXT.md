@@ -174,10 +174,29 @@ deux, ~210 ms à quatre). Le plafond est choisi au-dessus d'une rafale de
 keyframe (une IDR 1080p se fragmente sur une centaine de paquets MTU), pour
 qu'un hoquet d'ordonnancement ne la tronque pas.
 
-Le rejet n'est jamais silencieux : `PeerSink::dropped_packets()` expose un
-compteur atomique, et chaque rafale de pertes est journalisée une fois — pas une
-ligne par paquet. Ces compteurs ne remontent pas encore sur `/metrics`
-(voir les points connus).
+Le rejet n'est jamais silencieux : chaque rafale de pertes est journalisée une
+fois — pas une ligne par paquet — et chaque paquet jeté est compté.
+
+### Les paquets que le SFU jette
+
+Tout paquet que le SFU perd lui-même est compté dans les `DropCounters` de la
+connexion (`metrics/drops.rs`), par point de rejet et par type de média. Il y en
+a cinq :
+
+| Point | Sens | Où |
+| --- | --- | --- |
+| file transport → moteur pleine | entrée | `transport/event_loop` |
+| payload type inconnu | entrée | `PeerConnection::to_packet` |
+| file du `PeerSink` pleine | sortie | `transport/sink` |
+| aucun PT pour ce codec chez l'abonné | sortie | `PeerConnection::write_rtp` |
+| écriture refusée par str0m | sortie | `PeerConnection::write_rtp` |
+
+Les compteurs sont partagés par la boucle, la `PeerConnection` et le `PeerSink`
+d'un même peer. La pompe de session les relit à chaque tick de statistiques :
+le delta est replié dans `/metrics` (`media_packets_dropped`, par point et par
+type) et écrit dans `telemetry.peer_samples` (`dropped_{ingress,egress}_{audio,video}`).
+C'est ce qui rend mesurable le seuil B1b du gate Phase 0 (`docs/phase-0-gate.md`) :
+sur un flux dégradé, la seule perte qui revient au SFU est celle-là.
 
 ### Le peer_id sur le chemin chaud
 
@@ -246,9 +265,10 @@ room. Chaque participant doit voir tous les autres, chacun sur sa vignette.
    seule couche par track et ne s'adapte pas au débit disponible du subscriber.
    Une room large impose donc à chacun le débit du publisher.
 
-4. **Les compteurs de paquets jetés du `PeerSink` ne remontent pas sur
-   `/metrics`.** Ils existent et se journalisent, mais `media/` n'a pas accès à
-   `Metrics` et l'y amener est un chantier à part.
+4. ~~**Les compteurs de paquets jetés du `PeerSink` ne remontent pas sur
+   `/metrics`.**~~ Corrigé (LUM-709) : les cinq points de rejet du SFU sont
+   comptés par peer, remontent sur `/metrics` et dans la télémétrie. Voir « Les
+   paquets que le SFU jette ».
 
 5. ~~**`localhost+1-key.pem` est une clé privée committée.**~~ Corrigé : la paire
    est sortie du suivi git et `*.pem` / `*.key` sont ignorés. Chaque dev génère
