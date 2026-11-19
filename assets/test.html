@@ -3,7 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Lumyx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumyx · Test console</title>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
   <style>
     /* ===== LUMYX DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */
     /* One family, no monospace. Geist is what the repo's dashboard already declares via next/font,
@@ -344,48 +346,69 @@
 
       /* ===== END LUMYX DESIGN TOKENS ===== */
 
+      /* ── Base ─────────────────────────────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--surface-page); }
+      body {
+        font-family: var(--font-sans);
+        font-size: var(--fs-14);
+        line-height: var(--lh-snug);
+        color: var(--text-body);
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings: 'tnum' 1;
+      }
+      h1, h2, h3, p { margin: 0; }
+      button, input { font: inherit; color: inherit; }
+      .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+      .muted { color: var(--text-muted); }
+      .ph { font-size: 16px; line-height: 1; }
+      :focus-visible { outline: none; box-shadow: var(--ring-accent); }
+
       /* ── App shell ────────────────────────────────────────────────── */
       .app {
+        min-height: 100dvh;
         display: grid;
         grid-template-rows: auto 1fr auto;
-        min-height: 100vh;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: color-mix(in srgb, var(--surface-page) 82%, transparent);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+      .bar {
         max-width: var(--content-max);
         margin: 0 auto;
         padding: 0 var(--space-8);
-      }
-
-      .header {
+        height: 56px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: var(--space-6) 0;
-        border-bottom: 1px solid var(--border);
+        gap: var(--space-6);
       }
-
-      .brand {
-        display: flex;
-        align-items: baseline;
-        gap: var(--space-5);
-      }
-
-      .brand-name {
-        font-size: var(--fs-16);
-        font-weight: var(--fw-semibold);
-        letter-spacing: var(--ls-display);
-        color: var(--text-strong);
-      }
-
-      .brand-sub {
-        font-size: var(--fs-12);
+      .brand { display: flex; align-items: center; gap: var(--space-4); color: var(--text-strong); }
+      .brand-name { font-size: var(--fs-16); font-weight: var(--fw-semibold); letter-spacing: var(--ls-display); }
+      .crumb { display: flex; align-items: center; gap: var(--space-4); color: var(--text-muted); font-size: var(--fs-13); }
+      .crumb::before { content: ""; width: 1px; height: 16px; background: var(--border-strong); margin-right: var(--space-2); }
+      .tag {
+        padding: 1px 8px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-active);
         color: var(--text-muted);
+        font-size: var(--fs-11);
+        font-weight: var(--fw-medium);
       }
+      .spacer { flex: 1; }
 
-      /* ── Pill (core/Pill) ─────────────────────────────────────────── */
       .pill {
         display: inline-flex;
         align-items: center;
         gap: var(--space-4);
-        padding: 5px 12px;
+        height: 30px;
+        padding: 0 12px;
         border-radius: var(--radius-pill);
         background: var(--surface-card);
         border: 1px solid var(--border);
@@ -394,8 +417,22 @@
         color: var(--text-body);
         white-space: nowrap;
       }
+      .icon-btn {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-xs);
+        border: 1px solid transparent;
+        background: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+      }
+      .icon-btn:hover { background: var(--surface-hover); border-color: var(--border); color: var(--text-strong); }
 
-      /* ── StatusDot (core/StatusDot) — script sets className = 'status-dot ' + phase ── */
+      /* script sets className = 'status-dot ' + phase */
       .status-dot {
         display: inline-block;
         flex: 0 0 auto;
@@ -404,220 +441,197 @@
         border-radius: 50%;
         background: var(--idle);
         --dot-color: var(--idle);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 18%, transparent);
         transition: background var(--dur-2) var(--ease-out);
       }
+      .status-dot.connected { background: var(--ok-solid); --dot-color: var(--ok-solid); }
+      .status-dot.connecting { background: var(--warn-solid); --dot-color: var(--warn-solid); animation: sl-breathe 2.6s var(--ease-in-out) infinite; }
+      .status-dot.disconnected { background: var(--danger-solid); --dot-color: var(--danger-solid); }
 
-      .status-dot.connected {
-        background: var(--ok);
-        --dot-color: var(--ok);
-      }
-
-      .status-dot.connecting {
-        background: var(--warn);
-        --dot-color: var(--warn);
-        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-      }
-
-      .status-dot.disconnected {
-        background: var(--danger);
-        --dot-color: var(--danger);
-      }
-
-      /* ── main layout ──────────────────────────────────────────────── */
       .main {
+        max-width: var(--content-max);
+        width: 100%;
+        margin: 0 auto;
+        padding: var(--space-8);
         display: grid;
-        grid-template-columns: 1fr var(--rail-w);
-        gap: var(--gap-grid);
-        padding: var(--space-8) 0;
-        min-height: 0;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: var(--space-8);
+        align-items: start;
       }
+      .stage { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+      .rail { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; position: sticky; top: 80px; }
 
-      .video-section {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-6);
-        min-width: 0;
-      }
-
-      .sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-6);
-        min-width: 0;
-      }
-
-      /* ── Card (core/Card) ─────────────────────────────────────────── */
-      .card {
+      .panel {
         background: var(--surface-card);
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
-        display: flex;
-        flex-direction: column;
         min-width: 0;
         overflow: hidden;
       }
-
-      .card-header {
+      .panel-head {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         gap: var(--space-5);
         padding: 14px var(--space-7);
-        flex: 0 0 auto;
       }
+      .panel-title { font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text-strong); }
+      .panel-meta { font-size: var(--fs-12); color: var(--text-muted); }
 
-      .card-title-group {
-        display: inline-flex;
-        align-items: baseline;
-        gap: var(--space-4);
-        min-width: 0;
-      }
-
-      .card-title {
-        font-size: var(--fs-14);
-        font-weight: var(--fw-semibold);
-        color: var(--text-strong);
-      }
-
-      .card-meta {
-        font-size: var(--fs-12);
-        color: var(--text-muted);
-      }
-
-      .card-body {
-        flex: 1;
-        min-height: 0;
-      }
-
-      .card-body-padded {
-        padding: 0 var(--space-7) var(--space-7);
-      }
-
-      /* ── Button (core/Button) ─────────────────────────────────────── */
-      .controls {
-        display: flex;
-        gap: var(--space-4);
-        flex-wrap: wrap;
-      }
-
+      /* ── Buttons ──────────────────────────────────────────────────── */
       .btn {
-        font-family: var(--font-sans);
-        font-weight: var(--fw-medium);
-        letter-spacing: var(--ls-normal);
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        gap: var(--space-4);
+        height: 36px;
+        padding: 0 14px;
+        border-radius: var(--radius-sm);
+        font-size: var(--fs-13);
+        font-weight: var(--fw-medium);
         white-space: nowrap;
         cursor: pointer;
-        outline: none;
-        transition:
-          background var(--dur-1) var(--ease-out),
-          border-color var(--dur-1) var(--ease-out),
-          box-shadow var(--dur-1) var(--ease-out);
-        font-size: var(--fs-13);
-        padding: 9px 16px;
-        border-radius: var(--radius-sm);
+        transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
+      }
+      .btn:active:not(:disabled) { transform: translateY(1px); }
+      .btn:disabled { cursor: not-allowed; opacity: .45; }
+      .btn-primary { background: var(--accent); border: 1px solid var(--accent); color: var(--text-on-accent); box-shadow: var(--shadow-xs); }
+      .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+      .btn-secondary { background: var(--surface-card); border: 1px solid var(--border-strong); color: var(--text-strong); box-shadow: var(--shadow-xs); }
+      .btn-secondary:hover:not(:disabled) { background: var(--surface-hover); }
+      .btn-ghost { background: none; border: 1px solid transparent; color: var(--text-muted); }
+      .btn-ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-strong); }
+      .btn-danger { background: none; border: 1px solid var(--border-strong); color: var(--danger); }
+      .btn-danger:hover:not(:disabled) { background: var(--danger-tint); border-color: var(--danger); }
+      .btn-danger:focus-visible { box-shadow: var(--ring-danger); }
+
+      /* ── Session: the four steps, in order ────────────────────────── */
+      .session-head { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; padding: var(--space-6) var(--space-7); }
+      .session-head .panel-title { margin-right: auto; }
+      .steps {
+        list-style: none;
+        margin: 0;
+        padding: 0 var(--space-6) var(--space-6);
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: var(--space-4);
       }
-
-      .btn:disabled {
-        cursor: not-allowed;
-        opacity: .45;
-      }
-
-      .btn:focus-visible {
-        box-shadow: var(--ring-accent);
-      }
-
-      .btn-primary {
-        background: var(--accent);
-        border: 1px solid var(--accent);
-        color: var(--text-on-accent);
-        box-shadow: var(--shadow-xs);
-      }
-
-      .btn-primary:hover:not(:disabled) {
-        background: var(--accent-hover);
-        border-color: var(--accent-hover);
-      }
-
-      .btn-secondary {
-        background: var(--surface-card);
+      .step {
+        width: 100%;
+        height: auto;
+        min-height: 64px;
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        align-items: center;
+        gap: var(--space-5);
+        padding: var(--space-5);
+        border-radius: var(--radius-md);
         border: 1px solid var(--border);
+        background: var(--surface-sunken);
         color: var(--text-strong);
-        box-shadow: var(--shadow-xs);
+        text-align: left;
+        cursor: pointer;
+        transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
       }
-
-      .btn-secondary:hover:not(:disabled) {
-        background: var(--surface-hover);
-        border-color: var(--border-strong);
+      .step:hover:not(:disabled) { background: var(--surface-card); border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+      .step:active:not(:disabled) { transform: translateY(1px); }
+      .step:disabled { cursor: not-allowed; color: var(--text-faint); }
+      .step.is-done:disabled { cursor: default; color: var(--text-strong); }
+      .step-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-pill);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--fs-12);
+        font-weight: var(--fw-semibold);
+        background: var(--surface-active);
+        color: var(--text-muted);
+        transition: background var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
       }
+      .step-badge .ph { display: none; font-size: 14px; }
+      .step-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+      .step-name { font-size: var(--fs-13); font-weight: var(--fw-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .step-hint { font-size: var(--fs-12); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .step:disabled .step-hint { color: var(--text-faint); }
+      /* the next thing to click */
+      .step.is-next:not(:disabled) { border-color: var(--accent-border); background: var(--accent-tint); }
+      .step.is-next:not(:disabled) .step-badge { background: var(--accent); color: var(--text-on-accent); }
+      .step.is-done { background: var(--surface-card); }
+      .step.is-done .step-badge { background: var(--ok-tint); color: var(--ok); }
+      .step.is-done .step-badge .ph { display: inline; }
+      .step.is-done .step-badge span { display: none; }
+      .step.is-done .step-hint { color: var(--ok); }
 
-      .btn-danger {
+      .room-field {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-3);
+        height: 36px;
+        padding: 0 4px 0 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
         background: var(--surface-card);
-        border: 1px solid var(--border);
-        color: var(--danger);
-        box-shadow: var(--shadow-xs);
+        transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
       }
-
-      .btn-danger:hover:not(:disabled) {
-        background: var(--danger-tint);
-        border-color: var(--danger);
+      .room-field:focus-within { border-color: var(--accent); box-shadow: var(--ring-accent); }
+      .room-field label { font-size: var(--fs-12); color: var(--text-muted); }
+      .room-field input {
+        width: 128px;
+        height: 28px;
+        border: 0;
+        outline: none;
+        background: none;
+        font-size: var(--fs-13);
+        font-weight: var(--fw-medium);
+        color: var(--text-strong);
       }
+      .room-field input:disabled { color: var(--text-muted); }
 
-      .btn-danger:focus-visible {
-        box-shadow: var(--ring-danger);
-      }
-
-      /* ── VideoTile (webrtc/VideoTile) ─────────────────────────────── */
+      /* ── Video tiles (classes .video-card / .label / .indicator are built by the script) ── */
+      .stage-head { display: flex; align-items: baseline; gap: var(--space-4); padding: 0 var(--space-1); }
+      .stage-title { font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text-strong); }
       .video-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: var(--gap-grid);
       }
-
-      .video-card {
+      .video-card, .hint-card {
         position: relative;
         border-radius: var(--radius-lg);
         overflow: hidden;
-        border: 1px solid var(--border);
-        background: var(--surface-inset);
-        box-shadow: var(--shadow-xs);
-        min-width: 0;
         aspect-ratio: 16/10;
+        min-width: 0;
       }
-
-      .video-card video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+      .video-card {
+        background: var(--n-900);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        animation: tile-in var(--dur-3) var(--ease-out);
       }
-
-      /* .label is set directly by the script for the remote card */
+      .video-card video { width: 100%; height: 100%; object-fit: cover; display: block; }
+      #localCard video { transform: scaleX(-1); }
       .video-card .label {
         position: absolute;
-        bottom: var(--space-5);
         left: var(--space-5);
-        right: var(--space-5);
+        bottom: var(--space-5);
+        max-width: calc(100% - 24px);
         display: inline-flex;
         align-items: center;
-        gap: var(--space-4);
-        min-width: 0;
-        background: var(--surface-overlay);
-        color: var(--text-on-overlay);
-        backdrop-filter: var(--blur-overlay);
+        gap: var(--space-3);
         padding: 4px 10px;
         border-radius: var(--radius-pill);
+        background: rgba(11, 12, 16, .62);
+        backdrop-filter: var(--blur-overlay);
+        -webkit-backdrop-filter: var(--blur-overlay);
+        color: var(--n-0);
         font-size: var(--fs-12);
+        font-weight: var(--fw-medium);
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
-        width: max-content;
       }
-
-      /* .indicator / .indicator.live are set directly by the script */
       .video-card .indicator {
         position: absolute;
         top: var(--space-5);
@@ -625,17 +639,10 @@
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: var(--danger);
-        --dot-color: var(--danger);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+        background: var(--red-400);
+        box-shadow: 0 0 0 3px rgba(255, 107, 90, .28);
       }
-
-      .video-card .indicator.live {
-        background: var(--ok);
-        --dot-color: var(--ok);
-        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-      }
-
+      .video-card .indicator.live { background: var(--green-400); box-shadow: 0 0 0 3px rgba(52, 199, 123, .28); animation: sl-breathe 2.6s var(--ease-in-out) infinite; }
       .video-placeholder {
         position: absolute;
         inset: 0;
@@ -644,115 +651,146 @@
         align-items: center;
         justify-content: center;
         gap: var(--space-4);
-        color: var(--text-faint);
-        font-size: var(--fs-12);
+        background: var(--surface-inset);
+        color: var(--text-muted);
+        font-size: var(--fs-13);
       }
-
-      /* ── MetricGrid / MetricCard (data/MetricGrid, data/MetricCard) ─ */
-      .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1px;
-        background: var(--border-subtle);
-      }
-
-      .metric {
-        padding: var(--space-6) var(--space-7);
-        background: var(--surface-card);
+      .video-placeholder .ph { font-size: 28px; color: var(--text-faint); }
+      .hint-card {
+        border: 1px dashed var(--border-strong);
+        background: var(--surface-sunken);
         display: flex;
         flex-direction: column;
-        gap: var(--space-4);
-        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-5);
+        padding: var(--space-8);
+        text-align: center;
       }
+      .hint-card[hidden] { display: none; }
+      .hint-card .ph-users-three { font-size: 28px; color: var(--text-faint); }
+      .hint-title { font-size: var(--fs-14); font-weight: var(--fw-medium); color: var(--text-strong); }
+      .hint-text { font-size: var(--fs-13); color: var(--text-muted); max-width: 32ch; }
+      .hint-actions { display: flex; gap: var(--space-4); flex-wrap: wrap; justify-content: center; }
+      @keyframes tile-in { from { opacity: 0; transform: scale(.98); } }
 
-      .metric-value {
-        display: flex;
-        align-items: baseline;
-        gap: 3px;
-        font-size: var(--fs-34);
-        font-weight: var(--fw-medium);
-        letter-spacing: var(--ls-display);
-        line-height: var(--lh-flat);
-        color: var(--text-strong);
-      }
+      /* ── Metrics ──────────────────────────────────────────────────── */
+      .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border-subtle); }
+      .stat { padding: var(--space-6) var(--space-7); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+      .stat:nth-child(odd) { border-right: 1px solid var(--border-subtle); }
+      .stat:nth-child(n+3) { border-top: 1px solid var(--border-subtle); }
+      .stat-label { font-size: var(--fs-12); color: var(--text-muted); }
+      .stat-value { display: flex; align-items: baseline; gap: 4px; font-size: var(--fs-26); font-weight: var(--fw-medium); letter-spacing: var(--ls-display); line-height: var(--lh-flat); color: var(--text-strong); }
+      .stat-unit { font-size: var(--fs-13); font-weight: var(--fw-regular); color: var(--text-muted); }
+      .stat-sub { font-size: var(--fs-12); color: var(--text-faint); }
+      .spark { display: block; width: 100%; height: 44px; }
+      .spark-wrap { padding: 0 var(--space-7) var(--space-5); border-top: 1px solid var(--border-subtle); }
+      .spark-head { display: flex; justify-content: space-between; padding: var(--space-5) 0 var(--space-3); font-size: var(--fs-12); color: var(--text-muted); }
+      .counters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--border-subtle); background: var(--surface-sunken); }
+      .counter { padding: var(--space-5) var(--space-6); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .counter + .counter { border-left: 1px solid var(--border-subtle); }
+      .counter-value { font-size: var(--fs-16); font-weight: var(--fw-medium); color: var(--text-strong); }
+      .counter-value.bad { color: var(--danger); }
+      .counter-label { font-size: var(--fs-11); line-height: var(--lh-tight); color: var(--text-muted); }
 
-      .metric-unit {
-        font-size: var(--fs-14);
-        font-weight: var(--fw-regular);
+      /* ── Events (the script builds .log-entry / .log-time / .log-msg with type in {send,info,event,error}) ── */
+      .seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--radius-sm); background: var(--surface-active); }
+      .seg button {
+        height: 24px;
+        padding: 0 8px;
+        border: 0;
+        border-radius: var(--radius-xs);
+        background: none;
+        font-size: var(--fs-12);
         color: var(--text-muted);
+        cursor: pointer;
+        transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
       }
-
-      /* ── EventList (data/EventList) — script builds .log-entry / .log-time /
-       .log-msg directly, with type in {send,info,event,error} ─────── */
-      .log-container {
-        height: 260px;
-        overflow-y: auto;
-      }
-
+      .seg button[aria-pressed="true"] { background: var(--surface-card); color: var(--text-strong); box-shadow: var(--shadow-xs); }
+      .events-tools { display: flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-7) var(--space-5); }
+      .log-container { height: 340px; overflow-y: auto; border-top: 1px solid var(--border-subtle); position: relative; }
       .log-entry {
         display: grid;
-        grid-template-columns: 58px 1fr;
-        gap: var(--space-5);
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: var(--space-4);
         align-items: baseline;
-        padding: 10px var(--space-7);
+        padding: 7px var(--space-7);
         font-size: var(--fs-12);
+        line-height: var(--lh-snug);
+        animation: log-in var(--dur-2) var(--ease-out);
       }
-
-      .log-entry:not(:first-child) {
-        border-top: 1px solid var(--border-subtle);
-      }
-
-      .log-time {
-        color: var(--text-faint);
-        font-variant-numeric: tabular-nums;
-        font-feature-settings: 'tnum' 1;
-      }
-
-      .log-msg {
-        word-break: break-word;
-      }
-
-      .log-msg.info {
-        color: var(--text-body);
-      }
-
-      .log-msg.event {
-        color: var(--ok);
-      }
-
-      .log-msg.send {
-        color: var(--warn);
-      }
-
-      .log-msg.error {
-        color: var(--danger);
-      }
-
-      /* ── StatusStrip (layout/StatusStrip) ─────────────────────────── */
-      .statusstrip {
+      .log-entry:hover { background: var(--surface-hover); }
+      .log-time { color: var(--text-faint); font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+      .log-msg { word-break: break-word; color: var(--text-body); }
+      .log-msg.event { color: var(--ok); }
+      .log-msg.send { color: var(--accent-text); }
+      .log-msg.error { color: var(--danger); }
+      .log-container[data-filter="send"] .log-entry:not([data-type="send"]),
+      .log-container[data-filter="in"] .log-entry:not([data-type="info"]):not([data-type="event"]),
+      .log-container[data-filter="error"] .log-entry:not([data-type="error"]) { display: none; }
+      .log-empty {
+        position: absolute;
+        inset: 0;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: space-between;
-        gap: var(--space-6);
-        padding: var(--space-5) 0;
-        border-top: 1px solid var(--border);
-        font-size: var(--fs-12);
-        color: var(--text-muted);
-      }
-
-      .statusstrip-items {
-        display: flex;
-        gap: var(--space-7);
-        flex: 0 0 auto;
-      }
-
-      .statusstrip-item {
-        display: inline-flex;
+        justify-content: center;
         gap: var(--space-3);
+        color: var(--text-muted);
+        font-size: var(--fs-13);
+        text-align: center;
+        padding: var(--space-8);
       }
+      .log-empty .ph { font-size: 24px; color: var(--text-faint); }
+      .log-empty[hidden] { display: none; }
+      @keyframes log-in { from { opacity: 0; transform: translateY(4px); } }
 
-      .statusstrip-value {
-        color: var(--text-strong);
+      /* ── Status strip ─────────────────────────────────────────────── */
+      .statusstrip { border-top: 1px solid var(--border); background: var(--surface-card); }
+      .statusstrip .bar { height: 40px; gap: var(--space-8); font-size: var(--fs-12); color: var(--text-muted); overflow-x: auto; }
+      .ss-item { display: inline-flex; align-items: center; gap: var(--space-3); white-space: nowrap; }
+      .ss-value { color: var(--text-strong); font-weight: var(--fw-medium); }
+      .ss-copy { width: 22px; height: 22px; border-radius: 6px; }
+      .ss-copy .ph { font-size: 13px; }
+      .ss-link { color: var(--text-muted); text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-2); }
+      .ss-link:hover { color: var(--text-strong); }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 56px;
+        transform: translate(-50%, 8px);
+        padding: 8px 14px;
+        border-radius: var(--radius-pill);
+        background: var(--n-900);
+        color: var(--n-0);
+        font-size: var(--fs-12);
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out);
+        z-index: 20;
+      }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      /* ── Responsive ───────────────────────────────────────────────── */
+      @media (max-width: 1100px) {
+        .main { grid-template-columns: minmax(0, 1fr); }
+        .rail { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+      }
+      @media (max-width: 760px) {
+        .bar, .main { padding-left: var(--space-6); padding-right: var(--space-6); }
+        .main { padding-top: var(--space-6); }
+        .crumb { display: none; }
+        .rail { grid-template-columns: minmax(0, 1fr); }
+        .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .session-head .panel-title { width: 100%; }
+        .room-field { flex: 1 1 100%; }
+        .session-head .btn { flex: 1; }
+        .room-field input { width: 100%; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; transition: none !important; }
       }
   </style>
 </head>
@@ -760,147 +798,323 @@
 <body>
   <div class="app">
 
-    <header class="header">
-      <div class="brand">
-        <span class="brand-name">Lumyx</span>
-        <span class="brand-sub">Session console</span>
+    <header class="topbar">
+      <div class="bar">
+        <div class="brand">
+          <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4L41.3 14L31.5 24Z" fill="#4F39F6"/><path d="M41.3 14L41.3 34L27.8 30.5Z" fill="#4F39F6" fill-opacity=".55"/><path d="M41.3 34L24 44L20.3 30.5Z" fill="#4F39F6"/><path d="M24 44L6.7 34L16.5 24Z" fill="#4F39F6" fill-opacity=".55"/><path d="M6.7 34L6.7 14L20.2 17.5Z" fill="#4F39F6"/><path d="M6.7 14L24 4L27.8 17.5Z" fill="#4F39F6" fill-opacity=".55"/></svg>
+          <span class="brand-name">Lumyx</span>
+        </div>
+        <span class="crumb">Test console <span class="tag num" id="serverVersion">sfu</span></span>
+        <span class="spacer"></span>
+        <span class="pill" aria-live="polite">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">disconnected</span>
+        </span>
+        <button class="icon-btn" id="btnTheme" aria-label="Toggle dark mode" title="Toggle dark mode"><i class="ph ph-moon"></i></button>
       </div>
-      <span class="pill">
-        <span class="status-dot" id="statusDot"></span>
-        <span id="statusText">disconnected</span>
-      </span>
     </header>
 
     <main class="main">
-      <div class="video-section">
+      <div class="stage">
 
-        <section class="card">
-          <header class="card-header">
-            <span class="card-title-group">
-              <h3 class="card-title">Session</h3>
-            </span>
-          </header>
-          <div class="card-body card-body-padded">
-            <div class="controls">
-              <button class="btn btn-primary" id="btnConnect">Connect</button>
-              <button class="btn btn-secondary" id="btnCamera" disabled>Enable camera</button>
-              <button class="btn btn-secondary" id="btnCall" disabled>Call SFU</button>
-              <button class="btn btn-secondary" id="btnJoin" disabled>Join room</button>
-              <button class="btn btn-danger" id="btnDisconnect" disabled>Disconnect</button>
+        <section class="panel" aria-labelledby="sessionTitle">
+          <div class="session-head">
+            <h1 class="panel-title" id="sessionTitle">Session</h1>
+            <div class="room-field">
+              <label for="roomInput">Room</label>
+              <input id="roomInput" value="test-room" spellcheck="false" autocomplete="off">
             </div>
+            <button class="btn btn-secondary" id="btnQuick"><i class="ph ph-lightning"></i>Quick start</button>
+            <button class="btn btn-danger" id="btnDisconnect" disabled><i class="ph ph-plug"></i>Disconnect</button>
           </div>
+          <ol class="steps">
+            <li><button class="step" id="btnConnect">
+              <span class="step-badge"><span>1</span><i class="ph ph-check"></i></span>
+              <span class="step-text"><span class="step-name">Connect</span><span class="step-hint" data-hint>Open signaling</span></span>
+            </button></li>
+            <li><button class="step" id="btnCamera" disabled>
+              <span class="step-badge"><span>2</span><i class="ph ph-check"></i></span>
+              <span class="step-text"><span class="step-name">Enable camera</span><span class="step-hint" data-hint>Optional, watch only</span></span>
+            </button></li>
+            <li><button class="step" id="btnCall" disabled>
+              <span class="step-badge"><span>3</span><i class="ph ph-check"></i></span>
+              <span class="step-text"><span class="step-name">Call SFU</span><span class="step-hint" data-hint>Offer, answer, ICE</span></span>
+            </button></li>
+            <li><button class="step" id="btnJoin" disabled>
+              <span class="step-badge"><span>4</span><i class="ph ph-check"></i></span>
+              <span class="step-text"><span class="step-name">Join room</span><span class="step-hint" data-hint>Start forwarding</span></span>
+            </button></li>
+          </ol>
         </section>
 
+        <div class="stage-head">
+          <h2 class="stage-title">Peers</h2>
+          <span class="panel-meta num" id="tileCount">only you</span>
+        </div>
         <div class="video-grid" id="videoGrid">
           <div class="video-card" id="localCard">
             <video id="localVideo" autoplay muted playsinline></video>
-            <div class="label">local</div>
+            <div class="label" id="localLabel">You</div>
             <div class="indicator" id="localIndicator"></div>
             <div class="video-placeholder" id="localPlaceholder">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path
-                  d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.361a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-              </svg>
+              <i class="ph ph-video-camera-slash"></i>
               Camera off
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="sidebar">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title-group">
-              <h3 class="card-title">Metrics</h3>
-              <span class="card-meta">1s poll</span>
-            </span>
-          </div>
-          <div class="card-body">
-            <div class="metrics-grid">
-              <div class="metric">
-                <span class="sl-label">Rooms</span>
-                <span class="sl-num metric-value" id="metricRooms">0</span>
-              </div>
-              <div class="metric">
-                <span class="sl-label">Peers</span>
-                <span class="sl-num metric-value" id="metricPeers">0</span>
-              </div>
-              <div class="metric">
-                <span class="sl-label">RTP packets</span>
-                <span class="sl-num metric-value" id="metricPackets">0</span>
-              </div>
-              <div class="metric">
-                <span class="sl-label">Forwarded</span>
-                <span class="sl-num metric-value" id="metricBytes">0<span class="metric-unit">MB</span></span>
-              </div>
+          <div class="hint-card" id="remoteHint">
+            <i class="ph ph-users-three"></i>
+            <p class="hint-title">No one else here yet</p>
+            <p class="hint-text">Open this page in a second tab and join the same room. Their video lands here.</p>
+            <div class="hint-actions">
+              <button class="btn btn-secondary" id="btnNewTab"><i class="ph ph-arrow-square-out"></i>New tab</button>
+              <button class="btn btn-ghost" id="btnCopyLink"><i class="ph ph-link"></i>Copy link</button>
             </div>
           </div>
         </div>
-
-        <div class="card" style="flex:1">
-          <div class="card-header">
-            <span class="card-title-group">
-              <h3 class="card-title">Events</h3>
-            </span>
-            <span class="card-meta sl-num" id="logCount">0</span>
-          </div>
-          <div class="card-body">
-            <div class="log-container sl-scroll" id="log"></div>
-          </div>
-        </div>
       </div>
+
+      <aside class="rail">
+        <section class="panel" aria-labelledby="metricsTitle">
+          <div class="panel-head">
+            <h2 class="panel-title" id="metricsTitle">Server</h2>
+            <span class="spacer"></span>
+            <span class="panel-meta" id="metricsAge">polling /metrics</span>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <span class="stat-label">Rooms</span>
+              <span class="stat-value num" id="metricRooms">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Peers</span>
+              <span class="stat-value num" id="metricPeers">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Packets forwarded</span>
+              <span class="stat-value num"><span id="metricPacketRate">0</span><span class="stat-unit">/s</span></span>
+              <span class="stat-sub num"><span id="metricPackets">0</span> total</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Throughput</span>
+              <span class="stat-value num"><span id="metricRate">0.0</span><span class="stat-unit">Mb/s</span></span>
+              <span class="stat-sub num"><span id="metricBytes">0.0</span> MB total</span>
+            </div>
+          </div>
+          <div class="spark-wrap">
+            <div class="spark-head"><span>Throughput, last 60 s</span><span class="num" id="sparkPeak">peak 0.0</span></div>
+            <svg class="spark" id="spark" viewBox="0 0 300 44" preserveAspectRatio="none" aria-hidden="true">
+              <path id="sparkArea" fill="var(--accent-tint)" d=""></path>
+              <path id="sparkLine" fill="none" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke" d=""></path>
+            </svg>
+          </div>
+          <div class="counters">
+            <div class="counter"><span class="counter-value num" id="metricKeyframes">0</span><span class="counter-label">Keyframe requests</span></div>
+            <div class="counter"><span class="counter-value num" id="metricMediaDrops">0</span><span class="counter-label">Media drops</span></div>
+            <div class="counter"><span class="counter-value num" id="metricTelemetryDrops">0</span><span class="counter-label">Telemetry drops</span></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="eventsTitle">
+          <div class="panel-head">
+            <h2 class="panel-title" id="eventsTitle">Events</h2>
+            <span class="panel-meta num" id="logCount">0</span>
+          </div>
+          <div class="events-tools">
+            <div class="seg" role="group" aria-label="Filter events">
+              <button aria-pressed="true" data-filter="all">All</button>
+              <button aria-pressed="false" data-filter="send">Sent</button>
+              <button aria-pressed="false" data-filter="in">Received</button>
+              <button aria-pressed="false" data-filter="error">Errors</button>
+            </div>
+            <span class="spacer"></span>
+            <button class="icon-btn" id="btnClearLog" aria-label="Clear events" title="Clear events"><i class="ph ph-broom"></i></button>
+          </div>
+          <div class="log-container sl-scroll" id="log" data-filter="all" aria-live="polite">
+            <div class="log-empty" id="logEmpty"><i class="ph ph-pulse"></i>Nothing yet. Click Connect, or Quick start to run all four steps.</div>
+          </div>
+        </section>
+      </aside>
     </main>
 
     <footer class="statusstrip">
-      <span class="statusstrip-left">peer_id: <span class="sl-num statusstrip-value" id="footerPeerId">—</span></span>
-      <span class="statusstrip-items">
-        <span class="statusstrip-item">
-          <span class="sl-label">Room</span>
-          <span class="sl-num statusstrip-value" id="footerRoom">—</span>
+      <div class="bar num">
+        <span class="ss-item">Peer <span class="ss-value" id="footerPeerId">none</span>
+          <button class="icon-btn ss-copy" id="btnCopyPeer" aria-label="Copy peer id" title="Copy peer id" hidden><i class="ph ph-copy"></i></button>
         </span>
-      </span>
+        <span class="ss-item">Room <span class="ss-value" id="footerRoom">none</span></span>
+        <span class="ss-item">ICE <span class="ss-value" id="footerIce">idle</span></span>
+        <span class="ss-item">Transport <span class="ss-value" id="footerConn">idle</span></span>
+        <span class="spacer"></span>
+        <a class="ss-link" href="/metrics" target="_blank" rel="noopener">/metrics <i class="ph ph-arrow-up-right"></i></a>
+        <a class="ss-link" href="/health" target="_blank" rel="noopener">/health <i class="ph ph-arrow-up-right"></i></a>
+      </div>
     </footer>
 
   </div>
+  <div class="toast" id="toast" role="status"></div>
 
   <script>
-    const WS_URL = `wss://${window.location.host}/ws`;
-    const ROOM_ID = "test-room";
+    const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
+    const $ = (id) => document.getElementById(id);
+
+    // La room se choisit dans le champ, ou via ?room= pour ouvrir plusieurs onglets dessus.
+    const roomFromUrl = new URLSearchParams(location.search).get('room');
+    if (roomFromUrl) $('roomInput').value = roomFromUrl;
+    const roomId = () => $('roomInput').value.trim() || 'test-room';
 
     let ws, pc, localStream, peerId;
     let logCount = 0;
 
+    // ── Theme ────────────────────────────────────────────
+    // Les tokens portent déjà `.theme-dark` : on ne fait que poser la classe.
+    const THEME_KEY = 'lumyx-console-theme';
+    const readTheme = () => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } };
+    const applyTheme = (dark) => {
+      document.documentElement.classList.toggle('theme-dark', dark);
+      $('btnTheme').innerHTML = `<i class="ph ${dark ? 'ph-sun' : 'ph-moon'}"></i>`;
+    };
+    const mq = matchMedia('(prefers-color-scheme: dark)');
+    applyTheme(readTheme() ? readTheme() === 'dark' : mq.matches);
+    mq.addEventListener?.('change', (e) => { if (!readTheme()) applyTheme(e.matches); });
+    $('btnTheme').onclick = () => {
+      const dark = !document.documentElement.classList.contains('theme-dark');
+      applyTheme(dark);
+      try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch { }
+    };
+
+    // ── Toast & clipboard ────────────────────────────────
+    let toastTimer;
+    const toast = (text) => {
+      const t = $('toast');
+      t.textContent = text;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+    };
+    const copy = async (text, what) => {
+      try { await navigator.clipboard.writeText(text); toast(`${what} copied`); }
+      catch { toast('Copy failed'); }
+    };
+    const roomLink = () => `${location.origin}${location.pathname}?room=${encodeURIComponent(roomId())}`;
+    $('btnNewTab').onclick = () => window.open(roomLink(), '_blank');
+    $('btnCopyLink').onclick = () => copy(roomLink(), 'Link');
+    $('btnCopyPeer').onclick = () => peerId && copy(peerId, 'Peer id');
+
+    // ── Server version ───────────────────────────────────
+    fetch('/health').then(r => r.json()).then(h => {
+      if (h?.version) $('serverVersion').textContent = `v${h.version}`;
+    }).catch(() => { });
+
     // ── Metrics polling ──────────────────────────────────
+    const fmt = (n) => Math.round(n).toLocaleString('en-US');
+    const sumDrops = (d) => Object.values(d ?? {}).reduce((s, k) => s + (k?.audio ?? 0) + (k?.video ?? 0), 0);
+    const history = [];
+    let prev = null;
+
+    function drawSpark() {
+      const max = Math.max(1, ...history);
+      const n = 60;
+      const pts = history.map((v, i) => [((n - history.length + i) / (n - 1)) * 300, 42 - (v / max) * 38]);
+      if (pts.length < 2) { $('sparkLine').setAttribute('d', ''); $('sparkArea').setAttribute('d', ''); return; }
+      const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+      $('sparkLine').setAttribute('d', line);
+      $('sparkArea').setAttribute('d', `${line} L300 44 L${pts[0][0].toFixed(1)} 44 Z`);
+      $('sparkPeak').textContent = `peak ${Math.max(...history).toFixed(1)}`;
+    }
+
     setInterval(async () => {
       try {
         const r = await fetch('/metrics');
         const data = await r.json();
-        document.getElementById('metricRooms').textContent = data.rooms ?? 0;
-        document.getElementById('metricPeers').textContent = data.peers ?? 0;
-        document.getElementById('metricPackets').textContent =
-          (data.metrics?.rtp_packets_forwarded ?? 0).toLocaleString();
-        document.getElementById('metricBytes').textContent =
-          ((data.metrics?.bytes_forwarded ?? 0) / 1_000_000).toFixed(1);
-      } catch { }
+        const m = data.metrics ?? {};
+        const now = performance.now();
+        const packets = m.rtp_packets_forwarded ?? 0;
+        const bytes = m.bytes_forwarded ?? 0;
+
+        $('metricRooms').textContent = data.rooms ?? 0;
+        $('metricPeers').textContent = data.peers ?? 0;
+        $('metricPackets').textContent = packets.toLocaleString();
+        $('metricBytes').textContent = (bytes / 1_000_000).toFixed(1);
+        $('metricKeyframes').textContent = fmt(m.keyframe_requests ?? 0);
+        const media = sumDrops(m.media_packets_dropped);
+        $('metricMediaDrops').textContent = fmt(media);
+        $('metricMediaDrops').classList.toggle('bad', media > 0);
+        const tele = m.telemetry_entries_dropped ?? 0;
+        $('metricTelemetryDrops').textContent = fmt(tele);
+        $('metricTelemetryDrops').classList.toggle('bad', tele > 0);
+
+        // Débits calculés côté page, à partir de deux relevés successifs.
+        if (prev) {
+          const dt = Math.max(0.2, (now - prev.t) / 1000);
+          const pps = Math.max(0, (packets - prev.packets) / dt);
+          const mbps = Math.max(0, ((bytes - prev.bytes) * 8) / dt / 1_000_000);
+          $('metricPacketRate').textContent = fmt(pps);
+          $('metricRate').textContent = mbps.toFixed(1);
+          history.push(mbps);
+          if (history.length > 60) history.shift();
+          drawSpark();
+        }
+        prev = { t: now, packets, bytes };
+        $('metricsAge').textContent = 'live, every 1 s';
+      } catch {
+        $('metricsAge').textContent = 'server unreachable';
+      }
     }, 1000);
 
     // ── Log ──────────────────────────────────────────────
     const log = (msg, type = "info") => {
-      const el = document.getElementById("log");
+      const el = $("log");
       const entry = document.createElement("div");
       entry.className = "log-entry";
+      entry.dataset.type = type;
       const now = new Date();
       const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-      entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
+      entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}"></span>`;
+      entry.querySelector('.log-msg').textContent = msg;
       el.appendChild(entry);
       el.scrollTop = el.scrollHeight;
       logCount++;
-      document.getElementById('logCount').textContent = logCount;
+      $('logCount').textContent = logCount;
+      $('logEmpty').hidden = true;
+    };
+    document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+      document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      $('log').dataset.filter = b.dataset.filter;
+    });
+    $('btnClearLog').onclick = () => {
+      $('log').querySelectorAll('.log-entry').forEach(e => e.remove());
+      logCount = 0;
+      $('logCount').textContent = 0;
+      $('logEmpty').hidden = false;
     };
 
+    // ── Steps ────────────────────────────────────────────
+    // Chaque étape réussie est cochée ; la prochaine à cliquer est mise en avant.
+    const STEPS = ['btnConnect', 'btnCamera', 'btnCall', 'btnJoin'];
+    const done = new Set();
+    const HINTS = {
+      btnConnect: ['Open signaling', 'Signaling open'],
+      btnCamera: ['Optional, watch only', 'Publishing camera'],
+      btnCall: ['Offer, answer, ICE', 'Transport up'],
+      btnJoin: ['Start forwarding', 'In the room'],
+    };
+    function paintSteps() {
+      const next = STEPS.find(id => !done.has(id) && !$(id).disabled);
+      for (const id of STEPS) {
+        const b = $(id);
+        b.classList.toggle('is-done', done.has(id));
+        b.classList.toggle('is-next', id === next);
+        b.querySelector('[data-hint]').textContent = HINTS[id][done.has(id) ? 1 : 0];
+      }
+      $('roomInput').disabled = done.has('btnJoin');
+    }
+    const markDone = (id) => { done.add(id); paintSteps(); };
+    // Les boutons sont activés/désactivés à plusieurs endroits du script : on repeint à chaque changement.
+    new MutationObserver(paintSteps).observe(document.querySelector('.steps'), { subtree: true, attributes: true, attributeFilter: ['disabled'] });
+
     const setStatus = (s) => {
-      document.getElementById('statusDot').className = `status-dot ${s}`;
-      document.getElementById('statusText').textContent = s;
+      $('statusDot').className = `status-dot ${s}`;
+      $('statusText').textContent = s;
     };
 
     const send = (obj) => {
@@ -909,12 +1123,12 @@
     };
 
     // ── Connect ──────────────────────────────────────────
-    document.getElementById("btnConnect").onclick = () => {
+    $("btnConnect").onclick = () => {
       log("Connecting to signaling");
       setStatus("connecting");
       ws = new WebSocket(WS_URL);
 
-      ws.onopen = () => { log("Signaling connected", "event"); setStatus("connected"); };
+      ws.onopen = () => { log("Signaling connected", "event"); setStatus("connected"); markDone('btnConnect'); };
 
       ws.onmessage = async (e) => {
         const msg = JSON.parse(e.data);
@@ -926,40 +1140,77 @@
         log("Signaling closed", "error");
         setStatus("disconnected");
         ['btnConnect', 'btnJoin', 'btnCamera', 'btnCall'].forEach((id, i) => {
-          document.getElementById(id).disabled = i !== 0;
+          $(id).disabled = i !== 0;
         });
-        document.getElementById('btnDisconnect').disabled = true;
+        $('btnDisconnect').disabled = true;
+        done.clear();
+        if (localStream) done.add('btnCamera');
+        paintSteps();
+        $('footerPeerId').textContent = 'none';
+        $('footerRoom').textContent = 'none';
+        $('btnCopyPeer').hidden = true;
+        $('localLabel').textContent = 'You';
       };
 
       ws.onerror = () => log("WebSocket error", "error");
-      document.getElementById("btnConnect").disabled = true;
-      document.getElementById("btnDisconnect").disabled = false;
+      $("btnConnect").disabled = true;
+      $("btnDisconnect").disabled = false;
     };
 
-    document.getElementById("btnJoin").onclick = () => {
-      send({ type: "join", room_id: ROOM_ID, peer_id: peerId });
-      document.getElementById('footerRoom').textContent = ROOM_ID;
+    $("btnJoin").onclick = () => {
+      const room = roomId();
+      send({ type: "join", room_id: room, peer_id: peerId });
+      $('footerRoom').textContent = room;
     };
 
-    document.getElementById("btnCamera").onclick = async () => {
+    async function enableCamera() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById("localVideo").srcObject = localStream;
-        document.getElementById('localPlaceholder').style.display = 'none';
-        document.getElementById('localIndicator').classList.add('live');
+        $("localVideo").srcObject = localStream;
+        $('localPlaceholder').style.display = 'none';
+        $('localIndicator').classList.add('live');
         log("Camera enabled", "event");
+        markDone('btnCamera');
+        return true;
       } catch (e) {
         log(`Camera error: ${e.message}`, "error");
+        return false;
       }
-    };
+    }
+    $("btnCamera").onclick = enableCamera;
 
-    document.getElementById("btnCall").onclick = () => startCall();
-    document.getElementById("btnDisconnect").onclick = () => {
+    $("btnCall").onclick = () => startCall();
+    $("btnDisconnect").onclick = () => {
       ws?.close();
       pc?.close();
       pc = null;
       roster = new Set();
       clearRemotes();
+      $('footerIce').textContent = 'idle';
+      $('footerConn').textContent = 'idle';
+    };
+
+    // ── Quick start ──────────────────────────────────────
+    // Enchaîne les quatre étapes en attendant que chacune débloque la suivante.
+    const waitFor = (pred, ms = 8000) => new Promise((res, rej) => {
+      const t0 = performance.now();
+      const tick = () => pred() ? res() : performance.now() - t0 > ms ? rej(new Error('timeout')) : setTimeout(tick, 80);
+      tick();
+    });
+    $('btnQuick').onclick = async () => {
+      const b = $('btnQuick');
+      b.disabled = true;
+      try {
+        if (!ws || ws.readyState > 1) $('btnConnect').click();
+        await waitFor(() => !$('btnCamera').disabled);
+        if (!localStream) await enableCamera();
+        if (!done.has('btnCall')) { $('btnCall').click(); await waitFor(() => !$('btnJoin').disabled); }
+        if (!done.has('btnJoin')) $('btnJoin').click();
+      } catch {
+        log('Quick start stopped: a step did not complete in time', 'error');
+      } finally {
+        b.disabled = false;
+      }
     };
 
     // ── Messages ─────────────────────────────────────────
@@ -967,13 +1218,16 @@
       switch (msg.type) {
         case "connected":
           peerId = msg.peer_id;
-          document.getElementById('footerPeerId').textContent = peerId.slice(0, 8) + '...';
-          document.getElementById("btnCamera").disabled = false;
-          document.getElementById("btnCall").disabled = false;
+          $('footerPeerId').textContent = short(peerId);
+          $('btnCopyPeer').hidden = false;
+          $('localLabel').textContent = `You · ${short(peerId)}`;
+          $("btnCamera").disabled = false;
+          $("btnCall").disabled = false;
           break;
         case "joined_room":
           roster = new Set(msg.peers);
-          log(`Joined room · ${msg.peers.length} peer(s) already here`, "event");
+          log(`Joined ${roomId()} · ${msg.peers.length} peer(s) already here`, "event");
+          markDone('btnJoin');
           reconcile();
           break;
         case "peer_joined":
@@ -989,9 +1243,10 @@
         case "sfu_answer":
           await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
           log("Remote description set", "event");
+          markDone('btnCall');
           // Routing only starts once the transport exists: joining any earlier
           // would have the SFU re-offer to a connection that is not there yet.
-          document.getElementById("btnJoin").disabled = false;
+          $("btnJoin").disabled = false;
           break;
         case "sfu_offer":
           // The SFU re-offers whenever the room gains or loses a published
@@ -1032,7 +1287,7 @@
         });
       } else {
         // Viewer with no camera: the offer still has to carry ICE and DTLS,
-        // which live in the m-lines. These two stay unused — everything this
+        // which live in the m-lines. These two stay unused, everything this
         // peer watches arrives on m-lines the SFU adds later.
         pc.addTransceiver('audio', { direction: 'recvonly' });
         pc.addTransceiver('video', { direction: 'recvonly' });
@@ -1042,14 +1297,14 @@
         if (e.candidate) send({ type: "sfu_ice_candidate", candidate: e.candidate.candidate });
       };
 
-      pc.oniceconnectionstatechange = () => log(`ICE · ${pc.iceConnectionState}`, "event");
-      pc.onconnectionstatechange = () => log(`Connection · ${pc.connectionState}`, "event");
+      pc.oniceconnectionstatechange = () => { log(`ICE · ${pc.iceConnectionState}`, "event"); $('footerIce').textContent = pc.iceConnectionState; };
+      pc.onconnectionstatechange = () => { log(`Connection · ${pc.connectionState}`, "event"); $('footerConn').textContent = pc.connectionState; };
       pc.ontrack = onRemoteTrack;
 
       try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        log("Offer created — sending to SFU");
+        log("Offer created, sending to SFU");
         send({ type: "sfu_offer", sdp: offer.sdp });
       } catch (e) {
         log(`Offer error: ${e.message}`, "error");
@@ -1059,7 +1314,7 @@
     /// Answers a re-offer from the SFU.
     async function answerSfuOffer(sdp) {
       if (!pc) {
-        log("SFU offer received before the call started — ignored", "error");
+        log("SFU offer received before the call started, ignored", "error");
         return;
       }
       try {
@@ -1076,7 +1331,7 @@
     //
     // One tile per publisher, not per track. The SFU names each m-line it adds
     // with the publisher's id as the msid stream id, so `streams[0].id` says
-    // who a track belongs to — audio and video of one peer land in the same
+    // who a track belongs to: audio and video of one peer land in the same
     // MediaStream, and two peers never share a tile.
 
     const remotes = new Map(); // publisher peer_id → { card, stream }
@@ -1086,6 +1341,12 @@
     // it has not resolved yet, under an id of its own making, and that would
     // otherwise leave a tile nothing ever fills.
     let roster = new Set();
+
+    function paintTiles() {
+      const n = remotes.size;
+      $('remoteHint').hidden = n > 0;
+      $('tileCount').textContent = n === 0 ? 'only you' : `you and ${n} other${n > 1 ? 's' : ''}`;
+    }
 
     function onRemoteTrack(e) {
       const publisher = e.streams[0]?.id;
@@ -1128,10 +1389,12 @@
       indicator.className = 'indicator live';
 
       card.append(video, label, indicator);
-      document.getElementById('videoGrid').appendChild(card);
+      // Les vignettes distantes passent avant l'encart « personne d'autre ».
+      $('videoGrid').insertBefore(card, $('remoteHint'));
 
       const entry = { card, stream };
       remotes.set(publisher, entry);
+      paintTiles();
       return entry;
     }
 
@@ -1147,6 +1410,7 @@
       if (!entry) return;
       entry.card.remove();
       remotes.delete(publisher);
+      paintTiles();
       log(`Tile removed · ${short(publisher)}`, "event");
     }
 
@@ -1160,6 +1424,9 @@
         if (!roster.has(publisher)) removeRemote(publisher);
       }
     }
+
+    paintSteps();
+    paintTiles();
   </script>
 </body>
 
