@@ -15,6 +15,7 @@
 
 use serde::Serialize;
 use std::ops::Add;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Where a packet was dropped.
@@ -29,12 +30,6 @@ pub enum DropSite {
 }
 
 impl DropSite {
-    const ALL: [DropSite; 3] = [
-        DropSite::IngressQueue,
-        DropSite::UnknownPt,
-        DropSite::EgressQueue,
-    ];
-
     fn index(self) -> usize {
         match self {
             DropSite::IngressQueue => 0,
@@ -53,6 +48,15 @@ impl DropSite {
 pub struct PacketDrops {
     /// `[site][0 = audio, 1 = video]`.
     counters: [[AtomicU64; 2]; 3],
+    /// The server-wide totals, counted into on every drop.
+    ///
+    /// Counting at the source rather than folding a departing peer's
+    /// counters in at disconnect: the event loop and the sink outlive the
+    /// session by a few instants, and what they drop then — possibly for a
+    /// *remaining* peer's egress queue, saturated by the departure — must
+    /// still reach the totals. It also keeps the totals from ever going
+    /// backwards under a concurrent `/metrics` read.
+    totals: Option<Arc<PacketDrops>>,
 }
 
 impl PacketDrops {
@@ -60,9 +64,20 @@ impl PacketDrops {
         Self::default()
     }
 
+    /// A peer's counters that also count into the server `totals`.
+    pub fn with_totals(totals: Arc<PacketDrops>) -> Self {
+        PacketDrops {
+            totals: Some(totals),
+            ..Self::default()
+        }
+    }
+
     /// Counts one dropped packet.
     pub fn record(&self, site: DropSite, is_video: bool) {
         self.counters[site.index()][usize::from(is_video)].fetch_add(1, Ordering::Relaxed);
+        if let Some(totals) = &self.totals {
+            totals.record(site, is_video);
+        }
     }
 
     /// Packets dropped at `site`, both kinds together.
@@ -83,17 +98,6 @@ impl PacketDrops {
             ingress_queue: read(DropSite::IngressQueue),
             unknown_pt: read(DropSite::UnknownPt),
             egress_queue: read(DropSite::EgressQueue),
-        }
-    }
-
-    /// Adds another peer's counters into these — how a departing peer's
-    /// drops stay in the server totals.
-    pub fn absorb(&self, other: &PacketDrops) {
-        for site in DropSite::ALL {
-            for kind in 0..2 {
-                let n = other.counters[site.index()][kind].load(Ordering::Relaxed);
-                self.counters[site.index()][kind].fetch_add(n, Ordering::Relaxed);
-            }
         }
     }
 }
@@ -180,18 +184,18 @@ mod tests {
     }
 
     #[test]
-    fn absorb_adds_every_counter() {
-        let a = PacketDrops::new();
-        let b = PacketDrops::new();
+    fn a_drop_also_counts_into_the_totals() {
+        let totals = Arc::new(PacketDrops::new());
+        let a = PacketDrops::with_totals(Arc::clone(&totals));
+        let b = PacketDrops::with_totals(Arc::clone(&totals));
         a.record(DropSite::EgressQueue, true);
         b.record(DropSite::EgressQueue, true);
         b.record(DropSite::IngressQueue, false);
 
-        a.absorb(&b);
-
-        let s = a.snapshot();
-        assert_eq!(s.egress_queue.video, 2);
-        assert_eq!(s.ingress_queue.audio, 1);
+        assert_eq!(a.snapshot().egress_queue.video, 1);
+        let t = totals.snapshot();
+        assert_eq!(t.egress_queue.video, 2);
+        assert_eq!(t.ingress_queue.audio, 1);
     }
 
     #[test]

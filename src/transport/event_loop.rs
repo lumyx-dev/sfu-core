@@ -4,6 +4,7 @@ use super::peer_connection::PeerConnection;
 use crate::media::RtpPacketData;
 use crate::metrics::{DropSite, PacketDrops};
 use crate::telemetry::sampler::{IngressReading, PeerReading};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use str0m::{
@@ -30,7 +31,12 @@ const RECV_BUFFER_SIZE: usize = 2000;
 struct IngressDrops {
     counters: Arc<PacketDrops>,
     queue_bursting: bool,
-    unknown_pt_bursting: bool,
+    /// The mids currently in an unknown-PT burst.
+    ///
+    /// Per mid, unlike the queue: an unknown PT is a property of one m-line.
+    /// With a single flag, the valid packets of another mid would end the
+    /// burst at every turn and bring back one `warn!` per rejected packet.
+    unknown_pt_bursting: HashSet<Mid>,
 }
 
 impl IngressDrops {
@@ -38,7 +44,21 @@ impl IngressDrops {
         IngressDrops {
             counters,
             queue_bursting: false,
-            unknown_pt_bursting: false,
+            unknown_pt_bursting: HashSet::new(),
+        }
+    }
+
+    /// A packet of `mid` was rejected for its PT. `true` when it opens a
+    /// burst, i.e. when it should be logged.
+    fn unknown_pt_starts_burst(&mut self, mid: Mid) -> bool {
+        self.unknown_pt_bursting.insert(mid)
+    }
+
+    /// A packet of `mid` passed the PT check: its burst, if any, is over.
+    fn unknown_pt_ends_burst(&mut self, mid: Mid) {
+        // `is_empty` d'abord : le cas normal ne paie pas un hash par paquet.
+        if !self.unknown_pt_bursting.is_empty() {
+            self.unknown_pt_bursting.remove(&mid);
         }
     }
 }
@@ -327,8 +347,7 @@ fn handle_event(
                 drops
                     .counters
                     .record(DropSite::UnknownPt, conn.rx_is_video(mid));
-                if !drops.unknown_pt_bursting {
-                    drops.unknown_pt_bursting = true;
+                if drops.unknown_pt_starts_burst(mid) {
                     tracing::warn!(
                         "Peer {} — PT {} absent du codec config sur mid={}, paquet ignoré (total {})",
                         conn.peer_id,
@@ -339,7 +358,7 @@ fn handle_event(
                 }
                 return;
             };
-            drops.unknown_pt_bursting = false;
+            drops.unknown_pt_ends_burst(mid);
             let is_video = packet.is_video;
             // `Arc::clone`: the peer_id never changes, so sending it per packet
             // no longer has to reallocate it.
@@ -422,6 +441,21 @@ mod tests {
             .expect("codec configuré")
     }
 
+    /// Un PT dynamique absent de la config de codecs de `conn`.
+    fn unknown_pt(conn: &PeerConnection) -> Pt {
+        let configured: Vec<Pt> = conn
+            .rtc
+            .codec_config()
+            .params()
+            .iter()
+            .map(|p| p.pt())
+            .collect();
+        (96..=127u8)
+            .map(Pt::from)
+            .find(|pt| !configured.contains(pt))
+            .expect("un PT dynamique libre")
+    }
+
     fn media(conn: &PeerConnection, mid: &str, pt: Pt) -> Event {
         let params = conn.rtc.codec_config().params()[0];
         Event::MediaData(MediaData {
@@ -439,6 +473,35 @@ mod tests {
             last_sender_info: None,
             audio_start_of_talk_spurt: false,
         })
+    }
+
+    /// Un PT inconnu en continu sur un mid, pendant qu'un autre mid tourne
+    /// normalement, ne produit qu'un début de rafale — donc un seul `warn!`.
+    #[tokio::test]
+    async fn valid_traffic_on_another_mid_does_not_end_an_unknown_pt_burst() {
+        let mut conn = connection("alice").await;
+        let opus = pt_of(&conn, Codec::Opus);
+        let unknown = unknown_pt(&conn);
+        let (events, _rx) = mpsc::channel(64);
+        let mut drops = IngressDrops::new(Arc::new(PacketDrops::new()));
+
+        let mut bursts = 0;
+        for _ in 0..10 {
+            let opened_before = drops.unknown_pt_bursting.len();
+            let event = media(&conn, VIDEO, unknown);
+            handle_event(&mut conn, event, &events, &mut drops);
+            if drops.unknown_pt_bursting.len() > opened_before {
+                bursts += 1;
+            }
+            let event = media(&conn, AUDIO, opus);
+            handle_event(&mut conn, event, &events, &mut drops);
+        }
+        assert_eq!(bursts, 1);
+        assert_eq!(drops.counters.total(DropSite::UnknownPt), 10);
+
+        // Un paquet valide sur le mid fautif, lui, clôt la rafale.
+        drops.unknown_pt_ends_burst(Mid::from(VIDEO));
+        assert!(drops.unknown_pt_starts_burst(Mid::from(VIDEO)));
     }
 
     /// Une file d'entrée saturée fait monter, sur /metrics, le compteur du
@@ -481,17 +544,7 @@ mod tests {
         let mut conn = connection("alice").await;
         let (events, _rx) = mpsc::channel(16);
         let mut drops = IngressDrops::new(alice);
-        let configured: Vec<Pt> = conn
-            .rtc
-            .codec_config()
-            .params()
-            .iter()
-            .map(|p| p.pt())
-            .collect();
-        let unknown = (96..=127u8)
-            .map(Pt::from)
-            .find(|pt| !configured.contains(pt))
-            .expect("un PT dynamique libre");
+        let unknown = unknown_pt(&conn);
         for mid in [AUDIO, VIDEO, VIDEO] {
             let event = media(&conn, mid, unknown);
             handle_event(&mut conn, event, &events, &mut drops);

@@ -18,9 +18,9 @@ pub struct Metrics {
     pub telemetry_entries_dropped: AtomicU64,
     /// Drop counters of the peers currently connected.
     peer_drops: DashMap<Arc<str>, Arc<PacketDrops>>,
-    /// Drops of the peers that have left, so the server totals never go
-    /// backwards when a peer disconnects.
-    retired_drops: PacketDrops,
+    /// Server totals since startup, departed peers included. Every peer's
+    /// counters count into it as they drop (see [`PacketDrops::with_totals`]).
+    drop_totals: Arc<PacketDrops>,
 }
 
 impl Metrics {
@@ -59,22 +59,18 @@ impl Metrics {
     /// The returned `Arc` is what the peer's event loop and `PeerSink` count
     /// into.
     pub fn register_peer_drops(&self, peer_id: &Arc<str>) -> Arc<PacketDrops> {
-        let drops = Arc::new(PacketDrops::new());
+        let drops = Arc::new(PacketDrops::with_totals(Arc::clone(&self.drop_totals)));
         self.peer_drops
             .insert(Arc::clone(peer_id), Arc::clone(&drops));
         drops
     }
 
-    /// Removes a departing peer from `/metrics`, keeping its drops in the
-    /// server totals.
+    /// Removes a departing peer from the per-peer list of `/metrics`.
     ///
-    /// A packet the event loop or the sink drops after this call — they
-    /// outlive the session by a few instants — is no longer counted. It is a
-    /// packet for, or from, a peer that is gone.
+    /// Its drops stay in the server totals, and so do those its event loop
+    /// and sink make after this call: they count into the totals directly.
     pub fn retire_peer_drops(&self, peer_id: &str) {
-        if let Some((_, drops)) = self.peer_drops.remove(peer_id) {
-            self.retired_drops.absorb(&drops);
-        }
+        self.peer_drops.remove(peer_id);
     }
 
     pub fn snapshot(&self) -> MetricsSnapshot {
@@ -85,9 +81,7 @@ impl Metrics {
             .iter()
             .map(|e| (e.key().to_string(), e.value().snapshot()))
             .collect();
-        let totals = peers
-            .values()
-            .fold(self.retired_drops.snapshot(), |acc, d| acc + *d);
+        let totals = self.drop_totals.snapshot();
 
         MetricsSnapshot {
             rtp_packets_forwarded: self.rtp_packets_forwarded.load(Ordering::Relaxed),
@@ -206,6 +200,20 @@ mod tests {
         let snap = m.snapshot().packet_drops;
         assert!(!snap.peers.contains_key("alice"));
         assert_eq!(snap.totals.unknown_pt.audio, 2);
+    }
+
+    #[test]
+    fn a_drop_after_the_departure_still_reaches_the_totals() {
+        // L'event loop et le sink survivent un instant à la session : ce
+        // qu'ils jettent après `retire_peer_drops` doit rester compté.
+        let m = Metrics::new();
+        let alice = m.register_peer_drops(&Arc::from("alice"));
+        alice.record(DropSite::EgressQueue, false);
+
+        m.retire_peer_drops("alice");
+        alice.record(DropSite::EgressQueue, false);
+
+        assert_eq!(m.snapshot().packet_drops.totals.egress_queue.audio, 2);
     }
 
     #[test]

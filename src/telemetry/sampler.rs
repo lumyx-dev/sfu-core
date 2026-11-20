@@ -95,6 +95,13 @@ fn count(current: u64, previous: u64) -> i32 {
 pub struct Sampler {
     ingress: HashMap<String, IngressReading>,
     peer: Option<PeerReading>,
+    /// The drop counts already reported in a sample.
+    ///
+    /// Kept apart from `peer`: unlike str0m's counters, the SFU's drop
+    /// counters are created with the connection, so their baseline is known
+    /// — zero. The drops made before the first sample (an unknown PT during
+    /// negotiation, typically) are reported in it rather than lost.
+    drops_reported: DropCounts,
 }
 
 impl Sampler {
@@ -124,8 +131,13 @@ impl Sampler {
     }
 
     /// Same as [`Self::ingress`], for the peer's transport totals.
+    ///
+    /// The drops are the exception: they count from zero, so the first
+    /// emitted sample carries every drop since the connection opened.
     pub fn peer(&mut self, reading: &PeerReading) -> Option<PeerDeltas> {
         let previous = self.peer.replace(reading.clone())?;
+        let drops = reading.drops.since(self.drops_reported);
+        self.drops_reported = reading.drops;
         Some(PeerDeltas {
             bytes_rx: delta(reading.bytes_rx, previous.bytes_rx),
             bytes_tx: delta(reading.bytes_tx, previous.bytes_tx),
@@ -133,7 +145,7 @@ impl Sampler {
             transport_bytes_tx: delta(reading.transport_bytes_tx, previous.transport_bytes_tx),
             egress_loss: reading.egress_loss,
             bwe_bps: reading.bwe_bps,
-            drops: reading.drops.since(previous.drops),
+            drops,
         })
     }
 }
@@ -229,15 +241,32 @@ mod tests {
     }
 
     #[test]
+    fn the_first_sample_carries_the_drops_made_before_it() {
+        // Les compteurs de rejet naissent avec la connexion, à zéro : ce qui
+        // a été jeté avant le premier échantillon (un PT inconnu pendant la
+        // négociation, typiquement) doit y figurer, pas disparaître.
+        use crate::metrics::KindCounts;
+        let mut s = Sampler::new();
+        let mut r = peer_reading(0, 0);
+        r.drops.unknown_pt = KindCounts { audio: 3, video: 0 };
+        assert!(s.peer(&r).is_none(), "pas de delta str0m au premier relevé");
+
+        r.drops.unknown_pt.audio = 4;
+        let d = s.peer(&r).expect("un delta");
+        assert_eq!(d.drops.unknown_pt, KindCounts { audio: 4, video: 0 });
+    }
+
+    #[test]
     fn drops_become_per_interval_deltas() {
         use crate::metrics::KindCounts;
         let mut s = Sampler::new();
         let mut r = peer_reading(0, 0);
+        s.peer(&r);
         r.drops.egress_queue = KindCounts {
             audio: 3,
             video: 10,
         };
-        s.peer(&r);
+        s.peer(&r).expect("un delta");
         r.drops.egress_queue = KindCounts {
             audio: 5,
             video: 10,

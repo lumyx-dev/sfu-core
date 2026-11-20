@@ -137,6 +137,20 @@ l'abonné. Deux sources, qui doivent concorder :
   `telemetry.peer_samples` : `dropped_ingress_queue_audio` et `dropped_unknown_pt_audio` au
   compte du publieur, `dropped_egress_queue_audio` au compte de l'abonné. Leur somme sur la
   fenêtre d'une session est la part de la perte audio qui revient au SFU.
+
+  Deux limites à connaître avant de lire un résultat :
+
+  - **La dernière seconde manque à `peer_samples`.** Les rejets d'avant le premier
+    échantillon y figurent (ils sont reportés dans le premier), mais ceux qui suivent le
+    dernier relevé d'une connexion, au plus un intervalle d'échantillonnage, n'y sont jamais
+    écrits. Les totaux de `/metrics` (`packet_drops.totals`), eux, comptent tout, départs
+    compris. Lire `/metrics` avant et après la session, et prendre la différence comme
+    référence de B1b.
+  - **Un rejet de type incertain compte comme audio.** Un paquet jeté sur un mid dont le
+    type n'est pas encore connu (avant l'annonce de la piste) est classé audio : mieux vaut
+    un gate qui échoue à tort qu'une perte audio cachée. Un échec de B1b dû à
+    `dropped_unknown_pt_audio` en tout début de connexion peut donc venir de vidéo : le
+    vérifier dans les logs (`PT … absent du codec config sur mid=…`) avant de conclure.
 - **Le recoupement côté client**, là où il est possible : sur un flux dont l'abonné est sain,
   `packetsReceived` de l'abonné doit égaler le cumul de `track_samples.packets` du track
   publié sur la même fenêtre.
