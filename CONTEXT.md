@@ -174,10 +174,23 @@ deux, ~210 ms à quatre). Le plafond est choisi au-dessus d'une rafale de
 keyframe (une IDR 1080p se fragmente sur une centaine de paquets MTU), pour
 qu'un hoquet d'ordonnancement ne la tronque pas.
 
-Le rejet n'est jamais silencieux : `PeerSink::dropped_packets()` expose un
-compteur atomique, et chaque rafale de pertes est journalisée une fois — pas une
-ligne par paquet. Ces compteurs ne remontent pas encore sur `/metrics`
-(voir les points connus).
+Le rejet n'est jamais silencieux. Chaque paquet jeté est compté dans le
+`metrics::PacketDrops` du peer, par site et par type de média, et chaque rafale
+est journalisée une fois — pas une ligne par paquet. Il y a trois sites :
+
+| Site | Sens | Compté au compte de |
+| --- | --- | --- |
+| file d'entrée pleine (`transport/event_loop`) | entrant | l'émetteur |
+| PT absent de la config de codecs (`to_packet`) | entrant | l'émetteur |
+| file d'écriture du `PeerSink` pleine | sortant | le destinataire |
+
+La session crée les compteurs (`Metrics::register_peer_drops`) et les partage
+avec l'event loop et le `PeerSink` : c'est `transport/` qui compte, `media/`
+n'y touche pas. `/metrics` les expose par peer connecté et en totaux, et
+l'event loop les joint à chaque `PeerStats` pour que la télémétrie en tire des
+deltas par seconde (`peer_samples.dropped_*`). La séparation audio/vidéo sert
+le seuil B1b du gate Phase 0 (`docs/phase-0-gate.md`), qui ne porte que sur
+l'audio.
 
 ### Le peer_id sur le chemin chaud
 
@@ -210,7 +223,7 @@ qui traverse une room est une fuite, pas un bug d'aiguillage.
 
 ```bash
 cargo run                        # https://localhost:3000, client de test sur /
-cargo test                       # 148 tests
+cargo test                       # 170 tests
 cargo clippy --all-targets
 bun scripts/browser-check.ts 5   # QA dans 5 Chrome headless (serveur lancé)
 ```
@@ -228,7 +241,7 @@ room. Chaque participant doit voir tous les autres, chacun sur sa vignette.
 - Forwarding audio/vidéo cloisonné par room, **une m-line sortante par source**
 - Renégociation à l'arrivée et au départ d'un participant
 - PLI fonctionnelles, dans les deux sens
-- `/metrics` alimenté (paquets, octets, keyframes, connexions)
+- `/metrics` alimenté (paquets, octets, keyframes, connexions, paquets jetés)
 - Vérifié à 3, 5, 10 et 15 participants — en tests Rust de bout en bout et dans
   de vrais Chrome headless
 
@@ -246,9 +259,10 @@ room. Chaque participant doit voir tous les autres, chacun sur sa vignette.
    seule couche par track et ne s'adapte pas au débit disponible du subscriber.
    Une room large impose donc à chacun le débit du publisher.
 
-4. **Les compteurs de paquets jetés du `PeerSink` ne remontent pas sur
-   `/metrics`.** Ils existent et se journalisent, mais `media/` n'a pas accès à
-   `Metrics` et l'y amener est un chantier à part.
+4. ~~**Les compteurs de paquets jetés du `PeerSink` ne remontent pas sur
+   `/metrics`.**~~ Corrigé (LUM-709) : les trois sites de rejet sont comptés
+   par peer, par sens et par type de média, exposés sur `/metrics` et écrits en
+   télémétrie. Voir « Les files média jettent, elles n'accumulent pas ».
 
 5. ~~**`localhost+1-key.pem` est une clé privée committée.**~~ Corrigé : la paire
    est sortie du suivi git et `*.pem` / `*.key` sont ignorés. Chaque dev génère

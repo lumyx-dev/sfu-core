@@ -2,6 +2,7 @@
 
 use super::peer_connection::PeerConnection;
 use crate::media::RtpPacketData;
+use crate::metrics::{DropSite, PacketDrops};
 use crate::telemetry::sampler::{IngressReading, PeerReading};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -19,16 +20,27 @@ use tokio::sync::oneshot;
 /// Size of the UDP receive buffer (a comfortable MTU).
 const RECV_BUFFER_SIZE: usize = 2000;
 
-/// Inbound packets dropped for lack of room in the forwarding engine's queue.
+/// Inbound packets the SFU drops before they reach the forwarding engine.
 ///
-/// Logging every drop would drown the logs: a saturated queue produces as many
-/// as the publisher emits packets, i.e. hundreds per second. Only the first
-/// loss of a burst is traced, with the running total; the burst ends as soon as
-/// a packet gets through again.
-#[derive(Default)]
+/// The counts go to the peer's shared [`PacketDrops`], read by `/metrics` and
+/// telemetry. Logging every drop would drown the logs: a saturated queue
+/// produces as many as the publisher emits packets, i.e. hundreds per second.
+/// Only the first loss of a burst is traced, with the running total; the burst
+/// ends as soon as a packet gets through again.
 struct IngressDrops {
-    total: u64,
-    bursting: bool,
+    counters: Arc<PacketDrops>,
+    queue_bursting: bool,
+    unknown_pt_bursting: bool,
+}
+
+impl IngressDrops {
+    fn new(counters: Arc<PacketDrops>) -> Self {
+        IngressDrops {
+            counters,
+            queue_bursting: false,
+            unknown_pt_bursting: false,
+        }
+    }
 }
 
 /// Runs the connection until it closes.
@@ -36,6 +48,10 @@ struct IngressDrops {
 /// Alternates between draining str0m's outputs (transmits, events) and waiting
 /// for either an inbound datagram or the deadline str0m asked for. The media
 /// packets received are pushed onto `rtp_tx`, bound for the forwarding engine.
+///
+/// `drops` are the peer's counters: the inbound packets dropped here — queue
+/// full, unknown payload type — are counted there, as ingress drops. They are
+/// also attached to every [`TransportEvent::PeerStats`], for telemetry.
 ///
 /// `shutdown` is the stop signal the session emits when the WebSocket closes.
 /// It is armed inside the `select!` rather than checked between two turns:
@@ -50,6 +66,7 @@ struct IngressDrops {
 pub async fn run(
     conn: Arc<Mutex<PeerConnection>>,
     events: Sender<TransportEvent>,
+    drops: Arc<PacketDrops>,
     mut shutdown: oneshot::Receiver<()>,
 ) {
     let (socket, local_addr, peer_id) = {
@@ -77,7 +94,7 @@ pub async fn run(
     // it without giving back its capacity, hence no allocation at all in the
     // steady state.
     let mut outbound: Vec<Transmit> = Vec::new();
-    let mut ingress_drops = IngressDrops::default();
+    let mut ingress_drops = IngressDrops::new(drops);
 
     loop {
         let timeout = {
@@ -264,6 +281,10 @@ fn handle_event(
                 bwe_bps: s
                     .bwe_tx
                     .map(|b| i64::try_from(b.as_u64()).unwrap_or(i64::MAX)),
+                // Relevés au même instant que les cumuls str0m, au rythme de
+                // l'échantillonnage : la télémétrie en tire des deltas par
+                // seconde comme pour le reste.
+                drops: drops.counters.snapshot(),
             };
             let _ = events.try_send(TransportEvent::PeerStats {
                 peer: Arc::clone(&conn.peer_id),
@@ -300,9 +321,26 @@ fn handle_event(
             }
         }
         Event::MediaData(data) => {
+            let mid = data.mid;
+            let pt = data.pt;
             let Some(packet) = conn.to_packet(data) else {
+                drops
+                    .counters
+                    .record(DropSite::UnknownPt, conn.rx_is_video(mid));
+                if !drops.unknown_pt_bursting {
+                    drops.unknown_pt_bursting = true;
+                    tracing::warn!(
+                        "Peer {} — PT {} absent du codec config sur mid={}, paquet ignoré (total {})",
+                        conn.peer_id,
+                        pt,
+                        mid,
+                        drops.counters.total(DropSite::UnknownPt)
+                    );
+                }
                 return;
             };
+            drops.unknown_pt_bursting = false;
+            let is_video = packet.is_video;
             // `Arc::clone`: the peer_id never changes, so sending it per packet
             // no longer has to reallocate it.
             let event = TransportEvent::Media {
@@ -310,17 +348,17 @@ fn handle_event(
                 packet,
             };
             match events.try_send(event) {
-                Ok(()) => drops.bursting = false,
+                Ok(()) => drops.queue_bursting = false,
                 // Real-time media: the engine is behind, this packet is already
                 // worthless. We drop it rather than wait.
                 Err(TrySendError::Full(_)) => {
-                    drops.total += 1;
-                    if !drops.bursting {
-                        drops.bursting = true;
+                    drops.counters.record(DropSite::IngressQueue, is_video);
+                    if !drops.queue_bursting {
+                        drops.queue_bursting = true;
                         tracing::warn!(
                             "Peer {} — file de forwarding pleine, paquet entrant jeté (total {})",
                             conn.peer_id,
-                            drops.total
+                            drops.counters.total(DropSite::IngressQueue)
                         );
                     }
                 }
@@ -340,5 +378,182 @@ fn handle_event(
             });
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::media::RtpSink;
+    use crate::metrics::{DropCounts, KindCounts, Metrics};
+    use crate::transport::PeerSink;
+    use str0m::format::{Codec, CodecExtra};
+    use str0m::media::{ExtensionValues, Frequency, MediaData, MediaTime, Pt};
+    use str0m::rtp::SeqNo;
+    use tokio::sync::mpsc;
+
+    const AUDIO: &str = "0";
+    const VIDEO: &str = "1";
+
+    /// Une connexion dont le mid 0 publie de l'audio et le mid 1 de la vidéo.
+    async fn connection(peer: &str) -> PeerConnection {
+        let (sender, _rx) = mpsc::channel(4);
+        let mut conn = PeerConnection::new(
+            Arc::from(peer),
+            sender,
+            "127.0.0.1".to_string(),
+            None,
+            Duration::from_secs(1),
+        )
+        .await;
+        conn.rx_kind.insert(Mid::from(AUDIO), MediaKind::Audio);
+        conn.rx_kind.insert(Mid::from(VIDEO), MediaKind::Video);
+        conn
+    }
+
+    /// Le PT qu'annonce la config de codecs de `conn` pour `codec`.
+    fn pt_of(conn: &PeerConnection, codec: Codec) -> Pt {
+        conn.rtc
+            .codec_config()
+            .params()
+            .iter()
+            .find(|p| p.spec().codec == codec)
+            .map(|p| p.pt())
+            .expect("codec configuré")
+    }
+
+    fn media(conn: &PeerConnection, mid: &str, pt: Pt) -> Event {
+        let params = conn.rtc.codec_config().params()[0];
+        Event::MediaData(MediaData {
+            mid: Mid::from(mid),
+            pt,
+            rid: None,
+            params,
+            time: MediaTime::new(0, Frequency::FORTY_EIGHT_KHZ),
+            network_time: Instant::now(),
+            seq_range: SeqNo::from(1)..=SeqNo::from(1),
+            contiguous: true,
+            data: Arc::from(&b"frame"[..]),
+            ext_vals: ExtensionValues::default(),
+            codec_extra: CodecExtra::None,
+            last_sender_info: None,
+            audio_start_of_talk_spurt: false,
+        })
+    }
+
+    /// Une file d'entrée saturée fait monter, sur /metrics, le compteur du
+    /// peer émetteur, dans le sens entrant, pour le type du paquet — et rien
+    /// d'autre.
+    #[tokio::test]
+    async fn a_full_ingress_queue_shows_on_metrics_for_the_sender_as_ingress_audio() {
+        let metrics = Metrics::new();
+        let alice = metrics.register_peer_drops(&Arc::from("alice"));
+        metrics.register_peer_drops(&Arc::from("bob"));
+
+        let mut conn = connection("alice").await;
+        let opus = pt_of(&conn, Codec::Opus);
+        // File d'une place, jamais lue : le premier paquet passe, les trois
+        // suivants sont jetés.
+        let (events, _rx) = mpsc::channel(1);
+        let mut drops = IngressDrops::new(alice);
+        for _ in 0..4 {
+            let event = media(&conn, AUDIO, opus);
+            handle_event(&mut conn, event, &events, &mut drops);
+        }
+
+        let snap = metrics.snapshot().packet_drops;
+        assert_eq!(
+            snap.peers["alice"],
+            DropCounts {
+                ingress_queue: KindCounts { audio: 3, video: 0 },
+                ..Default::default()
+            }
+        );
+        assert_eq!(snap.peers["bob"], DropCounts::default());
+    }
+
+    /// Un PT absent de la config est compté, au bon type de média.
+    #[tokio::test]
+    async fn an_unknown_payload_type_is_counted_per_media_kind() {
+        let metrics = Metrics::new();
+        let alice = metrics.register_peer_drops(&Arc::from("alice"));
+
+        let mut conn = connection("alice").await;
+        let (events, _rx) = mpsc::channel(16);
+        let mut drops = IngressDrops::new(alice);
+        let configured: Vec<Pt> = conn
+            .rtc
+            .codec_config()
+            .params()
+            .iter()
+            .map(|p| p.pt())
+            .collect();
+        let unknown = (96..=127u8)
+            .map(Pt::from)
+            .find(|pt| !configured.contains(pt))
+            .expect("un PT dynamique libre");
+        for mid in [AUDIO, VIDEO, VIDEO] {
+            let event = media(&conn, mid, unknown);
+            handle_event(&mut conn, event, &events, &mut drops);
+        }
+
+        let snap = metrics.snapshot().packet_drops;
+        assert_eq!(
+            snap.peers["alice"].unknown_pt,
+            KindCounts { audio: 1, video: 2 }
+        );
+        assert_eq!(snap.peers["alice"].ingress_queue, KindCounts::default());
+    }
+
+    /// Sans saturation, les trois compteurs restent à zéro.
+    #[tokio::test]
+    async fn an_unsaturated_session_drops_nothing() {
+        let metrics = Metrics::new();
+        let alice = metrics.register_peer_drops(&Arc::from("alice"));
+
+        let mut conn = connection("alice").await;
+        let opus = pt_of(&conn, Codec::Opus);
+        let vp8 = pt_of(&conn, Codec::Vp8);
+        let (events, _rx) = mpsc::channel(64);
+        let mut drops = IngressDrops::new(Arc::clone(&alice));
+        for _ in 0..20 {
+            let event = media(&conn, AUDIO, opus);
+            handle_event(&mut conn, event, &events, &mut drops);
+            let event = media(&conn, VIDEO, vp8);
+            handle_event(&mut conn, event, &events, &mut drops);
+        }
+        let sink = PeerSink::new(Arc::from("alice"), Arc::new(Mutex::new(conn)), alice);
+        for _ in 0..20 {
+            sink.write_rtp(crate::media::RtpPacketData {
+                params: PayloadParamsFixture::opus(),
+                payload: Arc::from(&b"frame"[..]),
+                mid: Mid::from(AUDIO),
+                network_time: Instant::now(),
+                rtp_time: 0,
+                is_video: false,
+            });
+        }
+
+        assert_eq!(
+            metrics.snapshot().packet_drops.totals,
+            DropCounts::default()
+        );
+    }
+
+    struct PayloadParamsFixture;
+
+    impl PayloadParamsFixture {
+        fn opus() -> str0m::format::PayloadParams {
+            str0m::format::PayloadParams::new(
+                Pt::from(111),
+                None,
+                str0m::format::CodecSpec {
+                    codec: Codec::Opus,
+                    clock_rate: Frequency::FORTY_EIGHT_KHZ,
+                    channels: Some(2),
+                    format: Default::default(),
+                },
+            )
+        }
     }
 }

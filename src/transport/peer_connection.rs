@@ -404,13 +404,26 @@ impl PeerConnection {
         }
     }
 
+    /// Whether the m-line `mid` this peer publishes on carries video.
+    ///
+    /// An m-line not announced yet counts as audio, as in [`Self::to_packet`].
+    /// For the drop counters this errs on the safe side: B1b bears on audio,
+    /// and a doubtful drop counted as audio fails the gate rather than hiding
+    /// a loss.
+    pub fn rx_is_video(&self, mid: Mid) -> bool {
+        self.rx_kind
+            .get(&mid)
+            .is_some_and(|k| *k == MediaKind::Video)
+    }
+
+    /// Turns a received media packet into what the forwarding engine routes.
+    ///
+    /// `None` when the packet's payload type is absent from the codec config:
+    /// the packet is dropped. The caller counts and logs it — once per burst,
+    /// not once per packet.
     pub fn to_packet(&self, data: str0m::media::MediaData) -> Option<RtpPacketData> {
         let mid = data.mid;
-        let is_video = self
-            .rx_kind
-            .get(&mid)
-            .map(|k| *k == MediaKind::Video)
-            .unwrap_or(false);
+        let is_video = self.rx_is_video(mid);
 
         let freq = if is_video {
             str0m::media::Frequency::NINETY_KHZ
@@ -426,14 +439,7 @@ impl PeerConnection {
             .find(|p| p.pt() == data.pt)
             .copied();
 
-        let Some(params) = params else {
-            tracing::warn!(
-                "Peer {} — PT {} absent du codec config, paquet ignoré",
-                self.peer_id,
-                data.pt
-            );
-            return None;
-        };
+        let params = params?;
 
         Some(RtpPacketData {
             params,

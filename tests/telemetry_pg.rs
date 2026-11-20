@@ -6,6 +6,7 @@
 
 use chrono::Utc;
 use lumyx_sfu::config::TelemetryConfig;
+use lumyx_sfu::metrics::{DropCounts, KindCounts};
 use lumyx_sfu::telemetry::tasks::spawn_writer;
 use lumyx_sfu::telemetry::{
     Batch, Entry, EventKind, EventRecord, PeerSample, PgWriter, QueueSink, TelemetrySink,
@@ -407,6 +408,12 @@ struct PeerSampleRow {
     transport_bytes_tx: i64,
     egress_loss: Option<f32>,
     bwe_bps: Option<i64>,
+    dropped_ingress_queue_audio: i32,
+    dropped_ingress_queue_video: i32,
+    dropped_unknown_pt_audio: i32,
+    dropped_unknown_pt_video: i32,
+    dropped_egress_queue_audio: i32,
+    dropped_egress_queue_video: i32,
 }
 
 #[tokio::test]
@@ -427,12 +434,22 @@ async fn a_peer_sample_round_trips_every_column_without_transposition() {
         transport_bytes_tx: 104,
         egress_loss: Some(0.55),
         bwe_bps: Some(123_456),
+        // Six compteurs de rejet, six valeurs : une colonne audio/vidéo ou
+        // entrée/sortie intervertie se voit.
+        drops: DropCounts {
+            ingress_queue: KindCounts { audio: 1, video: 2 },
+            unknown_pt: KindCounts { audio: 3, video: 4 },
+            egress_queue: KindCounts { audio: 5, video: 6 },
+        },
     })]))
     .await
     .expect("échantillon peer");
 
     let row: PeerSampleRow = sqlx::query_as(
-        "select bytes_rx, bytes_tx, transport_bytes_rx, transport_bytes_tx, egress_loss, bwe_bps
+        "select bytes_rx, bytes_tx, transport_bytes_rx, transport_bytes_tx, egress_loss, bwe_bps,
+                dropped_ingress_queue_audio, dropped_ingress_queue_video,
+                dropped_unknown_pt_audio, dropped_unknown_pt_video,
+                dropped_egress_queue_audio, dropped_egress_queue_video
          from telemetry.peer_samples where peer_id = $1 and at = $2",
     )
     .bind(peer)
@@ -449,6 +466,12 @@ async fn a_peer_sample_round_trips_every_column_without_transposition() {
             transport_bytes_tx: 104,
             egress_loss: Some(0.55),
             bwe_bps: Some(123_456),
+            dropped_ingress_queue_audio: 1,
+            dropped_ingress_queue_video: 2,
+            dropped_unknown_pt_audio: 3,
+            dropped_unknown_pt_video: 4,
+            dropped_egress_queue_audio: 5,
+            dropped_egress_queue_video: 6,
         }
     );
 }

@@ -134,21 +134,39 @@ curl -k https://localhost:3000/metrics
 ```json
 {
   "rooms": 1,
-  "peers": 3,
+  "peers": 2,
   "metrics": {
-    "rtp_packets_forwarded": 0,
-    "bytes_forwarded": 0,
-    "keyframe_requests": 0,
-    "peers_connected": 5,
-    "peers_disconnected": 2
+    "rtp_packets_forwarded": 48210,
+    "bytes_forwarded": 31877342,
+    "keyframe_requests": 12,
+    "peers_connected": 4,
+    "peers_disconnected": 2,
+    "telemetry_entries_dropped": 0,
+    "packet_drops": {
+      "totals": {
+        "ingress_queue": { "audio": 0, "video": 0 },
+        "unknown_pt":    { "audio": 0, "video": 0 },
+        "egress_queue":  { "audio": 0, "video": 37 }
+      },
+      "peers": {
+        "4f1c…": {
+          "ingress_queue": { "audio": 0, "video": 0 },
+          "unknown_pt":    { "audio": 0, "video": 0 },
+          "egress_queue":  { "audio": 0, "video": 37 }
+        }
+      }
+    }
   }
 }
 ```
 
-Those three zeros are not a quiet call. `rooms`, `peers`, `peers_connected` and
-`peers_disconnected` are live; `record_rtp` and `record_keyframe` exist but are never called from
-the media path, so their counters stay at zero however much traffic you push. Wiring them up is
-the first half of the metrics milestone.
+Every counter is cumulative since startup. `packet_drops` lists the packets the SFU itself
+dropped, split by media kind: `ingress_queue` and `unknown_pt` count against the peer that
+**sent** the packet (its queue towards the forwarding engine was full, or its payload type is not
+in the codec config), `egress_queue` against the peer that **should have received** it (its write
+queue was full). `peers` lists the connected peers only; a departing peer's drops stay in
+`totals`. The same counters are written to telemetry as per-second deltas, in the `dropped_*`
+columns of `telemetry.peer_samples`.
 
 ### Configuration
 

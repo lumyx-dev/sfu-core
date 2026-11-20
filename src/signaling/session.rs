@@ -66,13 +66,22 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     let (transport_tx, transport_rx) =
         tokio::sync::mpsc::channel::<TransportEvent>(RTP_INGRESS_CAPACITY);
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-    tokio::spawn(event_loop::run(conn.clone(), transport_tx, shutdown_rx));
+    // Compteurs de paquets jetés du peer, partagés par les deux sens : l'event
+    // loop compte ce qu'il jette à l'entrée, le sink ce qu'il jette à la
+    // sortie. /metrics les liste jusqu'au départ du peer.
+    let drops = state.metrics.register_peer_drops(&peer_id);
+    tokio::spawn(event_loop::run(
+        conn.clone(),
+        transport_tx,
+        Arc::clone(&drops),
+        shutdown_rx,
+    ));
 
     // The sink exists from the moment of connection — its writer task must be
     // running before the first packet — but the engine only learns about it on
     // `Join`: a peer that has joined no room receives nothing and broadcasts
     // nothing. Holding it here keeps it alive for the whole session.
-    let sink: Arc<dyn RtpSink> = PeerSink::new(Arc::clone(&peer_id), conn.clone());
+    let sink: Arc<dyn RtpSink> = PeerSink::new(Arc::clone(&peer_id), conn.clone(), drops);
 
     // The negotiator has to be able to re-offer to this peer from the moment
     // it exists: a track published elsewhere can reach it before it has said a
@@ -145,6 +154,7 @@ pub async fn handle_socket(socket: WebSocket, peer_id: Arc<str>, state: AppState
     });
     state.negotiator.unregister(&peer_id);
     state.metrics.record_disconnect();
+    state.metrics.retire_peer_drops(&peer_id);
     tracing::info!("Peer {} déconnecté", peer_id);
 }
 
@@ -268,6 +278,7 @@ fn spawn_transport_pump(
                         transport_bytes_tx: d.transport_bytes_tx,
                         egress_loss: d.egress_loss,
                         bwe_bps: d.bwe_bps,
+                        drops: d.drops,
                     }));
                 }
                 TransportEvent::IceState { peer, state } => {

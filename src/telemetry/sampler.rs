@@ -4,6 +4,7 @@
 //! lets the arithmetic — the part most likely to be wrong — be tested without
 //! a peer connection.
 
+use crate::metrics::DropCounts;
 use std::collections::HashMap;
 
 /// One reading of an inbound m-line, as str0m reports it.
@@ -32,6 +33,8 @@ pub struct PeerReading {
     pub transport_bytes_tx: u64,
     pub egress_loss: Option<f32>,
     pub bwe_bps: Option<i64>,
+    /// The packets the SFU itself dropped for this peer, cumulative.
+    pub drops: DropCounts,
 }
 
 /// What changed on an inbound m-line since the previous reading.
@@ -56,6 +59,8 @@ pub struct PeerDeltas {
     pub transport_bytes_tx: i64,
     pub egress_loss: Option<f32>,
     pub bwe_bps: Option<i64>,
+    /// Packets the SFU dropped for this peer during the interval.
+    pub drops: DropCounts,
 }
 
 /// Converts str0m's jitter into milliseconds.
@@ -128,6 +133,7 @@ impl Sampler {
             transport_bytes_tx: delta(reading.transport_bytes_tx, previous.transport_bytes_tx),
             egress_loss: reading.egress_loss,
             bwe_bps: reading.bwe_bps,
+            drops: reading.drops.since(previous.drops),
         })
     }
 }
@@ -222,6 +228,27 @@ mod tests {
         assert_eq!(d.bytes_tx, 0, "un compteur qui recule donne zéro");
     }
 
+    #[test]
+    fn drops_become_per_interval_deltas() {
+        use crate::metrics::KindCounts;
+        let mut s = Sampler::new();
+        let mut r = peer_reading(0, 0);
+        r.drops.egress_queue = KindCounts {
+            audio: 3,
+            video: 10,
+        };
+        s.peer(&r);
+        r.drops.egress_queue = KindCounts {
+            audio: 5,
+            video: 10,
+        };
+        r.drops.unknown_pt.audio = 1;
+        let d = s.peer(&r).expect("un delta");
+        assert_eq!(d.drops.egress_queue, KindCounts { audio: 2, video: 0 });
+        assert_eq!(d.drops.unknown_pt.audio, 1);
+        assert_eq!(d.drops.ingress_queue, KindCounts::default());
+    }
+
     fn reading(bytes: u64, packets: u64, nacks: u64, plis: u64, firs: u64) -> IngressReading {
         IngressReading {
             bytes,
@@ -244,6 +271,7 @@ mod tests {
             transport_bytes_tx: tx,
             egress_loss: None,
             bwe_bps: None,
+            drops: DropCounts::default(),
         }
     }
 }

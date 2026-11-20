@@ -132,9 +132,11 @@ l'abonné. Deux sources, qui doivent concorder :
   d'entrée vers le moteur de forwarding et la file de sortie de chaque `PeerSink`, toutes deux
   pleines par conception plutôt que d'accumuler (`CONTEXT.md`, « Les files média jettent ») ;
   et `PeerConnection::to_packet`, qui écarte un paquet dont le payload type est absent de la
-  configuration de codecs. Les deux premiers ont un compteur, le troisième n'a qu'un log, et
-  **aucun n'est exporté** ni sur `/metrics` ni dans la télémétrie (`CONTEXT.md`, point
-  connu 4) : les exporter est un prérequis de la campagne.
+  configuration de codecs. Les trois sont comptés par peer, par sens et par type de média
+  (LUM-709), exposés sur `/metrics` (`packet_drops`) et écrits en deltas par seconde dans
+  `telemetry.peer_samples` : `dropped_ingress_queue_audio` et `dropped_unknown_pt_audio` au
+  compte du publieur, `dropped_egress_queue_audio` au compte de l'abonné. Leur somme sur la
+  fenêtre d'une session est la part de la perte audio qui revient au SFU.
 - **Le recoupement côté client**, là où il est possible : sur un flux dont l'abonné est sain,
   `packetsReceived` de l'abonné doit égaler le cumul de `track_samples.packets` du track
   publié sur la même fenêtre.

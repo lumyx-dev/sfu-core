@@ -5,6 +5,7 @@
 //! means adding a variant, not widening a trait every implementation has to
 //! follow.
 
+use crate::metrics::DropCounts;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 use uuid::Uuid;
@@ -123,6 +124,8 @@ pub struct PeerSample {
     pub transport_bytes_tx: i64,
     pub egress_loss: Option<f32>,
     pub bwe_bps: Option<i64>,
+    /// Packets the SFU itself dropped for this peer during the interval.
+    pub drops: DropCounts,
 }
 
 #[derive(Debug, Clone)]
