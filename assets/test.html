@@ -888,7 +888,7 @@
           </div>
           <div class="counters">
             <div class="counter"><span class="counter-value num" id="mKf">0</span><span class="counter-label">Keyframe requests</span></div>
-            <div class="counter"><span class="counter-value num" id="mLeft">0</span><span class="counter-label">Peers disconnected</span></div>
+            <div class="counter"><span class="counter-value num" id="mMediaDrops">0</span><span class="counter-label">Media drops</span></div>
             <div class="counter"><span class="counter-value num" id="mTelDrops">0</span><span class="counter-label">Telemetry drops</span></div>
           </div>
         </section>
@@ -1412,7 +1412,11 @@
         $('mMbps').textContent = mbps.toFixed(1);
         $('mMb').textContent = (bytes / 1e6).toFixed(1);
         $('mKf').textContent = fmt(m.keyframe_requests ?? 0);
-        $('mLeft').textContent = fmt(m.peers_disconnected ?? 0);
+        // Somme de tous les points de perte (files, payload type, écriture), audio et vidéo.
+        const mediaDrops = Object.values(m.media_packets_dropped ?? {})
+          .reduce((sum, k) => sum + (k.audio ?? 0) + (k.video ?? 0), 0);
+        $('mMediaDrops').textContent = fmt(mediaDrops);
+        $('mMediaDrops').classList.toggle('bad', mediaDrops > 0);
         const telDrops = m.telemetry_entries_dropped ?? 0;
         $('mTelDrops').textContent = fmt(telDrops);
         $('mTelDrops').classList.toggle('bad', telDrops > 0);
