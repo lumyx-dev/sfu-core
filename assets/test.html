@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
-  <title>Lumyx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumyx test console</title>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
   <style>
     /* ===== LUMYX DESIGN TOKENS — copied verbatim from the handoff. Do not hand-edit. ===== */
     /* One family, no monospace. Geist is what the repo's dashboard already declares via next/font,
@@ -344,48 +346,69 @@
 
       /* ===== END LUMYX DESIGN TOKENS ===== */
 
+      /* ── Base ─────────────────────────────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--surface-page); }
+      body {
+        font-family: var(--font-sans);
+        font-size: var(--fs-14);
+        line-height: var(--lh-snug);
+        color: var(--text-body);
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings: 'tnum' 1;
+      }
+      h1, h2, h3, p { margin: 0; }
+      button, input { font: inherit; color: inherit; }
+      .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+      .muted { color: var(--text-muted); }
+      .ph { font-size: 16px; line-height: 1; }
+      :focus-visible { outline: none; box-shadow: var(--ring-accent); }
+
       /* ── App shell ────────────────────────────────────────────────── */
       .app {
+        min-height: 100dvh;
         display: grid;
         grid-template-rows: auto 1fr auto;
-        min-height: 100vh;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: color-mix(in srgb, var(--surface-page) 82%, transparent);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+      .bar {
         max-width: var(--content-max);
         margin: 0 auto;
         padding: 0 var(--space-8);
-      }
-
-      .header {
+        height: 56px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: var(--space-6) 0;
-        border-bottom: 1px solid var(--border);
+        gap: var(--space-6);
       }
-
-      .brand {
-        display: flex;
-        align-items: baseline;
-        gap: var(--space-5);
-      }
-
-      .brand-name {
-        font-size: var(--fs-16);
-        font-weight: var(--fw-semibold);
-        letter-spacing: var(--ls-display);
-        color: var(--text-strong);
-      }
-
-      .brand-sub {
-        font-size: var(--fs-12);
+      .brand { display: flex; align-items: center; gap: var(--space-4); color: var(--text-strong); }
+      .brand-name { font-size: var(--fs-16); font-weight: var(--fw-semibold); letter-spacing: var(--ls-display); }
+      .crumb { display: flex; align-items: center; gap: var(--space-4); color: var(--text-muted); font-size: var(--fs-13); }
+      .crumb::before { content: ""; width: 1px; height: 16px; background: var(--border-strong); margin-right: var(--space-2); }
+      .tag {
+        padding: 1px 8px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-active);
         color: var(--text-muted);
+        font-size: var(--fs-11);
+        font-weight: var(--fw-medium);
       }
+      .spacer { flex: 1; }
 
-      /* ── Pill (core/Pill) ─────────────────────────────────────────── */
       .pill {
         display: inline-flex;
         align-items: center;
         gap: var(--space-4);
-        padding: 5px 12px;
+        height: 30px;
+        padding: 0 12px;
         border-radius: var(--radius-pill);
         background: var(--surface-card);
         border: 1px solid var(--border);
@@ -394,8 +417,22 @@
         color: var(--text-body);
         white-space: nowrap;
       }
+      .icon-btn {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-xs);
+        border: 1px solid transparent;
+        background: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+      }
+      .icon-btn:hover { background: var(--surface-hover); border-color: var(--border); color: var(--text-strong); }
 
-      /* ── StatusDot (core/StatusDot) — script sets className = 'status-dot ' + phase ── */
+      /* script sets className = 'status-dot ' + phase */
       .status-dot {
         display: inline-block;
         flex: 0 0 auto;
@@ -404,220 +441,197 @@
         border-radius: 50%;
         background: var(--idle);
         --dot-color: var(--idle);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 18%, transparent);
         transition: background var(--dur-2) var(--ease-out);
       }
+      .status-dot.connected { background: var(--ok-solid); --dot-color: var(--ok-solid); }
+      .status-dot.connecting { background: var(--warn-solid); --dot-color: var(--warn-solid); animation: sl-breathe 2.6s var(--ease-in-out) infinite; }
+      .status-dot.disconnected { background: var(--danger-solid); --dot-color: var(--danger-solid); }
 
-      .status-dot.connected {
-        background: var(--ok);
-        --dot-color: var(--ok);
-      }
-
-      .status-dot.connecting {
-        background: var(--warn);
-        --dot-color: var(--warn);
-        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-      }
-
-      .status-dot.disconnected {
-        background: var(--danger);
-        --dot-color: var(--danger);
-      }
-
-      /* ── main layout ──────────────────────────────────────────────── */
       .main {
+        max-width: var(--content-max);
+        width: 100%;
+        margin: 0 auto;
+        padding: var(--space-8);
         display: grid;
-        grid-template-columns: 1fr var(--rail-w);
-        gap: var(--gap-grid);
-        padding: var(--space-8) 0;
-        min-height: 0;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: var(--space-8);
+        align-items: start;
       }
+      .stage { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+      .rail { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; position: sticky; top: 80px; }
 
-      .video-section {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-6);
-        min-width: 0;
-      }
-
-      .sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-6);
-        min-width: 0;
-      }
-
-      /* ── Card (core/Card) ─────────────────────────────────────────── */
-      .card {
+      .panel {
         background: var(--surface-card);
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
-        display: flex;
-        flex-direction: column;
         min-width: 0;
         overflow: hidden;
       }
-
-      .card-header {
+      .panel-head {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         gap: var(--space-5);
         padding: 14px var(--space-7);
-        flex: 0 0 auto;
       }
+      .panel-title { font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text-strong); }
+      .panel-meta { font-size: var(--fs-12); color: var(--text-muted); }
 
-      .card-title-group {
-        display: inline-flex;
-        align-items: baseline;
-        gap: var(--space-4);
-        min-width: 0;
-      }
-
-      .card-title {
-        font-size: var(--fs-14);
-        font-weight: var(--fw-semibold);
-        color: var(--text-strong);
-      }
-
-      .card-meta {
-        font-size: var(--fs-12);
-        color: var(--text-muted);
-      }
-
-      .card-body {
-        flex: 1;
-        min-height: 0;
-      }
-
-      .card-body-padded {
-        padding: 0 var(--space-7) var(--space-7);
-      }
-
-      /* ── Button (core/Button) ─────────────────────────────────────── */
-      .controls {
-        display: flex;
-        gap: var(--space-4);
-        flex-wrap: wrap;
-      }
-
+      /* ── Buttons ──────────────────────────────────────────────────── */
       .btn {
-        font-family: var(--font-sans);
-        font-weight: var(--fw-medium);
-        letter-spacing: var(--ls-normal);
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        gap: var(--space-4);
+        height: 36px;
+        padding: 0 14px;
+        border-radius: var(--radius-sm);
+        font-size: var(--fs-13);
+        font-weight: var(--fw-medium);
         white-space: nowrap;
         cursor: pointer;
-        outline: none;
-        transition:
-          background var(--dur-1) var(--ease-out),
-          border-color var(--dur-1) var(--ease-out),
-          box-shadow var(--dur-1) var(--ease-out);
-        font-size: var(--fs-13);
-        padding: 9px 16px;
-        border-radius: var(--radius-sm);
+        transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
+      }
+      .btn:active:not(:disabled) { transform: translateY(1px); }
+      .btn:disabled { cursor: not-allowed; opacity: .45; }
+      .btn-primary { background: var(--accent); border: 1px solid var(--accent); color: var(--text-on-accent); box-shadow: var(--shadow-xs); }
+      .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+      .btn-secondary { background: var(--surface-card); border: 1px solid var(--border-strong); color: var(--text-strong); box-shadow: var(--shadow-xs); }
+      .btn-secondary:hover:not(:disabled) { background: var(--surface-hover); }
+      .btn-ghost { background: none; border: 1px solid transparent; color: var(--text-muted); }
+      .btn-ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-strong); }
+      .btn-danger { background: none; border: 1px solid var(--border-strong); color: var(--danger); }
+      .btn-danger:hover:not(:disabled) { background: var(--danger-tint); border-color: var(--danger); }
+      .btn-danger:focus-visible { box-shadow: var(--ring-danger); }
+
+      /* ── Session: the four steps, in order ────────────────────────── */
+      .session-head { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; padding: var(--space-6) var(--space-7); }
+      .session-head .panel-title { margin-right: auto; }
+      .steps {
+        list-style: none;
+        margin: 0;
+        padding: 0 var(--space-6) var(--space-6);
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: var(--space-4);
       }
-
-      .btn:disabled {
-        cursor: not-allowed;
-        opacity: .45;
-      }
-
-      .btn:focus-visible {
-        box-shadow: var(--ring-accent);
-      }
-
-      .btn-primary {
-        background: var(--accent);
-        border: 1px solid var(--accent);
-        color: var(--text-on-accent);
-        box-shadow: var(--shadow-xs);
-      }
-
-      .btn-primary:hover:not(:disabled) {
-        background: var(--accent-hover);
-        border-color: var(--accent-hover);
-      }
-
-      .btn-secondary {
-        background: var(--surface-card);
+      .step {
+        width: 100%;
+        height: auto;
+        min-height: 64px;
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        align-items: center;
+        gap: var(--space-5);
+        padding: var(--space-5);
+        border-radius: var(--radius-md);
         border: 1px solid var(--border);
+        background: var(--surface-sunken);
         color: var(--text-strong);
-        box-shadow: var(--shadow-xs);
+        text-align: left;
+        cursor: pointer;
+        transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
       }
-
-      .btn-secondary:hover:not(:disabled) {
-        background: var(--surface-hover);
-        border-color: var(--border-strong);
+      .step:hover:not(:disabled) { background: var(--surface-card); border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+      .step:active:not(:disabled) { transform: translateY(1px); }
+      .step:disabled { cursor: not-allowed; color: var(--text-faint); }
+      .step.is-done:disabled { cursor: default; color: var(--text-strong); }
+      .step-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-pill);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--fs-12);
+        font-weight: var(--fw-semibold);
+        background: var(--surface-active);
+        color: var(--text-muted);
+        transition: background var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
       }
+      .step-badge .ph { display: none; font-size: 14px; }
+      .step-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+      .step-name { font-size: var(--fs-13); font-weight: var(--fw-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .step-hint { font-size: var(--fs-12); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .step:disabled .step-hint { color: var(--text-faint); }
+      /* the next thing to click */
+      .step.is-next:not(:disabled) { border-color: var(--accent-border); background: var(--accent-tint); }
+      .step.is-next:not(:disabled) .step-badge { background: var(--accent); color: var(--text-on-accent); }
+      .step.is-done { background: var(--surface-card); }
+      .step.is-done .step-badge { background: var(--ok-tint); color: var(--ok); }
+      .step.is-done .step-badge .ph { display: inline; }
+      .step.is-done .step-badge span { display: none; }
+      .step.is-done .step-hint { color: var(--ok); }
 
-      .btn-danger {
+      .room-field {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-3);
+        height: 36px;
+        padding: 0 4px 0 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
         background: var(--surface-card);
-        border: 1px solid var(--border);
-        color: var(--danger);
-        box-shadow: var(--shadow-xs);
+        transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
       }
-
-      .btn-danger:hover:not(:disabled) {
-        background: var(--danger-tint);
-        border-color: var(--danger);
+      .room-field:focus-within { border-color: var(--accent); box-shadow: var(--ring-accent); }
+      .room-field label { font-size: var(--fs-12); color: var(--text-muted); }
+      .room-field input {
+        width: 128px;
+        height: 28px;
+        border: 0;
+        outline: none;
+        background: none;
+        font-size: var(--fs-13);
+        font-weight: var(--fw-medium);
+        color: var(--text-strong);
       }
+      .room-field input:disabled { color: var(--text-muted); }
 
-      .btn-danger:focus-visible {
-        box-shadow: var(--ring-danger);
-      }
-
-      /* ── VideoTile (webrtc/VideoTile) ─────────────────────────────── */
+      /* ── Video tiles (classes .video-card / .label / .indicator are built by the script) ── */
+      .stage-head { display: flex; align-items: baseline; gap: var(--space-4); padding: 0 var(--space-1); }
+      .stage-title { font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text-strong); }
       .video-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: var(--gap-grid);
       }
-
-      .video-card {
+      .video-card, .hint-card {
         position: relative;
         border-radius: var(--radius-lg);
         overflow: hidden;
-        border: 1px solid var(--border);
-        background: var(--surface-inset);
-        box-shadow: var(--shadow-xs);
-        min-width: 0;
         aspect-ratio: 16/10;
+        min-width: 0;
       }
-
-      .video-card video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+      .video-card {
+        background: var(--n-900);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        animation: tile-in var(--dur-3) var(--ease-out);
       }
-
-      /* .label is set directly by the script for the remote card */
+      .video-card video { width: 100%; height: 100%; object-fit: cover; display: block; }
+      #localCard video { transform: scaleX(-1); }
       .video-card .label {
         position: absolute;
-        bottom: var(--space-5);
         left: var(--space-5);
-        right: var(--space-5);
+        bottom: var(--space-5);
+        max-width: calc(100% - 24px);
         display: inline-flex;
         align-items: center;
-        gap: var(--space-4);
-        min-width: 0;
-        background: var(--surface-overlay);
-        color: var(--text-on-overlay);
-        backdrop-filter: var(--blur-overlay);
+        gap: var(--space-3);
         padding: 4px 10px;
         border-radius: var(--radius-pill);
+        background: rgba(11, 12, 16, .62);
+        backdrop-filter: var(--blur-overlay);
+        -webkit-backdrop-filter: var(--blur-overlay);
+        color: var(--n-0);
         font-size: var(--fs-12);
+        font-weight: var(--fw-medium);
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
-        width: max-content;
       }
-
-      /* .indicator / .indicator.live are set directly by the script */
       .video-card .indicator {
         position: absolute;
         top: var(--space-5);
@@ -625,17 +639,10 @@
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: var(--danger);
-        --dot-color: var(--danger);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 16%, transparent);
+        background: var(--red-400);
+        box-shadow: 0 0 0 3px rgba(255, 107, 90, .28);
       }
-
-      .video-card .indicator.live {
-        background: var(--ok);
-        --dot-color: var(--ok);
-        animation: sl-breathe 2.6s var(--ease-in-out) infinite;
-      }
-
+      .video-card .indicator.live { background: var(--green-400); box-shadow: 0 0 0 3px rgba(52, 199, 123, .28); animation: sl-breathe 2.6s var(--ease-in-out) infinite; }
       .video-placeholder {
         position: absolute;
         inset: 0;
@@ -644,464 +651,660 @@
         align-items: center;
         justify-content: center;
         gap: var(--space-4);
-        color: var(--text-faint);
-        font-size: var(--fs-12);
+        background: var(--surface-inset);
+        color: var(--text-muted);
+        font-size: var(--fs-13);
       }
-
-      /* ── MetricGrid / MetricCard (data/MetricGrid, data/MetricCard) ─ */
-      .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1px;
-        background: var(--border-subtle);
-      }
-
-      .metric {
-        padding: var(--space-6) var(--space-7);
-        background: var(--surface-card);
+      .video-placeholder .ph { font-size: 28px; color: var(--text-faint); }
+      .hint-card {
+        border: 1px dashed var(--border-strong);
+        background: var(--surface-sunken);
         display: flex;
         flex-direction: column;
-        gap: var(--space-4);
-        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-5);
+        padding: var(--space-8);
+        text-align: center;
       }
+      .hint-card[hidden] { display: none; }
+      .hint-card .ph-users-three { font-size: 28px; color: var(--text-faint); }
+      .hint-title { font-size: var(--fs-14); font-weight: var(--fw-medium); color: var(--text-strong); }
+      .hint-text { font-size: var(--fs-13); color: var(--text-muted); max-width: 32ch; }
+      .hint-actions { display: flex; gap: var(--space-4); flex-wrap: wrap; justify-content: center; }
+      @keyframes tile-in { from { opacity: 0; transform: scale(.98); } }
 
-      .metric-value {
-        display: flex;
-        align-items: baseline;
-        gap: 3px;
-        font-size: var(--fs-34);
-        font-weight: var(--fw-medium);
-        letter-spacing: var(--ls-display);
-        line-height: var(--lh-flat);
-        color: var(--text-strong);
-      }
+      /* ── Metrics ──────────────────────────────────────────────────── */
+      .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border-subtle); }
+      .stat { padding: var(--space-6) var(--space-7); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+      .stat:nth-child(odd) { border-right: 1px solid var(--border-subtle); }
+      .stat:nth-child(n+3) { border-top: 1px solid var(--border-subtle); }
+      .stat-label { font-size: var(--fs-12); color: var(--text-muted); }
+      .stat-value { display: flex; align-items: baseline; gap: 4px; font-size: var(--fs-26); font-weight: var(--fw-medium); letter-spacing: var(--ls-display); line-height: var(--lh-flat); color: var(--text-strong); }
+      .stat-unit { font-size: var(--fs-13); font-weight: var(--fw-regular); color: var(--text-muted); }
+      .stat-sub { font-size: var(--fs-12); color: var(--text-faint); }
+      .spark { display: block; width: 100%; height: 44px; }
+      .spark-wrap { padding: 0 var(--space-7) var(--space-5); border-top: 1px solid var(--border-subtle); }
+      .spark-head { display: flex; justify-content: space-between; padding: var(--space-5) 0 var(--space-3); font-size: var(--fs-12); color: var(--text-muted); }
+      .counters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--border-subtle); background: var(--surface-sunken); }
+      .counter { padding: var(--space-5) var(--space-6); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .counter + .counter { border-left: 1px solid var(--border-subtle); }
+      .counter-value { font-size: var(--fs-16); font-weight: var(--fw-medium); color: var(--text-strong); }
+      .counter-value.bad { color: var(--danger); }
+      .counter-label { font-size: var(--fs-11); line-height: var(--lh-tight); color: var(--text-muted); }
 
-      .metric-unit {
-        font-size: var(--fs-14);
-        font-weight: var(--fw-regular);
+      /* ── Events (the script builds .log-entry / .log-time / .log-msg with type in {send,info,event,error}) ── */
+      .seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--radius-sm); background: var(--surface-active); }
+      .seg button {
+        height: 24px;
+        padding: 0 8px;
+        border: 0;
+        border-radius: var(--radius-xs);
+        background: none;
+        font-size: var(--fs-12);
         color: var(--text-muted);
+        cursor: pointer;
+        transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
       }
-
-      /* ── EventList (data/EventList) — script builds .log-entry / .log-time /
-       .log-msg directly, with type in {send,info,event,error} ─────── */
-      .log-container {
-        height: 260px;
-        overflow-y: auto;
-      }
-
+      .seg button[aria-pressed="true"] { background: var(--surface-card); color: var(--text-strong); box-shadow: var(--shadow-xs); }
+      .events-tools { display: flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-7) var(--space-5); }
+      .log-container { height: 340px; overflow-y: auto; border-top: 1px solid var(--border-subtle); position: relative; }
       .log-entry {
         display: grid;
-        grid-template-columns: 58px 1fr;
-        gap: var(--space-5);
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: var(--space-4);
         align-items: baseline;
-        padding: 10px var(--space-7);
+        padding: 7px var(--space-7);
         font-size: var(--fs-12);
+        line-height: var(--lh-snug);
+        animation: log-in var(--dur-2) var(--ease-out);
       }
-
-      .log-entry:not(:first-child) {
-        border-top: 1px solid var(--border-subtle);
-      }
-
-      .log-time {
-        color: var(--text-faint);
-        font-variant-numeric: tabular-nums;
-        font-feature-settings: 'tnum' 1;
-      }
-
-      .log-msg {
-        word-break: break-word;
-      }
-
-      .log-msg.info {
-        color: var(--text-body);
-      }
-
-      .log-msg.event {
-        color: var(--ok);
-      }
-
-      .log-msg.send {
-        color: var(--warn);
-      }
-
-      .log-msg.error {
-        color: var(--danger);
-      }
-
-      /* ── StatusStrip (layout/StatusStrip) ─────────────────────────── */
-      .statusstrip {
+      .log-entry:hover { background: var(--surface-hover); }
+      .log-time { color: var(--text-faint); font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+      .log-msg { word-break: break-word; color: var(--text-body); }
+      .log-msg.event { color: var(--ok); }
+      .log-msg.send { color: var(--accent-text); }
+      .log-msg.error { color: var(--danger); }
+      .log-container[data-filter="send"] .log-entry:not([data-type="send"]),
+      .log-container[data-filter="in"] .log-entry:not([data-type="info"]):not([data-type="event"]),
+      .log-container[data-filter="error"] .log-entry:not([data-type="error"]) { display: none; }
+      .log-empty {
+        position: absolute;
+        inset: 0;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: space-between;
-        gap: var(--space-6);
-        padding: var(--space-5) 0;
-        border-top: 1px solid var(--border);
-        font-size: var(--fs-12);
-        color: var(--text-muted);
-      }
-
-      .statusstrip-items {
-        display: flex;
-        gap: var(--space-7);
-        flex: 0 0 auto;
-      }
-
-      .statusstrip-item {
-        display: inline-flex;
+        justify-content: center;
         gap: var(--space-3);
+        color: var(--text-muted);
+        font-size: var(--fs-13);
+        text-align: center;
+        padding: var(--space-8);
       }
+      .log-empty .ph { font-size: 24px; color: var(--text-faint); }
+      .log-empty[hidden] { display: none; }
+      @keyframes log-in { from { opacity: 0; transform: translateY(4px); } }
 
-      .statusstrip-value {
-        color: var(--text-strong);
+      /* ── Status strip ─────────────────────────────────────────────── */
+      .statusstrip { border-top: 1px solid var(--border); background: var(--surface-card); }
+      .statusstrip .bar { height: 40px; gap: var(--space-8); font-size: var(--fs-12); color: var(--text-muted); overflow-x: auto; }
+      .ss-item { display: inline-flex; align-items: center; gap: var(--space-3); white-space: nowrap; }
+      .ss-value { color: var(--text-strong); font-weight: var(--fw-medium); }
+      .ss-copy { width: 22px; height: 22px; border-radius: 6px; }
+      .ss-copy .ph { font-size: 13px; }
+      .ss-link { color: var(--text-muted); text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-2); }
+      .ss-link:hover { color: var(--text-strong); }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 56px;
+        transform: translate(-50%, 8px);
+        padding: 8px 14px;
+        border-radius: var(--radius-pill);
+        background: var(--n-900);
+        color: var(--n-0);
+        font-size: var(--fs-12);
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out);
+        z-index: 20;
       }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      /* ── Responsive ───────────────────────────────────────────────── */
+      @media (max-width: 1100px) {
+        .main { grid-template-columns: minmax(0, 1fr); }
+        .rail { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+      }
+      @media (max-width: 760px) {
+        .bar, .main { padding-left: var(--space-6); padding-right: var(--space-6); }
+        .main { padding-top: var(--space-6); }
+        .crumb { display: none; }
+        .rail { grid-template-columns: minmax(0, 1fr); }
+        .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .session-head .panel-title { width: 100%; }
+        .room-field { flex: 1 1 100%; }
+        .session-head .btn { flex: 1; }
+        .room-field input { width: 100%; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+  
+      .app { background: var(--surface-page); color: var(--text-body); font-family: var(--font-sans); }
+
+      /* l'attribut hidden doit gagner sur les display: flex des composants */
+      [hidden] { display: none !important; }
   </style>
 </head>
 
 <body>
   <div class="app">
 
-    <header class="header">
-      <div class="brand">
-        <span class="brand-name">Lumyx</span>
-        <span class="brand-sub">Session console</span>
+    <header class="topbar">
+      <div class="bar">
+        <div class="brand">
+          <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4L41.3 14L31.5 24Z" fill="#4F39F6"></path><path d="M41.3 14L41.3 34L27.8 30.5Z" fill="#4F39F6" fill-opacity=".55"></path><path d="M41.3 34L24 44L20.3 30.5Z" fill="#4F39F6"></path><path d="M24 44L6.7 34L16.5 24Z" fill="#4F39F6" fill-opacity=".55"></path><path d="M6.7 34L6.7 14L20.2 17.5Z" fill="#4F39F6"></path><path d="M6.7 14L24 4L27.8 17.5Z" fill="#4F39F6" fill-opacity=".55"></path></svg>
+          <span class="brand-name">Lumyx</span>
+        </div>
+        <span class="crumb">Test console <span class="tag num" id="version" hidden></span></span>
+        <span class="spacer"></span>
+        <span class="pill">
+          <span class="status-dot disconnected" id="statusDot"></span>
+          <span id="statusText">disconnected</span>
+        </span>
+        <button class="icon-btn" id="btnTheme" aria-label="Toggle dark mode"><i class="ph ph-moon" id="themeIcon"></i></button>
       </div>
-      <span class="pill">
-        <span class="status-dot" id="statusDot"></span>
-        <span id="statusText">disconnected</span>
-      </span>
     </header>
 
     <main class="main">
-      <div class="video-section">
+      <div class="stage">
 
-        <section class="card">
-          <header class="card-header">
-            <span class="card-title-group">
-              <h3 class="card-title">Session</h3>
-            </span>
-          </header>
-          <div class="card-body card-body-padded">
-            <div class="controls">
-              <button class="btn btn-primary" id="btnConnect">Connect</button>
-              <button class="btn btn-secondary" id="btnCamera" disabled>Enable camera</button>
-              <button class="btn btn-secondary" id="btnCall" disabled>Call SFU</button>
-              <button class="btn btn-secondary" id="btnJoin" disabled>Join room</button>
-              <button class="btn btn-danger" id="btnDisconnect" disabled>Disconnect</button>
+        <section class="panel">
+          <div class="session-head">
+            <h1 class="panel-title">Session</h1>
+            <div class="room-field">
+              <label for="roomInput">Room</label>
+              <input id="roomInput" value="test-room" spellcheck="false" autocomplete="off">
             </div>
+            <button class="btn btn-secondary" id="btnQuick"><i class="ph ph-lightning"></i>Quick start</button>
+            <button class="btn btn-danger" id="btnDisconnect" disabled><i class="ph ph-plug"></i>Disconnect</button>
           </div>
+          <ol class="steps" id="steps"></ol>
         </section>
 
+        <div class="stage-head">
+          <h2 class="stage-title">Peers</h2>
+          <span class="panel-meta num" id="tileCount">only you</span>
+        </div>
         <div class="video-grid" id="videoGrid">
           <div class="video-card" id="localCard">
             <video id="localVideo" autoplay muted playsinline></video>
-            <div class="label">local</div>
+            <div class="label" id="localLabel">You</div>
             <div class="indicator" id="localIndicator"></div>
-            <div class="video-placeholder" id="localPlaceholder">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path
-                  d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.361a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-              </svg>
-              Camera off
+            <div class="video-placeholder" id="localPlaceholder"><i class="ph ph-video-camera-slash"></i>Camera off</div>
+          </div>
+          <div class="hint-card" id="hintCard">
+            <i class="ph ph-users-three"></i>
+            <p class="hint-title">No one else here yet</p>
+            <p class="hint-text">Open this page in a second tab and join the same room. Their video lands here.</p>
+            <div class="hint-actions">
+              <button class="btn btn-secondary" id="btnNewTab"><i class="ph ph-arrow-square-out"></i>New tab</button>
+              <button class="btn btn-ghost" id="btnCopyLink"><i class="ph ph-link"></i>Copy link</button>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="sidebar">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title-group">
-              <h3 class="card-title">Metrics</h3>
-              <span class="card-meta">1s poll</span>
-            </span>
+      <aside class="rail">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Server</h2>
+            <span class="spacer"></span>
+            <span class="panel-meta">live, every 1 s</span>
           </div>
-          <div class="card-body">
-            <div class="metrics-grid">
-              <div class="metric">
-                <span class="sl-label">Rooms</span>
-                <span class="sl-num metric-value" id="metricRooms">0</span>
-              </div>
-              <div class="metric">
-                <span class="sl-label">Peers</span>
-                <span class="sl-num metric-value" id="metricPeers">0</span>
-              </div>
-              <div class="metric">
-                <span class="sl-label">RTP packets</span>
-                <span class="sl-num metric-value" id="metricPackets">0</span>
-              </div>
-              <div class="metric">
-                <span class="sl-label">Forwarded</span>
-                <span class="sl-num metric-value" id="metricBytes">0<span class="metric-unit">MB</span></span>
-              </div>
+          <div class="stats">
+            <div class="stat"><span class="stat-label">Rooms</span><span class="stat-value num" id="mRooms">0</span></div>
+            <div class="stat"><span class="stat-label">Peers</span><span class="stat-value num" id="mPeers">0</span></div>
+            <div class="stat">
+              <span class="stat-label">Packets forwarded</span>
+              <span class="stat-value num"><span id="mPps">0</span><span class="stat-unit">/s</span></span>
+              <span class="stat-sub num"><span id="mPackets">0</span> total</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Throughput</span>
+              <span class="stat-value num"><span id="mMbps">0.0</span><span class="stat-unit">Mb/s</span></span>
+              <span class="stat-sub num"><span id="mMb">0.0</span> MB total</span>
             </div>
           </div>
-        </div>
+          <div class="spark-wrap">
+            <div class="spark-head"><span>Throughput, last 60 s</span><span class="num">peak <span id="mPeak">0.0</span></span></div>
+            <svg class="spark" viewBox="0 0 300 44" preserveAspectRatio="none" aria-hidden="true">
+              <path id="sparkArea" fill="var(--accent-tint)" d=""></path>
+              <path id="sparkLine" fill="none" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke" d=""></path>
+            </svg>
+          </div>
+          <div class="counters">
+            <div class="counter"><span class="counter-value num" id="mKf">0</span><span class="counter-label">Keyframe requests</span></div>
+            <div class="counter"><span class="counter-value num" id="mMediaDrops">0</span><span class="counter-label">Media drops</span></div>
+            <div class="counter"><span class="counter-value num" id="mTelDrops">0</span><span class="counter-label">Telemetry drops</span></div>
+          </div>
+        </section>
 
-        <div class="card" style="flex:1">
-          <div class="card-header">
-            <span class="card-title-group">
-              <h3 class="card-title">Events</h3>
-            </span>
-            <span class="card-meta sl-num" id="logCount">0</span>
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Events</h2>
+            <span class="panel-meta num" id="logCount">0</span>
           </div>
-          <div class="card-body">
-            <div class="log-container sl-scroll" id="log"></div>
+          <div class="events-tools">
+            <div class="seg" role="group" aria-label="Filter events" id="filters">
+              <button aria-pressed="true" data-filter="all">All</button>
+              <button aria-pressed="false" data-filter="send">Sent</button>
+              <button aria-pressed="false" data-filter="in">Received</button>
+              <button aria-pressed="false" data-filter="error">Errors</button>
+            </div>
+            <span class="spacer"></span>
+            <button class="icon-btn" id="btnClearLog" aria-label="Clear events"><i class="ph ph-broom"></i></button>
           </div>
-        </div>
-      </div>
+          <div class="log-container sl-scroll" id="log" data-filter="all">
+            <div class="log-empty" id="logEmpty"><i class="ph ph-pulse"></i>Nothing yet. Click Connect, or Quick start to run all four steps.</div>
+          </div>
+        </section>
+      </aside>
     </main>
 
     <footer class="statusstrip">
-      <span class="statusstrip-left">peer_id: <span class="sl-num statusstrip-value" id="footerPeerId">—</span></span>
-      <span class="statusstrip-items">
-        <span class="statusstrip-item">
-          <span class="sl-label">Room</span>
-          <span class="sl-num statusstrip-value" id="footerRoom">—</span>
+      <div class="bar num">
+        <span class="ss-item">Peer <span class="ss-value" id="footerPeer">none</span>
+          <button class="icon-btn ss-copy" id="btnCopyPeer" aria-label="Copy peer id" hidden><i class="ph ph-copy"></i></button>
         </span>
-      </span>
+        <span class="ss-item">Room <span class="ss-value" id="footerRoom">none</span></span>
+        <span class="ss-item">ICE <span class="ss-value" id="footerIce">idle</span></span>
+        <span class="ss-item">Transport <span class="ss-value" id="footerTransport">idle</span></span>
+        <span class="spacer"></span>
+        <a class="ss-link" href="/metrics" target="_blank" rel="noopener">/metrics <i class="ph ph-arrow-up-right"></i></a>
+        <a class="ss-link" href="/health" target="_blank" rel="noopener">/health <i class="ph ph-arrow-up-right"></i></a>
+      </div>
     </footer>
 
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 
   <script>
-    const WS_URL = `wss://${window.location.host}/ws`;
-    const ROOM_ID = "test-room";
+    const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+    const $ = (id) => document.getElementById(id);
+    const short = (id) => (id || '').slice(0, 8);
+
+    // ── État ─────────────────────────────────────────────
+    const STEPS = [
+      { key: 'connect', name: 'Connect', idle: 'Open signaling', ok: 'Signaling open' },
+      { key: 'camera', name: 'Enable camera', idle: 'Optional, watch only', ok: 'Publishing camera' },
+      { key: 'call', name: 'Call SFU', idle: 'Offer, answer, ICE', ok: 'Transport up' },
+      { key: 'join', name: 'Join room', idle: 'Start forwarding', ok: 'In the room' },
+    ];
 
     let ws, pc, localStream, peerId;
-    let logCount = 0;
+    let status = 'disconnected';
+    let done = {};
+    let busy = false;
+    let joinedRoom = null;
+    // Résolveurs en attente pour le Quick start : 'connected' et 'answer'.
+    const waiters = {};
 
-    // ── Metrics polling ──────────────────────────────────
-    setInterval(async () => {
-      try {
-        const r = await fetch('/metrics');
-        const data = await r.json();
-        document.getElementById('metricRooms').textContent = data.rooms ?? 0;
-        document.getElementById('metricPeers').textContent = data.peers ?? 0;
-        document.getElementById('metricPackets').textContent =
-          (data.metrics?.rtp_packets_forwarded ?? 0).toLocaleString();
-        document.getElementById('metricBytes').textContent =
-          ((data.metrics?.bytes_forwarded ?? 0) / 1_000_000).toFixed(1);
-      } catch { }
-    }, 1000);
+    // La room peut venir de l'URL, pour qu'un lien partagé ouvre la même.
+    const params = new URLSearchParams(location.search);
+    if (params.get('room')) $('roomInput').value = params.get('room');
+    const roomId = () => $('roomInput').value.trim() || 'test-room';
 
-    // ── Log ──────────────────────────────────────────────
-    const log = (msg, type = "info") => {
-      const el = document.getElementById("log");
-      const entry = document.createElement("div");
-      entry.className = "log-entry";
-      const now = new Date();
-      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-      entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
-      el.appendChild(entry);
-      el.scrollTop = el.scrollHeight;
-      logCount++;
-      document.getElementById('logCount').textContent = logCount;
+    // ── Thème ────────────────────────────────────────────
+    const applyTheme = (dark) => {
+      document.documentElement.classList.toggle('theme-dark', dark);
+      $('themeIcon').className = `ph ${dark ? 'ph-sun' : 'ph-moon'}`;
+    };
+    let dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    try { const saved = localStorage.getItem('lumyx-theme'); if (saved) dark = saved === 'dark'; } catch { }
+    applyTheme(dark);
+    $('btnTheme').onclick = () => {
+      dark = !dark;
+      applyTheme(dark);
+      try { localStorage.setItem('lumyx-theme', dark ? 'dark' : 'light'); } catch { }
     };
 
-    const setStatus = (s) => {
-      document.getElementById('statusDot').className = `status-dot ${s}`;
-      document.getElementById('statusText').textContent = s;
+    // ── Toast ────────────────────────────────────────────
+    let toastTimer;
+    const flash = (text) => {
+      const t = $('toast');
+      t.textContent = text;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+    };
+    const copy = async (text, what) => {
+      try { await navigator.clipboard.writeText(text); flash(`${what} copied`); }
+      catch { flash('Clipboard unavailable'); }
+    };
+
+    // ── Étapes ───────────────────────────────────────────
+    const stepEls = {};
+    for (const [i, st] of STEPS.entries()) {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'step';
+      btn.innerHTML = `<span class="step-badge"><span>${i + 1}</span><i class="ph ph-check"></i></span>`
+        + `<span class="step-text"><span class="step-name">${st.name}</span><span class="step-hint"></span></span>`;
+      btn.onclick = () => runStep(st.key);
+      li.appendChild(btn);
+      $('steps').appendChild(li);
+      stepEls[st.key] = btn;
+    }
+
+    function render() {
+      const connected = status === 'connected' && !!peerId;
+      // La caméra ne s'ajoute qu'avant l'appel : après, l'offre est déjà partie sans elle.
+      const enabled = {
+        connect: status === 'disconnected',
+        camera: connected && !done.call,
+        call: connected,
+        join: connected && !!done.call,
+      };
+      const next = STEPS.find((s) => !done[s.key] && enabled[s.key])?.key;
+      for (const st of STEPS) {
+        const el = stepEls[st.key];
+        el.disabled = busy || !!done[st.key] || !enabled[st.key];
+        el.classList.toggle('is-done', !!done[st.key]);
+        el.classList.toggle('is-next', !busy && st.key === next);
+        el.querySelector('.step-hint').textContent = done[st.key] ? st.ok : st.idle;
+      }
+      $('btnQuick').disabled = busy || !!done.join;
+      $('btnDisconnect').disabled = status === 'disconnected';
+      $('roomInput').disabled = !!done.join;
+
+      $('statusDot').className = `status-dot ${status}`;
+      $('statusText').textContent = status;
+
+      $('localLabel').textContent = peerId ? `You · ${short(peerId)}` : 'You';
+      $('footerPeer').textContent = peerId ? short(peerId) : 'none';
+      $('btnCopyPeer').hidden = !peerId;
+      $('footerRoom').textContent = joinedRoom || 'none';
+      $('footerIce').textContent = pc ? pc.iceConnectionState : 'idle';
+      $('footerTransport').textContent = pc ? pc.connectionState : 'idle';
+
+      const n = remotes.size;
+      $('tileCount').textContent = n === 0 ? 'only you' : `you and ${n} other${n > 1 ? 's' : ''}`;
+      $('hintCard').hidden = n > 0;
+    }
+
+    function runStep(key) {
+      const fn = { connect, camera: enableCamera, call: startCall, join }[key];
+      Promise.resolve(fn()).catch(() => { });
+    }
+
+    const waitFor = (name, ms = 10000) => new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { delete waiters[name]; reject(new Error(`timed out waiting for ${name}`)); }, ms);
+      waiters[name] = (v) => { clearTimeout(timer); delete waiters[name]; resolve(v); };
+    });
+    const wake = (name, v) => waiters[name]?.(v);
+
+    // ── Journal ──────────────────────────────────────────
+    const MAX_LOG = 500;
+    let logCount = 0;
+    const log = (msg, type = 'info') => {
+      const el = $('log');
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.dataset.type = type;
+      const now = new Date();
+      const p = (n) => String(n).padStart(2, '0');
+      const time = document.createElement('span');
+      time.className = 'log-time';
+      time.textContent = `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+      // textContent, pas innerHTML : les messages d'erreur viennent du serveur.
+      const text = document.createElement('span');
+      text.className = `log-msg ${type}`;
+      text.textContent = msg;
+      entry.append(time, text);
+      el.appendChild(entry);
+      const entries = el.querySelectorAll('.log-entry');
+      if (entries.length > MAX_LOG) entries[0].remove();
+      if (atBottom) el.scrollTop = el.scrollHeight;
+      logCount++;
+      $('logCount').textContent = logCount;
+      $('logEmpty').hidden = true;
+    };
+
+    $('filters').onclick = (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      for (const other of $('filters').querySelectorAll('button')) other.setAttribute('aria-pressed', String(other === b));
+      $('log').dataset.filter = b.dataset.filter;
+    };
+    $('btnClearLog').onclick = () => {
+      $('log').querySelectorAll('.log-entry').forEach((e) => e.remove());
+      logCount = 0;
+      $('logCount').textContent = '0';
+      $('logEmpty').hidden = false;
     };
 
     const send = (obj) => {
-      log(`→ ${obj.type}`, "send");
+      log(`→ ${obj.type}`, 'send');
       ws.send(JSON.stringify(obj));
     };
 
-    // ── Connect ──────────────────────────────────────────
-    document.getElementById("btnConnect").onclick = () => {
-      log("Connecting to signaling");
-      setStatus("connecting");
+    // ── Connexion ────────────────────────────────────────
+    function connect() {
+      if (ws && ws.readyState <= WebSocket.OPEN) return;
+      log('Connecting to signaling');
+      status = 'connecting';
+      render();
       ws = new WebSocket(WS_URL);
 
-      ws.onopen = () => { log("Signaling connected", "event"); setStatus("connected"); };
-
+      ws.onopen = () => { log('Signaling connected', 'event'); status = 'connected'; render(); };
       ws.onmessage = async (e) => {
         const msg = JSON.parse(e.data);
-        log(`← ${msg.type}`, "info");
+        log(`← ${msg.type}`, 'info');
         await handleMessage(msg);
       };
-
       ws.onclose = () => {
-        log("Signaling closed", "error");
-        setStatus("disconnected");
-        ['btnConnect', 'btnJoin', 'btnCamera', 'btnCall'].forEach((id, i) => {
-          document.getElementById(id).disabled = i !== 0;
-        });
-        document.getElementById('btnDisconnect').disabled = true;
+        log('Signaling closed', 'error');
+        status = 'disconnected';
+        peerId = null;
+        joinedRoom = null;
+        pc?.close();
+        pc = null;
+        roster = new Set();
+        clearRemotes();
+        // La caméra reste allumée : elle ne dépend pas de la session.
+        done = done.camera ? { camera: true } : {};
+        for (const name of Object.keys(waiters)) delete waiters[name];
+        render();
       };
+      ws.onerror = () => log('WebSocket error', 'error');
+    }
 
-      ws.onerror = () => log("WebSocket error", "error");
-      document.getElementById("btnConnect").disabled = true;
-      document.getElementById("btnDisconnect").disabled = false;
-    };
+    function join() {
+      send({ type: 'join', room_id: roomId(), peer_id: peerId });
+    }
 
-    document.getElementById("btnJoin").onclick = () => {
-      send({ type: "join", room_id: ROOM_ID, peer_id: peerId });
-      document.getElementById('footerRoom').textContent = ROOM_ID;
-    };
-
-    document.getElementById("btnCamera").onclick = async () => {
+    async function enableCamera() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById("localVideo").srcObject = localStream;
-        document.getElementById('localPlaceholder').style.display = 'none';
-        document.getElementById('localIndicator').classList.add('live');
-        log("Camera enabled", "event");
+        $('localVideo').srcObject = localStream;
+        $('localPlaceholder').hidden = true;
+        $('localIndicator').classList.add('live');
+        log('Camera enabled', 'event');
+        done.camera = true;
+        render();
+        return true;
       } catch (e) {
-        log(`Camera error: ${e.message}`, "error");
+        log(`Camera error: ${e.message}`, 'error');
+        return false;
       }
-    };
+    }
 
-    document.getElementById("btnCall").onclick = () => startCall();
-    document.getElementById("btnDisconnect").onclick = () => {
-      ws?.close();
-      pc?.close();
-      pc = null;
-      roster = new Set();
-      clearRemotes();
+    $('btnDisconnect').onclick = () => ws?.close();
+
+    // Enchaîne les quatre étapes ; la caméra est tentée, un refus fait un simple spectateur.
+    $('btnQuick').onclick = async () => {
+      busy = true;
+      render();
+      try {
+        if (!done.connect) { const ready = waitFor('connected'); connect(); await ready; }
+        if (!done.camera && !done.call) await enableCamera();
+        if (!done.call) { const answered = waitFor('answer'); await startCall(); await answered; }
+        if (!done.join) { const joined = waitFor('joined'); join(); await joined; }
+      } catch (e) {
+        log(`Quick start stopped: ${e.message}`, 'error');
+      } finally {
+        busy = false;
+        render();
+      }
     };
 
     // ── Messages ─────────────────────────────────────────
     async function handleMessage(msg) {
       switch (msg.type) {
-        case "connected":
+        case 'connected':
           peerId = msg.peer_id;
-          document.getElementById('footerPeerId').textContent = peerId.slice(0, 8) + '...';
-          document.getElementById("btnCamera").disabled = false;
-          document.getElementById("btnCall").disabled = false;
+          done.connect = true;
+          render();
+          wake('connected');
           break;
-        case "joined_room":
+        case 'joined_room':
           roster = new Set(msg.peers);
-          log(`Joined room · ${msg.peers.length} peer(s) already here`, "event");
+          joinedRoom = msg.room_id;
+          done.join = true;
+          log(`Joined ${msg.room_id} · ${msg.peers.length} peer(s) already here`, 'event');
           reconcile();
+          render();
+          wake('joined');
           break;
-        case "peer_joined":
+        case 'peer_joined':
           roster.add(msg.peer_id);
-          log(`Peer joined · ${short(msg.peer_id)}`, "event");
+          log(`Peer joined · ${short(msg.peer_id)}`, 'event');
           break;
-        case "peer_left":
+        case 'peer_left':
           roster.delete(msg.peer_id);
-          log(`Peer left · ${short(msg.peer_id)}`, "event");
-          // The SFU closes its m-lines on its side; the tile goes with them.
+          log(`Peer left · ${short(msg.peer_id)}`, 'event');
+          // Le SFU ferme ses m-lines de son côté ; la tuile part avec elles.
           removeRemote(msg.peer_id);
           break;
-        case "sfu_answer":
-          await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
-          log("Remote description set", "event");
-          // Routing only starts once the transport exists: joining any earlier
-          // would have the SFU re-offer to a connection that is not there yet.
-          document.getElementById("btnJoin").disabled = false;
+        case 'sfu_answer':
+          await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+          log('Remote description set', 'event');
+          // Le routage ne démarre qu'une fois le transport en place : rejoindre plus tôt
+          // ferait re-offrir le SFU vers une connexion qui n'existe pas encore.
+          done.call = true;
+          render();
+          wake('answer');
           break;
-        case "sfu_offer":
-          // The SFU re-offers whenever the room gains or loses a published
-          // track: each one needs its own m-line here.
+        case 'sfu_offer':
+          // Le SFU re-offre dès que la room gagne ou perd une piste publiée :
+          // chacune a besoin de sa propre m-line ici.
           await answerSfuOffer(msg.sdp);
           break;
-        case "sfu_ice_candidate":
+        case 'sfu_ice_candidate':
           if (pc && msg.candidate) {
             try { await pc.addIceCandidate({ candidate: msg.candidate, sdpMLineIndex: 0 }); } catch { }
           }
           break;
-        case "error":
-          log(`Error: ${msg.message}`, "error");
+        case 'error':
+          log(`Error: ${msg.message}`, 'error');
           break;
       }
     }
 
-    const short = (id) => (id || "").slice(0, 8);
-
-    // ── Start Call ───────────────────────────────────────
+    // ── Appel ────────────────────────────────────────────
     async function startCall() {
-      log("Creating RTCPeerConnection");
+      log('Creating RTCPeerConnection');
 
       if (pc) { pc.close(); pc = null; }
       clearRemotes();
 
       pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
 
       if (localStream) {
-        // `sendonly`, not `sendrecv`: what this peer publishes and what it
-        // receives are different m-lines. Sharing one would put every
-        // publisher of the room into a single stream.
-        localStream.getTracks().forEach(track => {
+        // `sendonly`, pas `sendrecv` : ce que ce pair publie et ce qu'il reçoit sont des
+        // m-lines distinctes. En partager une mettrait tous les publieurs dans un seul flux.
+        localStream.getTracks().forEach((track) => {
           pc.addTransceiver(track, { direction: 'sendonly', streams: [localStream] });
           log(`Publishing · ${track.kind}`);
         });
       } else {
-        // Viewer with no camera: the offer still has to carry ICE and DTLS,
-        // which live in the m-lines. These two stay unused — everything this
-        // peer watches arrives on m-lines the SFU adds later.
+        // Spectateur sans caméra : l'offre doit quand même porter ICE et DTLS, qui vivent
+        // dans les m-lines. Ces deux-là restent inutilisées — tout ce que ce pair regarde
+        // arrive sur des m-lines que le SFU ajoute ensuite.
         pc.addTransceiver('audio', { direction: 'recvonly' });
         pc.addTransceiver('video', { direction: 'recvonly' });
       }
 
       pc.onicecandidate = (e) => {
-        if (e.candidate) send({ type: "sfu_ice_candidate", candidate: e.candidate.candidate });
+        if (e.candidate) send({ type: 'sfu_ice_candidate', candidate: e.candidate.candidate });
       };
-
-      pc.oniceconnectionstatechange = () => log(`ICE · ${pc.iceConnectionState}`, "event");
-      pc.onconnectionstatechange = () => log(`Connection · ${pc.connectionState}`, "event");
+      pc.oniceconnectionstatechange = () => { log(`ICE · ${pc.iceConnectionState}`, 'event'); render(); };
+      pc.onconnectionstatechange = () => { log(`Connection · ${pc.connectionState}`, 'event'); render(); };
       pc.ontrack = onRemoteTrack;
+      render();
 
       try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        log("Offer created — sending to SFU");
-        send({ type: "sfu_offer", sdp: offer.sdp });
+        log('Offer created, sending to SFU');
+        send({ type: 'sfu_offer', sdp: offer.sdp });
       } catch (e) {
-        log(`Offer error: ${e.message}`, "error");
+        log(`Offer error: ${e.message}`, 'error');
+        throw e;
       }
     }
 
-    /// Answers a re-offer from the SFU.
+    /// Répond à une re-offre du SFU.
     async function answerSfuOffer(sdp) {
       if (!pc) {
-        log("SFU offer received before the call started — ignored", "error");
+        log('SFU offer received before the call started, ignored', 'error');
         return;
       }
       try {
-        await pc.setRemoteDescription({ type: "offer", sdp });
+        await pc.setRemoteDescription({ type: 'offer', sdp });
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        send({ type: "sfu_answer", sdp: answer.sdp });
+        send({ type: 'sfu_answer', sdp: answer.sdp });
       } catch (e) {
-        log(`Answer error: ${e.message}`, "error");
+        log(`Answer error: ${e.message}`, 'error');
       }
     }
 
-    // ── Remote tiles ─────────────────────────────────────
+    // ── Tuiles distantes ─────────────────────────────────
     //
-    // One tile per publisher, not per track. The SFU names each m-line it adds
-    // with the publisher's id as the msid stream id, so `streams[0].id` says
-    // who a track belongs to — audio and video of one peer land in the same
-    // MediaStream, and two peers never share a tile.
+    // Une tuile par publieur, pas par piste. Le SFU nomme chaque m-line qu'il ajoute avec
+    // l'id du publieur comme stream id msid : `streams[0].id` dit à qui appartient une piste,
+    // l'audio et la vidéo d'un pair arrivent dans le même MediaStream, et deux pairs ne
+    // partagent jamais une tuile.
 
-    const remotes = new Map(); // publisher peer_id → { card, stream }
+    const remotes = new Map(); // peer_id du publieur → { card, stream }
 
-    // Who the SFU says is in the room. A track is only ever shown for a peer on
-    // this list: mid-renegotiation the browser can surface a stream whose msid
-    // it has not resolved yet, under an id of its own making, and that would
-    // otherwise leave a tile nothing ever fills.
+    // Qui est dans la room selon le SFU. Une piste n'est affichée que pour un pair de cette
+    // liste : en pleine renégociation, le navigateur peut exposer un flux dont il n'a pas
+    // encore résolu le msid, sous un id de son cru, ce qui laisserait une tuile vide.
     let roster = new Set();
 
     function onRemoteTrack(e) {
       const publisher = e.streams[0]?.id;
       if (!publisher) {
-        // An m-line with no msid: one of the unused recvonly slots a
-        // camera-less viewer offered. Nothing to show.
+        // Une m-line sans msid : un des slots recvonly inutilisés d'un spectateur.
         return;
       }
       if (!roster.has(publisher)) {
-        log(`Track from an unknown peer ignored · ${short(publisher)}`, "info");
+        log(`Track from an unknown peer ignored · ${short(publisher)}`, 'info');
         return;
       }
 
       const entry = remotes.get(publisher) ?? createRemote(publisher);
       entry.stream.addTrack(e.track);
-      log(`Remote ${e.track.kind} · ${short(publisher)}`, "event");
+      log(`Remote ${e.track.kind} · ${short(publisher)}`, 'event');
 
       e.track.onended = () => removeTrack(publisher, e.track);
       e.track.onmute = () => entry.card.querySelector('.indicator').classList.remove('live');
@@ -1128,10 +1331,11 @@
       indicator.className = 'indicator live';
 
       card.append(video, label, indicator);
-      document.getElementById('videoGrid').appendChild(card);
+      $('videoGrid').insertBefore(card, $('hintCard'));
 
       const entry = { card, stream };
       remotes.set(publisher, entry);
+      render();
       return entry;
     }
 
@@ -1147,19 +1351,84 @@
       if (!entry) return;
       entry.card.remove();
       remotes.delete(publisher);
-      log(`Tile removed · ${short(publisher)}`, "event");
+      log(`Tile removed · ${short(publisher)}`, 'event');
+      render();
     }
 
     function clearRemotes() {
       for (const publisher of [...remotes.keys()]) removeRemote(publisher);
     }
 
-    /// Drops any tile whose peer is no longer in the room.
+    /// Retire toute tuile dont le pair n'est plus dans la room.
     function reconcile() {
       for (const publisher of [...remotes.keys()]) {
         if (!roster.has(publisher)) removeRemote(publisher);
       }
     }
+
+    // ── Partage ──────────────────────────────────────────
+    const roomLink = () => `${location.origin}${location.pathname}?room=${encodeURIComponent(roomId())}`;
+    $('btnNewTab').onclick = () => window.open(roomLink(), '_blank', 'noopener');
+    $('btnCopyLink').onclick = () => copy(roomLink(), 'Link');
+    $('btnCopyPeer').onclick = () => peerId && copy(peerId, 'Peer id');
+
+    // ── Métriques serveur ────────────────────────────────
+    const fmt = (n) => n.toLocaleString('en-US');
+    const hist = [];
+    let prev = null;
+
+    function drawSpark() {
+      const max = Math.max(1, ...hist);
+      const pts = hist.map((v, i) => [((60 - hist.length + i) / 59) * 300, 42 - (v / max) * 38]);
+      const line = pts.length > 1 ? pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ') : '';
+      $('sparkLine').setAttribute('d', line);
+      $('sparkArea').setAttribute('d', line ? `${line} L300 44 L${pts[0][0].toFixed(1)} 44 Z` : '');
+      $('mPeak').textContent = (hist.length ? Math.max(...hist) : 0).toFixed(1);
+    }
+
+    setInterval(async () => {
+      try {
+        const r = await fetch('/metrics');
+        const data = await r.json();
+        const m = data.metrics ?? {};
+        const now = performance.now();
+        const packets = m.rtp_packets_forwarded ?? 0;
+        const bytes = m.bytes_forwarded ?? 0;
+        // Débits calculés sur l'écart entre deux relevés ; un compteur qui recule (redémarrage) repart de zéro.
+        let pps = 0, mbps = 0;
+        if (prev && packets >= prev.packets) {
+          const dt = (now - prev.t) / 1000;
+          pps = Math.round((packets - prev.packets) / dt);
+          mbps = ((bytes - prev.bytes) * 8) / dt / 1e6;
+        }
+        prev = { t: now, packets, bytes };
+        hist.push(mbps);
+        if (hist.length > 60) hist.shift();
+
+        $('mRooms').textContent = data.rooms ?? 0;
+        $('mPeers').textContent = data.peers ?? 0;
+        $('mPps').textContent = fmt(pps);
+        $('mPackets').textContent = fmt(packets);
+        $('mMbps').textContent = mbps.toFixed(1);
+        $('mMb').textContent = (bytes / 1e6).toFixed(1);
+        $('mKf').textContent = fmt(m.keyframe_requests ?? 0);
+        // Somme de tous les points de perte (files, payload type, écriture), audio et vidéo.
+        const mediaDrops = Object.values(m.media_packets_dropped ?? {})
+          .reduce((sum, k) => sum + (k.audio ?? 0) + (k.video ?? 0), 0);
+        $('mMediaDrops').textContent = fmt(mediaDrops);
+        $('mMediaDrops').classList.toggle('bad', mediaDrops > 0);
+        const telDrops = m.telemetry_entries_dropped ?? 0;
+        $('mTelDrops').textContent = fmt(telDrops);
+        $('mTelDrops').classList.toggle('bad', telDrops > 0);
+        drawSpark();
+      } catch { }
+    }, 1000);
+
+    fetch('/health').then((r) => r.json()).then((h) => {
+      if (h.version) { $('version').textContent = `v${h.version}`; $('version').hidden = false; }
+    }).catch(() => { });
+
+    render();
   </script>
 </body>
 
